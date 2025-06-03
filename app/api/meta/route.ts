@@ -46,7 +46,7 @@ export async function POST(request: NextRequest) {
       const campaignListSummaryFields =
         "name,created_time,effective_status,insights.date_preset(" +
         datePreset +
-        "){spend,impressions,clicks,ctr,cpc,actions,action_values,frequency,roas}" // Added roas here
+        "){spend,impressions,clicks,ctr,cpc,actions,action_values,frequency}"
       const campaignsSummaryUrl = `https://graph.facebook.com/${META_API_VERSION}/${adAccountId}/campaigns?fields=${campaignListSummaryFields}&limit=100`
       const campaignsSummaryData = await fetchMeta(campaignsSummaryUrl, accessToken)
 
@@ -67,12 +67,12 @@ export async function POST(request: NextRequest) {
     } else if (type === "campaign_details" && campaignId) {
       // Ad sets for the campaign (summary for the period)
       const adSetFields =
-        "name,status,insights.date_preset(" + datePreset + "){spend,impressions,clicks,actions,action_values,roas}" // Added roas
+        "name,status,insights.date_preset(" + datePreset + "){spend,impressions,clicks,actions,action_values}"
       const adSetsUrl = `https://graph.facebook.com/${META_API_VERSION}/${campaignId}/adsets?fields=${adSetFields}&limit=50`
       const adSetsData = await fetchMeta(adSetsUrl, accessToken)
 
       // Hourly insights for today (or a narrow recent range)
-      const hourlyInsightFields = "spend,impressions,clicks,actions,roas" // Added roas
+      const hourlyInsightFields = "spend,impressions,clicks,actions"
       const hourlyInsightsUrl = `https://graph.facebook.com/${META_API_VERSION}/${campaignId}/insights?fields=${hourlyInsightFields}&time_increment=1&date_preset=today` // time_increment=1 means hourly for date_preset=today
       const hourlyData = await fetchMeta(hourlyInsightsUrl, accessToken)
 
@@ -82,7 +82,7 @@ export async function POST(request: NextRequest) {
       })
     } else if (type === "historical_campaign_data" && campaignId) {
       // Fetch daily historical data for a specific campaign over the datePreset
-      const historicalFields = "spend,impressions,clicks,ctr,cpc,actions,action_values,roas"
+      const historicalFields = "spend,impressions,clicks,ctr,cpc,actions,action_values"
       const historicalDataUrl = `https://graph.facebook.com/${META_API_VERSION}/${campaignId}/insights?fields=${historicalFields}&date_preset=${datePreset}&time_increment=1` // time_increment=1 means daily here
       const historicalData = await fetchMeta(historicalDataUrl, accessToken)
       return NextResponse.json({
