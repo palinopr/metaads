@@ -15,6 +15,7 @@ import { DateRangeSelector, type DateRangePreset } from "@/components/date-range
 import { CampaignPredictions } from "@/components/campaign-predictions" // Added CampaignPredictions
 import { AIAnalysisModal } from "@/components/ai-analysis-modal"
 import { DemographicAnalytics } from "@/components/demographic-analytics"
+import { DayHourPerformance } from "@/components/day-hour-performance"
 import {
   Settings,
   Loader2,
@@ -29,6 +30,7 @@ import {
   LineChartIcon,
   BarChart3,
   Users,
+  Clock,
 } from "lucide-react"
 import { formatNumberWithCommas, formatCurrency, formatPercentage } from "@/lib/utils"
 import {
@@ -745,7 +747,7 @@ export default function AdvancedDashboardPage() {
 
                       {campaign.expandedData && !campaign.expandedData.isLoading && !campaign.expandedData.error && (
                         <Tabs defaultValue="details" className="w-full">
-                          <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 gap-1 bg-gray-700/50 p-1 rounded-lg mb-4">
+                          <TabsList className="grid w-full grid-cols-2 sm:grid-cols-5 gap-1 bg-gray-700/50 p-1 rounded-lg mb-4">
                             <TabsTrigger
                               value="details"
                               className="text-xs md:text-sm py-1.5 data-[state=active]:bg-gray-600 data-[state=active]:text-white text-gray-300 hover:bg-gray-600/70"
@@ -763,6 +765,12 @@ export default function AdvancedDashboardPage() {
                               className="text-xs md:text-sm py-1.5 data-[state=active]:bg-gray-600 data-[state=active]:text-white text-gray-300 hover:bg-gray-600/70"
                             >
                               <Users className="mr-1.5 h-4 w-4" /> Demographics
+                            </TabsTrigger>
+                            <TabsTrigger
+                              value="dayHourPerformance"
+                              className="text-xs md:text-sm py-1.5 data-[state=active]:bg-gray-600 data-[state=active]:text-white text-gray-300 hover:bg-gray-600/70"
+                            >
+                              <Clock className="mr-1.5 h-4 w-4" /> Day & Hour
                             </TabsTrigger>
                             <TabsTrigger
                               value="compare"
@@ -1091,6 +1099,20 @@ export default function AdvancedDashboardPage() {
                             {(!campaign.id || !accessToken) && (
                               <div className="text-center py-10 text-gray-400">
                                 <p>Campaign details are required to load demographics.</p>
+                              </div>
+                            )}
+                          </TabsContent>
+                          <TabsContent value="dayHourPerformance" className="space-y-6">
+                            {campaign.id && accessToken && selectedDateRange && (
+                              <DayHourPerformance
+                                campaignId={campaign.id}
+                                accessToken={accessToken}
+                                datePreset={selectedDateRange}
+                              />
+                            )}
+                            {(!campaign.id || !accessToken) && (
+                              <div className="text-center py-10 text-gray-400">
+                                <p>Campaign details are required to load day & hour performance.</p>
                               </div>
                             )}
                           </TabsContent>
