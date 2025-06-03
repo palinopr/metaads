@@ -2,6 +2,76 @@ import { NextResponse, type NextRequest } from "next/server"
 
 const META_API_VERSION = "v19.0" // Or your preferred version
 
+// Helper function to extract key metrics from a row
+// This is a simplified version of what processCampaignInsights might do,
+// focused on what's needed for demographic aggregation.
+// You might need to adjust this based on your exact needs or reuse/import a more generic one.
+const extractMetricsFromRow = (row: any) => {
+  const spend = Number.parseFloat(row.spend || "0")
+  let conversions = 0
+  let revenue = 0
+
+  if (row.actions) {
+    const purchaseAction = row.actions.find(
+      (a: any) =>
+        a.action_type === "purchase" ||
+        a.action_type === "omni_purchase" ||
+        a.action_type === "offsite_conversion.fb_pixel_purchase",
+    )
+    if (purchaseAction) {
+      conversions += Number.parseInt(purchaseAction.value || "0")
+    }
+  }
+
+  if (row.action_values) {
+    const purchaseValue = row.action_values.find(
+      (av: any) =>
+        av.action_type === "purchase" ||
+        av.action_type === "omni_purchase" ||
+        av.action_type === "offsite_conversion.fb_pixel_purchase",
+    )
+    if (purchaseValue) {
+      revenue += Number.parseFloat(purchaseValue.value || "0")
+    }
+  }
+  return {
+    spend,
+    conversions,
+    revenue,
+    impressions: Number.parseInt(row.impressions || "0"),
+  }
+}
+
+async function fetchBreakdownData(
+  campaignId: string,
+  accessToken: string,
+  datePreset: string,
+  breakdown: string,
+  fields: string,
+): Promise<{ data?: any[]; error?: any; breakdownName?: string }> {
+  const url =
+    `https://graph.facebook.com/${META_API_VERSION}/${campaignId}/insights?` +
+    `fields=${fields}` +
+    `&breakdowns=${breakdown}` +
+    `&date_preset=${datePreset}` +
+    `&limit=500` + // Increased limit slightly
+    `&access_token=${accessToken}`
+
+  try {
+    const response = await fetch(url)
+    const data = await response.json()
+
+    if (data.error) {
+      console.error(`Meta Demographics API Error for breakdown ${breakdown}:`, data.error)
+      return { error: data.error, breakdownName: breakdown }
+    }
+    return { data: data.data || [], breakdownName: breakdown }
+  } catch (error: any) {
+    console.error(`Network or parsing error for breakdown ${breakdown}:`, error)
+    return { error: { message: error.message || "Network error" }, breakdownName: breakdown }
+  }
+}
+
 export async function POST(request: NextRequest) {
   try {
     const { campaignId, accessToken, datePreset = "last_30d" } = await request.json()
@@ -10,30 +80,68 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Campaign ID and Access Token are required." }, { status: 400 })
     }
 
-    // Construct the date_range based on datePreset or a fixed range
-    // For simplicity, using a fixed recent range. For dynamic, map datePreset to since/until.
-    // Example: last_30d would require calculating dates.
-    // The provided code uses a fixed range from 2024-01-01. Let's make it more dynamic or use date_preset.
-    // Using date_preset is simpler if the API supports it well for breakdowns.
-    // If not, we'd need to calculate 'since' and 'until' based on datePreset.
-    // For now, let's try with date_preset as it's simpler.
-    // The original code had a hardcoded time_range. Let's use datePreset for consistency.
+    const commonFields = "actions,action_values,impressions,spend"
 
-    const demographicsUrl =
-      `https://graph.facebook.com/${META_API_VERSION}/${campaignId}/insights?` +
-      `fields=actions,action_values,impressions,spend` +
-      `&breakdowns=age,gender,region,device_platform` +
-      `&date_preset=${datePreset}` + // Using datePreset
-      `&limit=200` + // Increased limit for more comprehensive data
-      `&access_token=${accessToken}`
-
-    const response = await fetch(demographicsUrl)
-    const data = await response.json()
-
-    if (data.error) {
-      console.error("Meta Demographics API Error:", data.error)
-      throw new Error(data.error.message || `Facebook API error: ${data.error.code} - ${data.error.error_subcode}`)
+    // 1. Fetch total campaign conversions for accurate percentage calculation
+    let totalConversionsAll = 0
+    try {
+      const totalStatsUrl = `https://graph.facebook.com/${META_API_VERSION}/${campaignId}/insights?fields=actions&date_preset=${datePreset}&access_token=${accessToken}`
+      const totalStatsRes = await fetch(totalStatsUrl)
+      const totalStatsData = await totalStatsRes.json()
+      if (totalStatsData.data && totalStatsData.data[0] && totalStatsData.data[0].actions) {
+        totalStatsData.data[0].actions.forEach((action: any) => {
+          if (
+            action.action_type === "purchase" ||
+            action.action_type === "omni_purchase" ||
+            action.action_type === "offsite_conversion.fb_pixel_purchase"
+          ) {
+            totalConversionsAll += Number.parseInt(action.value || "0")
+          }
+        })
+      } else if (totalStatsData.error) {
+        console.warn("Could not fetch total campaign conversions for percentages:", totalStatsData.error.message)
+      }
+    } catch (e: any) {
+      console.warn("Error fetching total campaign conversions:", e.message)
     }
+
+    const results = await Promise.all([
+      fetchBreakdownData(campaignId, accessToken, datePreset, "age", commonFields),
+      fetchBreakdownData(campaignId, accessToken, datePreset, "gender", commonFields),
+      fetchBreakdownData(campaignId, accessToken, datePreset, "region", commonFields),
+      fetchBreakdownData(campaignId, accessToken, datePreset, "device_platform", commonFields),
+    ])
+
+    const errors = results.filter((r) => r.error)
+    if (errors.length > 0) {
+      // Log all errors
+      errors.forEach((err) =>
+        console.error(
+          `Error for ${err.breakdownName}: ${err.error?.message} (Code: ${err.error?.code}, Subcode: ${err.error?.error_subcode})`,
+        ),
+      )
+
+      // If all requests failed with the same type of error, it might indicate a persistent issue.
+      // For now, returning the first error encountered.
+      const firstError = errors[0]
+      return NextResponse.json(
+        {
+          error: `Failed to fetch some demographic data. First error for ${firstError.breakdownName}: ${firstError.error?.message || "Unknown error"} (Code: ${firstError.error?.code})`,
+          details: errors.map((e) => ({
+            breakdown: e.breakdownName,
+            message: e.error?.message,
+            code: e.error?.code,
+            error_subcode: e.error?.error_subcode,
+          })),
+        },
+        { status: 500 },
+      )
+    }
+
+    const ageApiData = results.find((r) => r.breakdownName === "age")?.data || []
+    const genderApiData = results.find((r) => r.breakdownName === "gender")?.data || []
+    const regionApiData = results.find((r) => r.breakdownName === "region")?.data || []
+    const deviceApiData = results.find((r) => r.breakdownName === "device_platform")?.data || []
 
     const ageData: { [key: string]: { conversions: number; revenue: number; impressions: number; spend: number } } = {}
     const genderData: { [key: string]: { conversions: number; revenue: number; spend: number } } = {}
@@ -42,58 +150,31 @@ export async function POST(request: NextRequest) {
     } = {}
     const deviceData: { [key: string]: { conversions: number; revenue: number; spend: number } } = {}
 
-    let totalConversionsAll = 0
-
-    data.data?.forEach((row: any) => {
-      const currentSpend = Number.parseFloat(row.spend || "0")
-      let currentConversions = 0
-      let currentRevenue = 0
-
-      if (row.actions) {
-        const purchaseAction = row.actions.find(
-          (a: any) =>
-            a.action_type === "purchase" ||
-            a.action_type === "omni_purchase" ||
-            a.action_type === "offsite_conversion.fb_pixel_purchase",
-        )
-        if (purchaseAction) {
-          currentConversions += Number.parseInt(purchaseAction.value || "0")
-        }
-      }
-
-      if (row.action_values) {
-        const purchaseValue = row.action_values.find(
-          (av: any) =>
-            av.action_type === "purchase" ||
-            av.action_type === "omni_purchase" ||
-            av.action_type === "offsite_conversion.fb_pixel_purchase",
-        )
-        if (purchaseValue) {
-          currentRevenue += Number.parseFloat(purchaseValue.value || "0")
-        }
-      }
-      totalConversionsAll += currentConversions
-
-      // Age breakdown
+    ageApiData.forEach((row: any) => {
+      const metrics = extractMetricsFromRow(row)
       if (row.age) {
         if (!ageData[row.age]) ageData[row.age] = { conversions: 0, revenue: 0, impressions: 0, spend: 0 }
-        ageData[row.age].conversions += currentConversions
-        ageData[row.age].revenue += currentRevenue
-        ageData[row.age].impressions += Number.parseInt(row.impressions || "0")
-        ageData[row.age].spend += currentSpend
+        ageData[row.age].conversions += metrics.conversions
+        ageData[row.age].revenue += metrics.revenue
+        ageData[row.age].impressions += metrics.impressions
+        ageData[row.age].spend += metrics.spend
       }
+    })
 
-      // Gender breakdown
+    genderApiData.forEach((row: any) => {
+      const metrics = extractMetricsFromRow(row)
       if (row.gender) {
         if (!genderData[row.gender]) genderData[row.gender] = { conversions: 0, revenue: 0, spend: 0 }
-        genderData[row.gender].conversions += currentConversions
-        genderData[row.gender].revenue += currentRevenue
-        genderData[row.gender].spend += currentSpend
+        genderData[row.gender].conversions += metrics.conversions
+        genderData[row.gender].revenue += metrics.revenue
+        genderData[row.gender].spend += metrics.spend
       }
+    })
 
-      // Region breakdown
+    regionApiData.forEach((row: any) => {
+      const metrics = extractMetricsFromRow(row)
       if (row.region) {
-        const key = row.region // Region can be "City, State" or just "State" or "Country"
+        const key = row.region
         if (!regionData[key]) {
           const parts = key.split(",")
           regionData[key] = {
@@ -104,17 +185,19 @@ export async function POST(request: NextRequest) {
             spend: 0,
           }
         }
-        regionData[key].conversions += currentConversions
-        regionData[key].revenue += currentRevenue
-        regionData[key].spend += currentSpend
+        regionData[key].conversions += metrics.conversions
+        regionData[key].revenue += metrics.revenue
+        regionData[key].spend += metrics.spend
       }
+    })
 
-      // Device platform
+    deviceApiData.forEach((row: any) => {
+      const metrics = extractMetricsFromRow(row)
       if (row.device_platform) {
         if (!deviceData[row.device_platform]) deviceData[row.device_platform] = { conversions: 0, revenue: 0, spend: 0 }
-        deviceData[row.device_platform].conversions += currentConversions
-        deviceData[row.device_platform].revenue += currentRevenue
-        deviceData[row.device_platform].spend += currentSpend
+        deviceData[row.device_platform].conversions += metrics.conversions
+        deviceData[row.device_platform].revenue += metrics.revenue
+        deviceData[row.device_platform].spend += metrics.spend
       }
     })
 
@@ -127,22 +210,21 @@ export async function POST(request: NextRequest) {
       .sort((a, b) => b.conversions - a.conversions)
 
     const formatGender = Object.entries(genderData).map(([type, data]) => ({
-      type: type.charAt(0).toUpperCase() + type.slice(1), // Capitalize
+      type: type.charAt(0).toUpperCase() + type.slice(1),
       ...data,
       percentage: totalConversionsAll > 0 ? Math.round((data.conversions / totalConversionsAll) * 100) : 0,
     }))
 
     const formatRegion = Object.entries(regionData)
       .map(([_, data]) => ({
-        // Key 'region' is already part of 'data' as city/state
         ...data,
         roas: data.spend > 0 ? data.revenue / data.spend : 0,
       }))
-      .sort((a, b) => b.revenue - a.revenue) // Sort by revenue or conversions
+      .sort((a, b) => b.revenue - a.revenue)
 
     const formatDevice = Object.entries(deviceData)
       .map(([platform, data]) => ({
-        platform: platform.charAt(0).toUpperCase() + platform.slice(1), // Capitalize
+        platform: platform.charAt(0).toUpperCase() + platform.slice(1),
         ...data,
         percentage: totalConversionsAll > 0 ? Math.round((data.conversions / totalConversionsAll) * 100) : 0,
       }))
@@ -155,7 +237,7 @@ export async function POST(request: NextRequest) {
       device: formatDevice,
     })
   } catch (error: any) {
-    console.error("Demographics API Error:", error)
+    console.error("Demographics API Main Error Catcher:", error)
     return NextResponse.json({ error: error.message || "Failed to fetch demographics" }, { status: 500 })
   }
 }
