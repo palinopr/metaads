@@ -1,5 +1,7 @@
 "use client"
 
+import type React from "react"
+
 import { useState, useEffect, type FormEvent, useCallback } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -7,73 +9,149 @@ import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import { Terminal, Settings, Loader2, RefreshCw, Info } from "lucide-react"
-import Link from "next/link"
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
+import { Switch } from "@/components/ui/switch"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import {
+  Settings,
+  Loader2,
+  RefreshCw,
+  TrendingUp,
+  DollarSign,
+  Target,
+  Activity,
+  AlertCircle,
+  ExternalLink,
+  Download,
+  Users,
+} from "lucide-react"
 import { formatNumberWithCommas, formatCurrency, formatPercentage } from "@/lib/utils"
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts"
 
-// This interface matches the structure returned by our updated API route
-interface RawCampaignDataFromApi {
+// --- Interfaces ---
+interface MetaAction {
+  action_type: string
+  value: string
+}
+interface TodayInsights {
+  spend?: string
+  actions?: MetaAction[]
+}
+interface CampaignInsightData {
+  spend?: string
+  impressions?: string
+  clicks?: string
+  ctr?: string
+  cpc?: string
+  actions?: MetaAction[]
+  action_values?: MetaAction[]
+  frequency?: string
+}
+interface RawCampaign {
   id: string
   name: string
   created_time: string
-  insights?: {
-    // Insights object
-    data?: Array<{
-      // Insights data is usually an array, often with one element for aggregated results
-      spend?: string
-      impressions?: string
-      clicks?: string
-      ctr?: string
-      cpc?: string
-      actions?: Array<{ action_type: string; value: string }>
-      action_values?: Array<{ action_type: string; value: string }>
-    }>
+  effective_status: string
+  insights?: { data?: CampaignInsightData[] }
+}
+interface AdSet {
+  id: string
+  name: string
+  status: string
+  insights?: { data?: CampaignInsightData[] }
+}
+interface HourlyDataPoint {
+  time_start: string
+  spend?: string
+  impressions?: string
+  clicks?: string
+  actions?: MetaAction[]
+}
+
+interface ProcessedCampaign extends RawCampaign {
+  processedInsights: {
+    spend: number
+    revenue: number
+    conversions: number
+    roas: number
+    impressions: number
+    clicks: number
+    ctr: number
+    cpc: number
+    frequency: number
   }
+  expandedData?: { adSets: AdSet[]; hourlyData: HourlyDataPoint[]; isLoading: boolean; error?: string }
 }
-
-interface ProcessedCampaign {
-  id: string
-  name: string
-  spend: number
-  revenue: number
-  conversions: number
-  roas: number
-  impressions: number
-  clicks: number
-  ctr: number
-  cpc: number
-  created_time: string
-}
-
 interface FetchError {
   error: string
   details?: any
 }
 
-const findActionValue = (
-  items: Array<{ action_type: string; value: string }> | undefined,
-  targetActionType: string,
-): number => {
+// --- Helper Functions ---
+const findMetaActionValue = (items: MetaAction[] | undefined, targetTypes: string[]): number => {
   if (!items) return 0
-  const purchaseActionTypes = [targetActionType, "omni_purchase", "purchase", "offsite_conversion.fb_pixel_purchase"]
   return items
-    .filter((item) => purchaseActionTypes.includes(item.action_type))
+    .filter((item) => targetTypes.includes(item.action_type))
     .reduce((sum, item) => sum + Number.parseFloat(item.value || "0"), 0)
 }
 
-const DATE_PRESET = "last_30_days" // Declare the DATE_PRESET variable
+const processCampaignInsights = (insightData?: CampaignInsightData) => {
+  const data = insightData || {}
+  const spend = Number.parseFloat(data.spend || "0")
+  const revenue = findMetaActionValue(data.action_values, [
+    "omni_purchase",
+    "purchase",
+    "offsite_conversion.fb_pixel_purchase",
+  ])
+  const conversions = findMetaActionValue(data.actions, [
+    "omni_purchase",
+    "purchase",
+    "offsite_conversion.fb_pixel_purchase",
+  ])
+  return {
+    spend,
+    revenue,
+    conversions,
+    roas: spend > 0 ? revenue / spend : 0,
+    impressions: Number.parseInt(data.impressions || "0", 10),
+    clicks: Number.parseInt(data.clicks || "0", 10),
+    ctr: Number.parseFloat(data.ctr || "0"),
+    cpc: Number.parseFloat(data.cpc || "0"),
+    frequency: Number.parseFloat(data.frequency || "0"),
+  }
+}
 
-export default function HomePage() {
+// --- Main Component ---
+export default function AdvancedDashboardPage() {
   const [accessToken, setAccessToken] = useState("")
   const [adAccountId, setAdAccountId] = useState("")
   const [credentialsSubmitted, setCredentialsSubmitted] = useState(false)
+  const [showSettings, setShowSettings] = useState(true)
 
-  const [campaignsData, setCampaignsData] = useState<ProcessedCampaign[]>([])
+  // Data states
+  const [todaySpend, setTodaySpend] = useState(0)
+  const [todayConversions, setTodayConversions] = useState(0)
+  const [activeCampaignsCount, setActiveCampaignsCount] = useState(0)
+  const [campaigns, setCampaigns] = useState<ProcessedCampaign[]>([])
+  const [overallStats, setOverallStats] = useState({
+    totalRevenue: 0,
+    avgCPA: 0,
+    totalSpend: 0,
+    totalConversions: 0,
+    avgROAS: 0,
+    avgCTR: 0,
+    avgCPC: 0,
+  })
+
+  // UI states
   const [isLoading, setIsLoading] = useState(false)
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [fetchError, setFetchError] = useState<FetchError | null>(null)
-  const [showSettings, setShowSettings] = useState(true)
+  const [autoRefreshEnabled, setAutoRefreshEnabled] = useState(false)
+  const [refreshInterval, setRefreshInterval] = useState("5") // minutes
+  const [expandedCampaignId, setExpandedCampaignId] = useState<string | null>(null)
 
+  // --- Effects ---
   useEffect(() => {
     const storedToken = localStorage.getItem("metaAccessToken")
     const storedAccountId = localStorage.getItem("metaAdAccountId")
@@ -82,17 +160,12 @@ export default function HomePage() {
       setAdAccountId(storedAccountId)
       setCredentialsSubmitted(true)
       setShowSettings(false)
-    } else {
-      setShowSettings(true)
     }
   }, [])
 
-  const fetchMetaAdsData = useCallback(
+  const fetchOverviewData = useCallback(
     async (isRefresh = false) => {
-      if (!accessToken || !adAccountId) {
-        setFetchError({ error: "Credentials are not set. Please enter them in settings." })
-        return
-      }
+      if (!accessToken || !adAccountId) return
       if (!isRefresh) setIsLoading(true)
       else setIsRefreshing(true)
       setFetchError(null)
@@ -101,63 +174,45 @@ export default function HomePage() {
         const res = await fetch(`/api/meta`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ accessToken, adAccountId }),
+          body: JSON.stringify({ accessToken, adAccountId, type: "overview", datePreset: "last_30d" }),
         })
-        const responseData = await res.json()
+        const data = await res.json()
+        if (!res.ok) throw new Error(data.error || "Failed to fetch overview data")
 
-        if (!res.ok) {
-          setFetchError({
-            error: `Failed to fetch ads data. API responded with: ${responseData.error || res.statusText}`,
-            details: responseData.details,
-          })
-          setCampaignsData([])
-          return
-        }
+        setTodaySpend(Number.parseFloat(data.todayData?.spend || "0"))
+        setTodayConversions(findMetaActionValue(data.todayData?.actions, ["omni_purchase", "purchase"]))
+        setActiveCampaignsCount(data.activeCampaignsCount || 0)
 
-        if (!responseData.data || responseData.data.length === 0) {
-          setCampaignsData([])
-          if (responseData.error) {
-            // Check if the API itself returned an error object within data
-            setFetchError({
-              error: `Meta API Error: ${responseData.error.message || "Unknown error"}`,
-              details: responseData.error,
-            })
-          }
-          // If no error and no data, it's just an empty set.
-          return
-        }
+        const processedCampaignsList = (data.campaigns || []).map((c: RawCampaign) => ({
+          ...c,
+          processedInsights: processCampaignInsights(c.insights?.data?.[0]),
+        }))
+        setCampaigns(processedCampaignsList)
 
-        const processedData = responseData.data.map((campaign: RawCampaignDataFromApi): ProcessedCampaign => {
-          // Get the first (and usually only) entry from insights.data array
-          const insightData = campaign.insights?.data?.[0] || {}
-
-          const spend = Number.parseFloat(insightData.spend || "0") // Spend from insights
-          const revenue = findActionValue(insightData.action_values, "omni_purchase")
-          const conversions = findActionValue(insightData.actions, "omni_purchase")
-          const roas = spend > 0 ? revenue / spend : 0
-          const impressions = Number.parseInt(insightData.impressions || "0", 10)
-          const clicks = Number.parseInt(insightData.clicks || "0", 10)
-          const ctr = Number.parseFloat(insightData.ctr || "0")
-          const cpc = Number.parseFloat(insightData.cpc || "0")
-
-          return {
-            id: campaign.id,
-            name: campaign.name,
-            spend,
-            revenue,
-            conversions: Math.round(conversions),
-            roas,
-            impressions,
-            clicks,
-            ctr,
-            cpc,
-            created_time: campaign.created_time,
-          }
+        // Calculate overall stats from the campaign list (last 30d)
+        let totalSpend = 0,
+          totalRevenue = 0,
+          totalConversions = 0,
+          totalImpressions = 0,
+          totalClicks = 0
+        processedCampaignsList.forEach((c) => {
+          totalSpend += c.processedInsights.spend
+          totalRevenue += c.processedInsights.revenue
+          totalConversions += c.processedInsights.conversions
+          totalImpressions += c.processedInsights.impressions
+          totalClicks += c.processedInsights.clicks
         })
-        setCampaignsData(processedData)
-      } catch (error: any) {
-        setFetchError({ error: error.message || "An unknown error occurred." })
-        setCampaignsData([])
+        setOverallStats({
+          totalSpend,
+          totalRevenue,
+          totalConversions,
+          avgCPA: totalConversions > 0 ? totalSpend / totalConversions : 0,
+          avgROAS: totalSpend > 0 ? totalRevenue / totalSpend : 0,
+          avgCTR: totalImpressions > 0 ? (totalClicks / totalImpressions) * 100 : 0,
+          avgCPC: totalClicks > 0 ? totalSpend / totalClicks : 0,
+        })
+      } catch (err: any) {
+        setFetchError({ error: err.message })
       } finally {
         if (!isRefresh) setIsLoading(false)
         else setIsRefreshing(false)
@@ -167,69 +222,153 @@ export default function HomePage() {
   )
 
   useEffect(() => {
-    if (credentialsSubmitted && accessToken && adAccountId) {
-      fetchMetaAdsData()
-    }
-  }, [credentialsSubmitted, accessToken, adAccountId, fetchMetaAdsData])
+    if (credentialsSubmitted) fetchOverviewData()
+  }, [credentialsSubmitted, fetchOverviewData])
 
-  const handleCredentialSubmit = (event: FormEvent) => {
-    event.preventDefault()
+  useEffect(() => {
+    let intervalId: NodeJS.Timeout | null = null
+    if (autoRefreshEnabled && credentialsSubmitted) {
+      intervalId = setInterval(() => fetchOverviewData(true), Number(refreshInterval) * 60 * 1000)
+    }
+    return () => {
+      if (intervalId) clearInterval(intervalId)
+    }
+  }, [autoRefreshEnabled, refreshInterval, credentialsSubmitted, fetchOverviewData])
+
+  const handleCredentialSubmit = (e: FormEvent) => {
+    e.preventDefault()
     if (!accessToken || !adAccountId) {
-      setFetchError({ error: "Access Token and Ad Account ID are required." })
+      setFetchError({ error: "Token and Account ID are required." })
       return
     }
-    setFetchError(null)
     localStorage.setItem("metaAccessToken", accessToken)
     localStorage.setItem("metaAdAccountId", adAccountId)
     setCredentialsSubmitted(true)
     setShowSettings(false)
   }
-
   const clearCredentials = () => {
+    /* ... (same as before) ... */
     localStorage.removeItem("metaAccessToken")
     localStorage.removeItem("metaAdAccountId")
     setAccessToken("")
     setAdAccountId("")
     setCredentialsSubmitted(false)
-    setCampaignsData([])
+    setCampaigns([])
     setFetchError(null)
     setShowSettings(true)
+    setTodaySpend(0)
+    setTodayConversions(0)
+    setActiveCampaignsCount(0)
+    setOverallStats({
+      totalRevenue: 0,
+      avgCPA: 0,
+      totalSpend: 0,
+      totalConversions: 0,
+      avgROAS: 0,
+      avgCTR: 0,
+      avgCPC: 0,
+    })
   }
 
-  return (
-    <div className="container mx-auto px-2 sm:px-4 py-8 space-y-6 min-h-screen">
-      <div className="flex flex-wrap justify-between items-center gap-4 border-b pb-4">
-        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Meta Ads Dashboard</h1>
-        <div className="flex items-center gap-2">
-          {credentialsSubmitted && (
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={() => fetchMetaAdsData(true)}
-              disabled={isRefreshing || isLoading}
-              title="Refresh Data"
-            >
-              {isRefreshing ? <Loader2 className="h-5 w-5 animate-spin" /> : <RefreshCw className="h-5 w-5" />}
-              <span className="sr-only">Refresh Data</span>
-            </Button>
-          )}
-          <Button variant="outline" size="icon" onClick={() => setShowSettings(!showSettings)} title="Settings">
-            <Settings className="h-5 w-5" />
-            <span className="sr-only">Toggle Settings</span>
-          </Button>
-        </div>
-      </div>
+  const fetchCampaignDetails = async (campaignId: string) => {
+    setCampaigns((prev) =>
+      prev.map((c) =>
+        c.id === campaignId
+          ? {
+              ...c,
+              expandedData: {
+                ...(c.expandedData || { adSets: [], hourlyData: [] }),
+                isLoading: true,
+                error: undefined,
+              },
+            }
+          : c,
+      ),
+    )
+    try {
+      const res = await fetch(`/api/meta`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          accessToken,
+          adAccountId,
+          type: "campaign_details",
+          campaignId,
+          datePreset: "last_30d",
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || `Failed to fetch details for campaign ${campaignId}`)
 
-      {showSettings && (
-        <Card className="max-w-md mx-auto shadow-lg">
+      setCampaigns((prev) =>
+        prev.map((c) =>
+          c.id === campaignId
+            ? { ...c, expandedData: { adSets: data.adSets, hourlyData: data.hourlyData, isLoading: false } }
+            : c,
+        ),
+      )
+    } catch (err: any) {
+      setCampaigns((prev) =>
+        prev.map((c) =>
+          c.id === campaignId
+            ? {
+                ...c,
+                expandedData: {
+                  ...(c.expandedData || { adSets: [], hourlyData: [] }),
+                  isLoading: false,
+                  error: err.message,
+                },
+              }
+            : c,
+        ),
+      )
+    }
+  }
+
+  const onAccordionChange = (value: string) => {
+    setExpandedCampaignId(value)
+    if (value && !campaigns.find((c) => c.id === value)?.expandedData?.adSets?.length) {
+      // Fetch only if not already fetched or empty
+      fetchCampaignDetails(value)
+    }
+  }
+
+  // --- Metric Card Component ---
+  const MetricCard = ({
+    title,
+    value,
+    gradient,
+    icon: Icon,
+  }: { title: string; value: string | number; gradient: string; icon: React.ElementType }) => (
+    <Card className={`text-white shadow-xl ${gradient} hover:opacity-90 transition-opacity`}>
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+        <CardTitle className="text-sm font-medium">{title}</CardTitle>
+        <Icon className="h-5 w-5 text-gray-200" />
+      </CardHeader>
+      <CardContent>
+        <div className="text-3xl font-bold">{value}</div>
+      </CardContent>
+    </Card>
+  )
+
+  // --- Render ---
+  if (!credentialsSubmitted && showSettings) {
+    return (
+      /* ... Settings Form (same structure as before, ensure dark theme compatibility) ... */
+      <div className="flex items-center justify-center min-h-screen">
+        <Card className="w-full max-w-md mx-auto shadow-lg bg-gray-800 border-gray-700">
           <CardHeader>
-            <CardTitle className="text-xl">API Credentials</CardTitle>
-            <CardDescription>Enter Meta Ads API Access Token & Ad Account ID. Stored in your browser.</CardDescription>
+            <CardTitle className="text-xl text-white">API Credentials</CardTitle>
+            <CardDescription className="text-gray-400">
+              Enter Meta Ads API Access Token & Ad Account ID. Stored in your browser.
+            </CardDescription>
           </CardHeader>
           <form onSubmit={handleCredentialSubmit}>
             <CardContent className="space-y-4">
               <div className="space-y-1.5">
-                <Label htmlFor="accessToken">Access Token</Label>
+                <Label htmlFor="accessToken" className="text-gray-300">
+                  Access Token
+                </Label>
                 <Input
                   id="accessToken"
                   type="password"
@@ -237,11 +376,13 @@ export default function HomePage() {
                   value={accessToken}
                   onChange={(e) => setAccessToken(e.target.value)}
                   required
-                  className="text-sm"
+                  className="text-sm bg-gray-700 border-gray-600 text-white placeholder-gray-500 focus:ring-blue-500 focus:border-blue-500"
                 />
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="adAccountId">Ad Account ID</Label>
+                <Label htmlFor="adAccountId" className="text-gray-300">
+                  Ad Account ID
+                </Label>
                 <Input
                   id="adAccountId"
                   type="text"
@@ -249,7 +390,7 @@ export default function HomePage() {
                   value={adAccountId}
                   onChange={(e) => setAdAccountId(e.target.value)}
                   required
-                  className="text-sm"
+                  className="text-sm bg-gray-700 border-gray-600 text-white placeholder-gray-500 focus:ring-blue-500 focus:border-blue-500"
                 />
               </div>
             </CardContent>
@@ -258,16 +399,16 @@ export default function HomePage() {
                 type="button"
                 variant="ghost"
                 onClick={clearCredentials}
-                className="text-sm text-muted-foreground hover:text-foreground w-full sm:w-auto"
+                className="text-sm text-gray-400 hover:text-white w-full sm:w-auto"
               >
                 Clear Credentials
               </Button>
               <Button
                 type="submit"
                 disabled={isLoading || isRefreshing || !accessToken || !adAccountId}
-                className="text-sm w-full sm:w-auto"
+                className="text-sm w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white"
               >
-                {(isLoading && !campaignsData.length) || isRefreshing ? (
+                {(isLoading && !campaigns.length) || isRefreshing ? (
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 ) : null}
                 Save & Fetch Data
@@ -275,104 +416,334 @@ export default function HomePage() {
             </CardFooter>
           </form>
         </Card>
-      )}
+      </div>
+    )
+  }
 
-      {!credentialsSubmitted && !showSettings && (
-        <Alert className="max-w-lg mx-auto">
-          <Info className="h-4 w-4" />
-          <AlertTitle>Credentials Required</AlertTitle>
-          <AlertDescription>
-            Please enter credentials. Click <Settings className="inline h-4 w-4 mx-1" /> icon.
-          </AlertDescription>
-        </Alert>
-      )}
-
-      {fetchError && (
-        <Alert variant="destructive" className="max-w-2xl mx-auto shadow-md">
-          <Terminal className="h-4 w-4" />
-          <AlertTitle className="font-semibold">Error Fetching Data</AlertTitle>
-          <AlertDescription>
-            <p className="mb-1">{fetchError.error}</p>
-            {fetchError.details && (
-              <details className="mt-2 text-xs">
-                <summary className="cursor-pointer hover:underline">Details</summary>
-                <pre className="mt-1 bg-muted p-2 rounded overflow-auto max-h-40">
-                  {JSON.stringify(fetchError.details, null, 2)}
-                </pre>
-              </details>
+  return (
+    <div className="space-y-8 text-white">
+      {/* Header and Controls */}
+      <div className="flex flex-wrap justify-between items-center gap-4 border-b border-gray-700 pb-6">
+        <h1 className="text-3xl font-bold tracking-tight">Meta Ads Dashboard</h1>
+        <div className="flex items-center gap-3">
+          <div className="flex items-center space-x-2">
+            <Switch
+              id="auto-refresh"
+              checked={autoRefreshEnabled}
+              onCheckedChange={setAutoRefreshEnabled}
+              className="data-[state=checked]:bg-blue-600 data-[state=unchecked]:bg-gray-600"
+            />
+            <Label htmlFor="auto-refresh" className="text-sm text-gray-300">
+              Auto-Refresh
+            </Label>
+          </div>
+          <Select value={refreshInterval} onValueChange={setRefreshInterval} disabled={!autoRefreshEnabled}>
+            <SelectTrigger className="w-[100px] text-sm bg-gray-700 border-gray-600 hover:border-gray-500 focus:ring-blue-500">
+              <SelectValue placeholder="Interval" />
+            </SelectTrigger>
+            <SelectContent className="bg-gray-800 border-gray-700 text-white">
+              {[1, 5, 10, 30].map((val) => (
+                <SelectItem key={val} value={String(val)} className="hover:bg-gray-700">
+                  {val} min
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => fetchOverviewData(true)}
+            disabled={isRefreshing || isLoading}
+            title="Refresh Data"
+            className="border-gray-600 hover:bg-gray-700 hover:border-gray-500"
+          >
+            {isRefreshing ? (
+              <Loader2 className="h-5 w-5 animate-spin" />
+            ) : (
+              <RefreshCw className={`h-5 w-5 ${isRefreshing ? "" : "group-hover:animate-pulse"}`} />
             )}
-          </AlertDescription>
-        </Alert>
-      )}
+          </Button>
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => setShowSettings(true)}
+            title="Settings"
+            className="border-gray-600 hover:bg-gray-700 hover:border-gray-500"
+          >
+            <Settings className="h-5 w-5" />
+          </Button>
+        </div>
+      </div>
 
-      {isLoading && campaignsData.length === 0 && (
-        <div className="flex flex-col justify-center items-center py-20 text-center">
-          <Loader2 className="h-12 w-12 animate-spin text-primary" />
-          <p className="text-lg mt-4 text-muted-foreground">Loading Campaign Data...</p>
+      {/* Loading/Error States */}
+      {isLoading && campaigns.length === 0 && (
+        <div className="flex justify-center py-10">
+          <Loader2 className="h-12 w-12 animate-spin text-blue-500" />
         </div>
       )}
-
-      {!isLoading && !fetchError && credentialsSubmitted && campaignsData.length === 0 && (
-        <Alert className="max-w-lg mx-auto">
-          <Info className="h-4 w-4" />
-          <AlertTitle>No Campaign Data</AlertTitle>
-          <AlertDescription>
-            No campaigns found for the selected period ({DATE_PRESET.replace("_", " ")}), or data is still processing.
-            Try refreshing or check Meta Ads Manager.
-          </AlertDescription>
+      {fetchError && (
+        <Alert variant="destructive" className="bg-red-900 border-red-700 text-red-100">
+          <AlertCircle className="h-5 w-5 text-red-300" />
+          <AlertTitle>Error</AlertTitle>
+          <AlertDescription>{fetchError.error}</AlertDescription>
         </Alert>
       )}
 
-      {credentialsSubmitted && campaignsData.length > 0 && (
-        <Card className="shadow-md">
-          <CardHeader>
-            <CardTitle className="text-xl">Campaign Performance ({DATE_PRESET.replace("_", " ")})</CardTitle>
-            <CardDescription>Sorted by creation date (newest first). All currency in USD.</CardDescription>
-          </CardHeader>
-          <CardContent className="overflow-x-auto">
-            <Table className="min-w-full">
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-[250px] min-w-[200px]">Campaign Name</TableHead>
-                  <TableHead className="text-right">Spend</TableHead>
-                  <TableHead className="text-right">Revenue</TableHead>
-                  <TableHead className="text-right">ROAS</TableHead>
-                  <TableHead className="text-right">Conv.</TableHead>
-                  <TableHead className="text-right">Impr.</TableHead>
-                  <TableHead className="text-right">Clicks</TableHead>
-                  <TableHead className="text-right">CTR</TableHead>
-                  <TableHead className="text-right">CPC</TableHead>
-                  <TableHead className="text-right hidden md:table-cell">Created</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {campaignsData.map((campaign) => (
-                  <TableRow key={campaign.id} className="text-sm">
-                    <TableCell className="font-medium py-3">{campaign.name}</TableCell>
-                    <TableCell className="text-right py-3">{formatCurrency(campaign.spend)}</TableCell>
-                    <TableCell className="text-right py-3">{formatCurrency(campaign.revenue)}</TableCell>
-                    <TableCell className="text-right py-3">{campaign.roas.toFixed(2)}x</TableCell>
-                    <TableCell className="text-right py-3">{formatNumberWithCommas(campaign.conversions)}</TableCell>
-                    <TableCell className="text-right py-3">{formatNumberWithCommas(campaign.impressions)}</TableCell>
-                    <TableCell className="text-right py-3">{formatNumberWithCommas(campaign.clicks)}</TableCell>
-                    <TableCell className="text-right py-3">{formatPercentage(campaign.ctr)}</TableCell>
-                    <TableCell className="text-right py-3">{formatCurrency(campaign.cpc)}</TableCell>
-                    <TableCell className="text-right hidden md:table-cell py-3 text-xs text-muted-foreground">
-                      {new Date(campaign.created_time).toLocaleDateString()}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </CardContent>
+      {/* Metric Cards */}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+        <MetricCard
+          title="Today's Spend"
+          value={formatCurrency(todaySpend)}
+          gradient="bg-gradient-to-br from-blue-900 to-blue-800"
+          icon={DollarSign}
+        />
+        <MetricCard
+          title="Total Revenue (30d)"
+          value={formatCurrency(overallStats.totalRevenue)}
+          gradient="bg-gradient-to-br from-green-900 to-green-800"
+          icon={TrendingUp}
+        />
+        <MetricCard
+          title="Active Campaigns"
+          value={activeCampaignsCount}
+          gradient="bg-gradient-to-br from-purple-900 to-purple-800"
+          icon={Activity}
+        />
+        <MetricCard
+          title="Today's Conversions"
+          value={formatNumberWithCommas(todayConversions)}
+          gradient="bg-gradient-to-br from-yellow-800 to-yellow-700"
+          icon={Target}
+        />
+        <MetricCard
+          title="Avg CPA (30d)"
+          value={formatCurrency(overallStats.avgCPA)}
+          gradient="bg-gradient-to-br from-red-900 to-red-800"
+          icon={DollarSign}
+        />
+        {/* Refresh button is now with controls, this card can be another metric or removed */}
+        <Card className="bg-gray-800 border-gray-700 shadow-xl flex items-center justify-center">
+          <Users className="h-10 w-10 text-gray-500" /> {/* Placeholder for 6th card */}
         </Card>
-      )}
-      <footer className="text-center mt-12 py-6 border-t">
-        <p className="text-sm text-muted-foreground">Meta Ads Dashboard | Built with Next.js & v0</p>
-        <Button variant="link" asChild className="mt-1">
-          <Link href="/about">About This App</Link>
-        </Button>
+      </div>
+
+      {/* Overall Stats Cards */}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
+        <StatCard title="Total Spend (30d)" value={formatCurrency(overallStats.totalSpend)} />
+        <StatCard title="Total Conversions (30d)" value={formatNumberWithCommas(overallStats.totalConversions)} />
+        <StatCard title="Overall ROAS (30d)" value={`${overallStats.avgROAS.toFixed(2)}x`} />
+        <StatCard title="Avg CTR (30d)" value={formatPercentage(overallStats.avgCTR)} />
+        <StatCard title="Avg CPC (30d)" value={formatCurrency(overallStats.avgCPC)} />
+      </div>
+
+      {/* Campaigns Table */}
+      <Card className="bg-gray-800 border-gray-700 shadow-xl">
+        <CardHeader>
+          <CardTitle>Campaigns Overview (Last 30 Days)</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <Accordion
+            type="single"
+            collapsible
+            className="w-full"
+            value={expandedCampaignId || undefined}
+            onValueChange={onAccordionChange}
+          >
+            {campaigns.map((campaign) => (
+              <AccordionItem key={campaign.id} value={campaign.id} className="border-b border-gray-700">
+                <AccordionTrigger className="hover:bg-gray-750 px-4 py-3 text-left text-sm font-medium [&[data-state=open]>svg]:rotate-180">
+                  <div className="grid grid-cols-3 md:grid-cols-6 gap-2 w-full items-center">
+                    <span className="col-span-2 md:col-span-1 truncate">{campaign.name}</span>
+                    <span className="text-right hidden md:block">
+                      {formatCurrency(campaign.processedInsights.spend)}
+                    </span>
+                    <span className="text-right hidden md:block">{`${campaign.processedInsights.roas.toFixed(2)}x`}</span>
+                    <span className="text-right">{formatNumberWithCommas(campaign.processedInsights.conversions)}</span>
+                    <span className="text-right hidden md:block">
+                      {formatPercentage(campaign.processedInsights.ctr)}
+                    </span>
+                    <span
+                      className={`text-xs ${campaign.effective_status === "ACTIVE" ? "text-green-400" : "text-gray-400"} hidden md:block text-right`}
+                    >
+                      {campaign.effective_status}
+                    </span>
+                  </div>
+                </AccordionTrigger>
+                <AccordionContent className="bg-gray-850 p-4 space-y-6">
+                  {campaign.expandedData?.isLoading && (
+                    <div className="flex justify-center py-4">
+                      <Loader2 className="h-6 w-6 animate-spin text-blue-400" />
+                    </div>
+                  )}
+                  {campaign.expandedData?.error && (
+                    <Alert variant="destructive" className="bg-red-900 border-red-700 text-red-100">
+                      <AlertCircle className="h-4 w-4" />
+                      {campaign.expandedData.error}
+                    </Alert>
+                  )}
+
+                  {campaign.expandedData && !campaign.expandedData.isLoading && !campaign.expandedData.error && (
+                    <>
+                      {/* Hourly Chart */}
+                      <Card className="bg-gray-800 border-gray-700">
+                        <CardHeader>
+                          <CardTitle className="text-base">Today's Hourly Performance</CardTitle>
+                        </CardHeader>
+                        <CardContent className="h-[250px]">
+                          <ResponsiveContainer width="100%" height="100%">
+                            <AreaChart
+                              data={campaign.expandedData.hourlyData.map((h) => ({
+                                time: new Date(h.time_start).toLocaleTimeString([], {
+                                  hour: "2-digit",
+                                  minute: "2-digit",
+                                }),
+                                spend: Number.parseFloat(h.spend || "0"),
+                                impressions: Number.parseInt(h.impressions || "0", 10),
+                              }))}
+                            >
+                              <CartesianGrid strokeDasharray="3 3" stroke="#4A5568" />
+                              <XAxis dataKey="time" stroke="#9CA3AF" fontSize={12} />
+                              <YAxis yAxisId="left" stroke="#9CA3AF" fontSize={12} />
+                              <YAxis yAxisId="right" orientation="right" stroke="#9CA3AF" fontSize={12} />
+                              <Tooltip
+                                contentStyle={{
+                                  backgroundColor: "#1F2937",
+                                  border: "1px solid #374151",
+                                  borderRadius: "0.25rem",
+                                }}
+                                itemStyle={{ color: "#E5E7EB" }}
+                                labelStyle={{ color: "#CBD5E1" }}
+                              />
+                              <Legend wrapperStyle={{ fontSize: "12px" }} />
+                              <Area
+                                yAxisId="left"
+                                type="monotone"
+                                dataKey="spend"
+                                stroke="#3B82F6"
+                                fill="#3B82F6"
+                                fillOpacity={0.3}
+                                name="Spend ($)"
+                              />
+                              <Area
+                                yAxisId="right"
+                                type="monotone"
+                                dataKey="impressions"
+                                stroke="#10B981"
+                                fill="#10B981"
+                                fillOpacity={0.3}
+                                name="Impressions"
+                              />
+                            </AreaChart>
+                          </ResponsiveContainer>
+                        </CardContent>
+                      </Card>
+
+                      {/* Ad Sets Table */}
+                      <Card className="bg-gray-800 border-gray-700">
+                        <CardHeader>
+                          <CardTitle className="text-base">Ad Sets</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <Table>
+                            <TableHeader>
+                              <TableRow className="border-gray-700 hover:bg-gray-750">
+                                <TableHead>Name</TableHead>
+                                <TableHead>Status</TableHead>
+                                <TableHead className="text-right">Spend</TableHead>
+                              </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                              {campaign.expandedData.adSets.map((adSet) => {
+                                const adSetInsights = processCampaignInsights(adSet.insights?.data?.[0])
+                                return (
+                                  <TableRow key={adSet.id} className="border-gray-700 hover:bg-gray-750 text-xs">
+                                    <TableCell>{adSet.name}</TableCell>
+                                    <TableCell
+                                      className={adSet.status === "ACTIVE" ? "text-green-400" : "text-gray-400"}
+                                    >
+                                      {adSet.status}
+                                    </TableCell>
+                                    <TableCell className="text-right">{formatCurrency(adSetInsights.spend)}</TableCell>
+                                  </TableRow>
+                                )
+                              })}
+                            </TableBody>
+                          </Table>
+                        </CardContent>
+                      </Card>
+
+                      {/* AI Reco & Actions */}
+                      <div className="grid md:grid-cols-2 gap-4">
+                        <Card className="bg-gray-800 border-gray-700">
+                          <CardHeader>
+                            <CardTitle className="text-base">Quick Analysis</CardTitle>
+                          </CardHeader>
+                          <CardContent className="text-xs">
+                            <p>ROAS: {campaign.processedInsights.roas.toFixed(2)}x</p>
+                            <p className="mt-1">
+                              {campaign.processedInsights.roas < 1
+                                ? "Recommendation: ROAS is low. Review ad creatives, targeting, and landing page."
+                                : campaign.processedInsights.roas > 3
+                                  ? "Recommendation: ROAS is strong! Consider scaling budget or exploring lookalike audiences."
+                                  : "Recommendation: Performance is moderate. Monitor closely and optimize."}
+                            </p>
+                            {campaign.processedInsights.frequency > 3 && (
+                              <p className="mt-2 text-yellow-400">
+                                <AlertCircle className="inline h-4 w-4 mr-1" />
+                                High Frequency ({campaign.processedInsights.frequency.toFixed(2)}). Consider audience
+                                refresh.
+                              </p>
+                            )}
+                          </CardContent>
+                        </Card>
+                        <div className="space-y-2 flex flex-col justify-center">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="border-gray-600 hover:bg-gray-700 hover:border-gray-500 text-xs"
+                            onClick={() => alert("Exporting campaign data (not implemented yet)...")}
+                          >
+                            <Download className="mr-2 h-3 w-3" /> Export Campaign Data
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            asChild
+                            className="border-gray-600 hover:bg-gray-700 hover:border-gray-500 text-xs"
+                          >
+                            <a
+                              href={`https://www.facebook.com/adsmanager/manage/campaigns/edit?act=${adAccountId}&campaign_id=${campaign.id}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                            >
+                              <ExternalLink className="mr-2 h-3 w-3" /> View in Ads Manager
+                            </a>
+                          </Button>
+                        </div>
+                      </div>
+                    </>
+                  )}
+                </AccordionContent>
+              </AccordionItem>
+            ))}
+          </Accordion>
+        </CardContent>
+      </Card>
+      <footer className="text-center mt-12 py-6 border-t border-gray-700">
+        <p className="text-sm text-gray-400">Meta Ads Dashboard Pro | Built with Next.js & v0</p>
       </footer>
     </div>
   )
 }
+
+// Simple Stat Card component
+const StatCard = ({ title, value }: { title: string; value: string | number }) => (
+  <Card className="bg-gray-800 border-gray-700 shadow-lg hover:bg-gray-750 transition-colors">
+    <CardHeader className="pb-2">
+      <CardTitle className="text-sm font-medium text-gray-400">{title}</CardTitle>
+    </CardHeader>
+    <CardContent>
+      <div className="text-2xl font-bold text-white">{value}</div>
+    </CardContent>
+  </Card>
+)
