@@ -14,6 +14,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs" 
 import { DateRangeSelector, type DateRangePreset } from "@/components/date-range-selector"
 import { CampaignPredictions } from "@/components/campaign-predictions" // Added CampaignPredictions
 import { AIAnalysisModal } from "@/components/ai-analysis-modal"
+import { DemographicAnalytics } from "@/components/demographic-analytics"
 import {
   Settings,
   Loader2,
@@ -27,6 +28,7 @@ import {
   Download,
   LineChartIcon,
   BarChart3,
+  Users,
 } from "lucide-react"
 import { formatNumberWithCommas, formatCurrency, formatPercentage } from "@/lib/utils"
 import {
@@ -743,7 +745,7 @@ export default function AdvancedDashboardPage() {
 
                       {campaign.expandedData && !campaign.expandedData.isLoading && !campaign.expandedData.error && (
                         <Tabs defaultValue="details" className="w-full">
-                          <TabsList className="grid w-full grid-cols-2 md:grid-cols-3 gap-1 bg-gray-700/50 p-1 rounded-lg mb-4">
+                          <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 gap-1 bg-gray-700/50 p-1 rounded-lg mb-4">
                             <TabsTrigger
                               value="details"
                               className="text-xs md:text-sm py-1.5 data-[state=active]:bg-gray-600 data-[state=active]:text-white text-gray-300 hover:bg-gray-600/70"
@@ -756,7 +758,12 @@ export default function AdvancedDashboardPage() {
                             >
                               <BarChart3 className="mr-1.5 h-4 w-4" /> Predictions
                             </TabsTrigger>
-                            {/* Placeholder for future "Compare" tab */}
+                            <TabsTrigger
+                              value="demographics"
+                              className="text-xs md:text-sm py-1.5 data-[state=active]:bg-gray-600 data-[state=active]:text-white text-gray-300 hover:bg-gray-600/70"
+                            >
+                              <Users className="mr-1.5 h-4 w-4" /> Demographics
+                            </TabsTrigger>
                             <TabsTrigger
                               value="compare"
                               disabled
@@ -885,22 +892,31 @@ export default function AdvancedDashboardPage() {
                               <CardContent className="h-[250px]">
                                 <ResponsiveContainer width="100%" height="100%">
                                   <AreaChart
-                                    data={campaign.expandedData.hourlyData.map((h) => ({
-                                      time: new Date(
-                                        h.hourly_stats_aggregated_by_advertiser_time_zone || h.time_start || Date.now(),
-                                      ).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-                                      spend: Number.parseFloat(h.spend || "0"),
-                                      roas:
-                                        Number.parseFloat(h.spend || "0") > 0
-                                          ? findMetaActionValue(h.actions, ["omni_purchase", "purchase"]) /
-                                            Number.parseFloat(h.spend || "0")
-                                          : 0,
+                                    data={(campaign.expandedData.hourlyData || []).map((h: any) => ({
+                                      time: h.time_start, // This is now directly from the API (e.g., "00:00", "01:00")
+                                      spend: h.spend,
+                                      revenue: h.revenue, // Added revenue
+                                      roas: h.roas,
+                                      conversions: h.conversions, // Added conversions
                                     }))}
                                   >
                                     <CartesianGrid strokeDasharray="3 3" stroke="rgba(107, 114, 128, 0.3)" />
-                                    <XAxis dataKey="time" stroke="#9CA3AF" fontSize={12} />
-                                    <YAxis yAxisId="left" stroke="#9CA3AF" fontSize={12} />
-                                    <YAxis yAxisId="right" orientation="right" stroke="#9CA3AF" fontSize={12} />
+                                    <XAxis dataKey="time" stroke="#9CA3AF" fontSize={10} />
+                                    <YAxis
+                                      yAxisId="left"
+                                      stroke="#818CF8"
+                                      fontSize={10}
+                                      tickFormatter={(val) => formatCurrency(val)}
+                                      name="Spend ($)"
+                                    />
+                                    <YAxis
+                                      yAxisId="right"
+                                      orientation="right"
+                                      stroke="#34D399"
+                                      fontSize={10}
+                                      tickFormatter={(val) => val.toFixed(1)}
+                                      name="ROAS (x)"
+                                    />
                                     <Tooltip
                                       contentStyle={{
                                         backgroundColor: "rgba(31, 41, 55, 0.9)",
@@ -910,14 +926,20 @@ export default function AdvancedDashboardPage() {
                                       }}
                                       itemStyle={{ color: "#D1D5DB" }}
                                       labelStyle={{ color: "#E5E7EB", fontWeight: "bold" }}
+                                      formatter={(value: number, name: string) => {
+                                        if (name === "Spend" || name === "Revenue") return formatCurrency(value)
+                                        if (name === "ROAS") return `${value.toFixed(2)}x`
+                                        if (name === "Conversions") return formatNumberWithCommas(value)
+                                        return value
+                                      }}
                                     />
-                                    <Legend wrapperStyle={{ fontSize: "12px", color: "#D1D5DB" }} />
+                                    <Legend wrapperStyle={{ fontSize: "12px", color: "#D1D5DB", paddingTop: "10px" }} />
                                     <Area
                                       yAxisId="left"
                                       type="monotone"
                                       dataKey="spend"
-                                      stroke="#60A5FA"
-                                      fill="#60A5FA"
+                                      stroke="#818CF8" // Blue for spend
+                                      fill="#818CF8"
                                       fillOpacity={0.2}
                                       name="Spend ($)"
                                     />
@@ -925,11 +947,13 @@ export default function AdvancedDashboardPage() {
                                       yAxisId="right"
                                       type="monotone"
                                       dataKey="roas"
-                                      stroke="#34D399"
+                                      stroke="#34D399" // Green for ROAS
                                       fill="#34D399"
                                       fillOpacity={0.2}
-                                      name="ROAS"
+                                      name="ROAS (x)"
                                     />
+                                    {/* Optional: Add Area for Revenue if desired */}
+                                    {/* <Area yAxisId="left" type="monotone" dataKey="revenue" stroke="#FBBF24" fill="#FBBF24" fillOpacity={0.2} name="Revenue ($)" /> */}
                                   </AreaChart>
                                 </ResponsiveContainer>
                               </CardContent>
@@ -1052,6 +1076,21 @@ export default function AdvancedDashboardPage() {
                               <div className="text-center py-10 text-gray-400">
                                 <Loader2 className="mx-auto h-8 w-8 animate-spin mb-2" />
                                 Preparing prediction data...
+                              </div>
+                            )}
+                          </TabsContent>
+                          <TabsContent value="demographics" className="space-y-6">
+                            {campaign.id && accessToken && selectedDateRange && (
+                              <DemographicAnalytics
+                                campaignId={campaign.id}
+                                campaignName={campaign.name}
+                                accessToken={accessToken}
+                                datePreset={selectedDateRange}
+                              />
+                            )}
+                            {(!campaign.id || !accessToken) && (
+                              <div className="text-center py-10 text-gray-400">
+                                <p>Campaign details are required to load demographics.</p>
                               </div>
                             )}
                           </TabsContent>
