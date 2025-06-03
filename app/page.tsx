@@ -11,21 +11,24 @@ import { Terminal, Settings, Loader2, RefreshCw, Info } from "lucide-react"
 import Link from "next/link"
 import { formatNumberWithCommas, formatCurrency, formatPercentage } from "@/lib/utils"
 
-interface CampaignInsight {
-  impressions?: string
-  clicks?: string
-  ctr?: string
-  cpc?: string
-  actions?: Array<{ action_type: string; value: string }>
-  action_values?: Array<{ action_type: string; value: string }>
-}
-
-interface RawCampaignData {
+// This interface matches the structure returned by our updated API route
+interface RawCampaignDataFromApi {
   id: string
   name: string
-  spend?: string
   created_time: string
-  insights?: { data: CampaignInsight[] }
+  insights?: {
+    // Insights object
+    data?: Array<{
+      // Insights data is usually an array, often with one element for aggregated results
+      spend?: string
+      impressions?: string
+      clicks?: string
+      ctr?: string
+      cpc?: string
+      actions?: Array<{ action_type: string; value: string }>
+      action_values?: Array<{ action_type: string; value: string }>
+    }>
+  }
 }
 
 interface ProcessedCampaign {
@@ -57,6 +60,8 @@ const findActionValue = (
     .filter((item) => purchaseActionTypes.includes(item.action_type))
     .reduce((sum, item) => sum + Number.parseFloat(item.value || "0"), 0)
 }
+
+const DATE_PRESET = "last_30_days" // Declare the DATE_PRESET variable
 
 export default function HomePage() {
   const [accessToken, setAccessToken] = useState("")
@@ -99,6 +104,7 @@ export default function HomePage() {
           body: JSON.stringify({ accessToken, adAccountId }),
         })
         const responseData = await res.json()
+
         if (!res.ok) {
           setFetchError({
             error: `Failed to fetch ads data. API responded with: ${responseData.error || res.statusText}`,
@@ -107,26 +113,33 @@ export default function HomePage() {
           setCampaignsData([])
           return
         }
+
         if (!responseData.data || responseData.data.length === 0) {
           setCampaignsData([])
           if (responseData.error) {
+            // Check if the API itself returned an error object within data
             setFetchError({
               error: `Meta API Error: ${responseData.error.message || "Unknown error"}`,
               details: responseData.error,
             })
           }
+          // If no error and no data, it's just an empty set.
           return
         }
-        const processedData = responseData.data.map((campaign: RawCampaignData): ProcessedCampaign => {
-          const insight = campaign.insights?.data?.[0] || {}
-          const spend = Number.parseFloat(campaign.spend || "0")
-          const revenue = findActionValue(insight.action_values, "omni_purchase")
-          const conversions = findActionValue(insight.actions, "omni_purchase")
+
+        const processedData = responseData.data.map((campaign: RawCampaignDataFromApi): ProcessedCampaign => {
+          // Get the first (and usually only) entry from insights.data array
+          const insightData = campaign.insights?.data?.[0] || {}
+
+          const spend = Number.parseFloat(insightData.spend || "0") // Spend from insights
+          const revenue = findActionValue(insightData.action_values, "omni_purchase")
+          const conversions = findActionValue(insightData.actions, "omni_purchase")
           const roas = spend > 0 ? revenue / spend : 0
-          const impressions = Number.parseInt(insight.impressions || "0", 10)
-          const clicks = Number.parseInt(insight.clicks || "0", 10)
-          const ctr = Number.parseFloat(insight.ctr || "0")
-          const cpc = Number.parseFloat(insight.cpc || "0")
+          const impressions = Number.parseInt(insightData.impressions || "0", 10)
+          const clicks = Number.parseInt(insightData.clicks || "0", 10)
+          const ctr = Number.parseFloat(insightData.ctr || "0")
+          const cpc = Number.parseFloat(insightData.cpc || "0")
+
           return {
             id: campaign.id,
             name: campaign.name,
@@ -194,12 +207,13 @@ export default function HomePage() {
               size="icon"
               onClick={() => fetchMetaAdsData(true)}
               disabled={isRefreshing || isLoading}
+              title="Refresh Data"
             >
               {isRefreshing ? <Loader2 className="h-5 w-5 animate-spin" /> : <RefreshCw className="h-5 w-5" />}
               <span className="sr-only">Refresh Data</span>
             </Button>
           )}
-          <Button variant="outline" size="icon" onClick={() => setShowSettings(!showSettings)}>
+          <Button variant="outline" size="icon" onClick={() => setShowSettings(!showSettings)} title="Settings">
             <Settings className="h-5 w-5" />
             <span className="sr-only">Toggle Settings</span>
           </Button>
@@ -303,7 +317,8 @@ export default function HomePage() {
           <Info className="h-4 w-4" />
           <AlertTitle>No Campaign Data</AlertTitle>
           <AlertDescription>
-            No campaigns found or data is processing. Try refreshing or check Meta Ads Manager.
+            No campaigns found for the selected period ({DATE_PRESET.replace("_", " ")}), or data is still processing.
+            Try refreshing or check Meta Ads Manager.
           </AlertDescription>
         </Alert>
       )}
@@ -311,7 +326,7 @@ export default function HomePage() {
       {credentialsSubmitted && campaignsData.length > 0 && (
         <Card className="shadow-md">
           <CardHeader>
-            <CardTitle className="text-xl">Campaign Performance</CardTitle>
+            <CardTitle className="text-xl">Campaign Performance ({DATE_PRESET.replace("_", " ")})</CardTitle>
             <CardDescription>Sorted by creation date (newest first). All currency in USD.</CardDescription>
           </CardHeader>
           <CardContent className="overflow-x-auto">
