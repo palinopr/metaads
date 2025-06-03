@@ -23,7 +23,7 @@ import {
   AlertCircle,
   ExternalLink,
   Download,
-  Users,
+  Info,
 } from "lucide-react"
 import { formatNumberWithCommas, formatCurrency, formatPercentage } from "@/lib/utils"
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts"
@@ -61,7 +61,8 @@ interface AdSet {
   insights?: { data?: CampaignInsightData[] }
 }
 interface HourlyDataPoint {
-  time_start: string
+  hourly_stats_aggregated_by_advertiser_time_zone?: string // Meta API often uses this for hourly
+  time_start?: string // Fallback or alternative
   spend?: string
   impressions?: string
   clicks?: string
@@ -142,6 +143,7 @@ export default function AdvancedDashboardPage() {
     avgCTR: 0,
     avgCPC: 0,
   })
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
 
   // UI states
   const [isLoading, setIsLoading] = useState(false)
@@ -180,7 +182,13 @@ export default function AdvancedDashboardPage() {
         if (!res.ok) throw new Error(data.error || "Failed to fetch overview data")
 
         setTodaySpend(Number.parseFloat(data.todayData?.spend || "0"))
-        setTodayConversions(findMetaActionValue(data.todayData?.actions, ["omni_purchase", "purchase"]))
+        setTodayConversions(
+          findMetaActionValue(data.todayData?.actions, [
+            "omni_purchase",
+            "purchase",
+            "offsite_conversion.fb_pixel_purchase",
+          ]),
+        )
         setActiveCampaignsCount(data.activeCampaignsCount || 0)
 
         const processedCampaignsList = (data.campaigns || []).map((c: RawCampaign) => ({
@@ -189,7 +197,6 @@ export default function AdvancedDashboardPage() {
         }))
         setCampaigns(processedCampaignsList)
 
-        // Calculate overall stats from the campaign list (last 30d)
         let totalSpend = 0,
           totalRevenue = 0,
           totalConversions = 0,
@@ -211,6 +218,7 @@ export default function AdvancedDashboardPage() {
           avgCTR: totalImpressions > 0 ? (totalClicks / totalImpressions) * 100 : 0,
           avgCPC: totalClicks > 0 ? totalSpend / totalClicks : 0,
         })
+        setLastUpdated(new Date())
       } catch (err: any) {
         setFetchError({ error: err.message })
       } finally {
@@ -247,7 +255,6 @@ export default function AdvancedDashboardPage() {
     setShowSettings(false)
   }
   const clearCredentials = () => {
-    /* ... (same as before) ... */
     localStorage.removeItem("metaAccessToken")
     localStorage.removeItem("metaAdAccountId")
     setAccessToken("")
@@ -268,6 +275,7 @@ export default function AdvancedDashboardPage() {
       avgCTR: 0,
       avgCPC: 0,
     })
+    setLastUpdated(null)
   }
 
   const fetchCampaignDetails = async (campaignId: string) => {
@@ -294,7 +302,7 @@ export default function AdvancedDashboardPage() {
           adAccountId,
           type: "campaign_details",
           campaignId,
-          datePreset: "last_30d",
+          datePreset: "last_30d", // Or 'today' for hourly data consistency
         }),
       })
       const data = await res.json()
@@ -326,11 +334,21 @@ export default function AdvancedDashboardPage() {
   }
 
   const onAccordionChange = (value: string) => {
-    setExpandedCampaignId(value)
-    if (value && !campaigns.find((c) => c.id === value)?.expandedData?.adSets?.length) {
-      // Fetch only if not already fetched or empty
-      fetchCampaignDetails(value)
+    const newExpandedId = expandedCampaignId === value ? null : value // Toggle behavior
+    setExpandedCampaignId(newExpandedId)
+    if (newExpandedId && !campaigns.find((c) => c.id === newExpandedId)?.expandedData?.adSets?.length) {
+      fetchCampaignDetails(newExpandedId)
     }
+  }
+
+  const exportCampaignToJson = (campaign: ProcessedCampaign) => {
+    const dataStr = JSON.stringify(campaign, null, 2)
+    const dataUri = "data:application/json;charset=utf-8," + encodeURIComponent(dataStr)
+    const exportFileDefaultName = `${campaign.name.replace(/\s+/g, "_")}_data.json`
+    const linkElement = document.createElement("a")
+    linkElement.setAttribute("href", dataUri)
+    linkElement.setAttribute("download", exportFileDefaultName)
+    linkElement.click()
   }
 
   // --- Metric Card Component ---
@@ -339,13 +357,21 @@ export default function AdvancedDashboardPage() {
     value,
     gradient,
     icon: Icon,
-  }: { title: string; value: string | number; gradient: string; icon: React.ElementType }) => (
-    <Card className={`text-white shadow-xl ${gradient} hover:opacity-90 transition-opacity`}>
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+    pulse,
+  }: {
+    title: string
+    value: string | number
+    gradient: string
+    icon: React.ElementType
+    pulse?: boolean
+  }) => (
+    <Card className={`text-white shadow-xl ${gradient} hover:opacity-90 transition-opacity relative overflow-hidden`}>
+      {pulse && <div className="absolute inset-0 bg-white opacity-10 animate-pulse"></div>}
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 relative z-10">
         <CardTitle className="text-sm font-medium">{title}</CardTitle>
         <Icon className="h-5 w-5 text-gray-200" />
       </CardHeader>
-      <CardContent>
+      <CardContent className="relative z-10">
         <div className="text-3xl font-bold">{value}</div>
       </CardContent>
     </Card>
@@ -354,8 +380,7 @@ export default function AdvancedDashboardPage() {
   // --- Render ---
   if (!credentialsSubmitted && showSettings) {
     return (
-      /* ... Settings Form (same structure as before, ensure dark theme compatibility) ... */
-      <div className="flex items-center justify-center min-h-screen">
+      <div className="flex items-center justify-center min-h-screen bg-gray-900">
         <Card className="w-full max-w-md mx-auto shadow-lg bg-gray-800 border-gray-700">
           <CardHeader>
             <CardTitle className="text-xl text-white">API Credentials</CardTitle>
@@ -424,8 +449,8 @@ export default function AdvancedDashboardPage() {
     <div className="space-y-8 text-white">
       {/* Header and Controls */}
       <div className="flex flex-wrap justify-between items-center gap-4 border-b border-gray-700 pb-6">
-        <h1 className="text-3xl font-bold tracking-tight">Meta Ads Dashboard</h1>
-        <div className="flex items-center gap-3">
+        <h1 className="text-3xl font-bold tracking-tight">Meta Ads Dashboard Pro</h1>
+        <div className="flex items-center gap-3 flex-wrap">
           <div className="flex items-center space-x-2">
             <Switch
               id="auto-refresh"
@@ -433,7 +458,7 @@ export default function AdvancedDashboardPage() {
               onCheckedChange={setAutoRefreshEnabled}
               className="data-[state=checked]:bg-blue-600 data-[state=unchecked]:bg-gray-600"
             />
-            <Label htmlFor="auto-refresh" className="text-sm text-gray-300">
+            <Label htmlFor="auto-refresh" className="text-sm text-gray-300 whitespace-nowrap">
               Auto-Refresh
             </Label>
           </div>
@@ -443,7 +468,7 @@ export default function AdvancedDashboardPage() {
             </SelectTrigger>
             <SelectContent className="bg-gray-800 border-gray-700 text-white">
               {[1, 5, 10, 30].map((val) => (
-                <SelectItem key={val} value={String(val)} className="hover:bg-gray-700">
+                <SelectItem key={val} value={String(val)} className="hover:bg-gray-700 focus:bg-gray-600">
                   {val} min
                 </SelectItem>
               ))}
@@ -455,12 +480,12 @@ export default function AdvancedDashboardPage() {
             onClick={() => fetchOverviewData(true)}
             disabled={isRefreshing || isLoading}
             title="Refresh Data"
-            className="border-gray-600 hover:bg-gray-700 hover:border-gray-500"
+            className="bg-gray-700 border-gray-600 hover:bg-gray-600 hover:border-gray-500 text-white"
           >
             {isRefreshing ? (
               <Loader2 className="h-5 w-5 animate-spin" />
             ) : (
-              <RefreshCw className={`h-5 w-5 ${isRefreshing ? "" : "group-hover:animate-pulse"}`} />
+              <RefreshCw className="h-5 w-5 group-hover:animate-spin" /> // Simpler spin on hover
             )}
           </Button>
           <Button
@@ -474,17 +499,21 @@ export default function AdvancedDashboardPage() {
           </Button>
         </div>
       </div>
+      {lastUpdated && (
+        <p className="text-xs text-gray-500 text-right -mt-4">Last updated: {lastUpdated.toLocaleTimeString()}</p>
+      )}
 
       {/* Loading/Error States */}
       {isLoading && campaigns.length === 0 && (
-        <div className="flex justify-center py-10">
+        <div className="flex justify-center items-center py-20 min-h-[300px]">
           <Loader2 className="h-12 w-12 animate-spin text-blue-500" />
+          <p className="ml-3 text-lg text-gray-400">Loading Dashboard Data...</p>
         </div>
       )}
       {fetchError && (
-        <Alert variant="destructive" className="bg-red-900 border-red-700 text-red-100">
+        <Alert variant="destructive" className="bg-red-900/80 border-red-700 text-red-100">
           <AlertCircle className="h-5 w-5 text-red-300" />
-          <AlertTitle>Error</AlertTitle>
+          <AlertTitle className="font-semibold">Dashboard Error</AlertTitle>
           <AlertDescription>{fetchError.error}</AlertDescription>
         </Alert>
       )}
@@ -496,6 +525,7 @@ export default function AdvancedDashboardPage() {
           value={formatCurrency(todaySpend)}
           gradient="bg-gradient-to-br from-blue-900 to-blue-800"
           icon={DollarSign}
+          pulse={isRefreshing}
         />
         <MetricCard
           title="Total Revenue (30d)"
@@ -512,18 +542,29 @@ export default function AdvancedDashboardPage() {
         <MetricCard
           title="Today's Conversions"
           value={formatNumberWithCommas(todayConversions)}
-          gradient="bg-gradient-to-br from-yellow-800 to-yellow-700"
+          gradient="bg-gradient-to-br from-yellow-900 to-yellow-800"
           icon={Target}
         />
         <MetricCard
-          title="Avg CPA (30d)"
+          title="Average CPA (30d)"
           value={formatCurrency(overallStats.avgCPA)}
           gradient="bg-gradient-to-br from-red-900 to-red-800"
           icon={DollarSign}
         />
-        {/* Refresh button is now with controls, this card can be another metric or removed */}
         <Card className="bg-gray-800 border-gray-700 shadow-xl flex items-center justify-center">
-          <Users className="h-10 w-10 text-gray-500" /> {/* Placeholder for 6th card */}
+          <Button
+            variant="ghost"
+            className="w-full h-full flex flex-col items-center justify-center text-gray-400 hover:text-white hover:bg-gray-700/50"
+            onClick={() => fetchOverviewData(true)}
+            disabled={isRefreshing || isLoading}
+          >
+            {isRefreshing ? (
+              <Loader2 className="h-8 w-8 animate-spin" />
+            ) : (
+              <RefreshCw className="h-8 w-8 group-hover:animate-spin" />
+            )}
+            <span className="mt-2 text-xs">Refresh All</span>
+          </Button>
         </Card>
       </div>
 
@@ -537,200 +578,263 @@ export default function AdvancedDashboardPage() {
       </div>
 
       {/* Campaigns Table */}
-      <Card className="bg-gray-800 border-gray-700 shadow-xl">
-        <CardHeader>
-          <CardTitle>Campaigns Overview (Last 30 Days)</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Accordion
-            type="single"
-            collapsible
-            className="w-full"
-            value={expandedCampaignId || undefined}
-            onValueChange={onAccordionChange}
-          >
-            {campaigns.map((campaign) => (
-              <AccordionItem key={campaign.id} value={campaign.id} className="border-b border-gray-700">
-                <AccordionTrigger className="hover:bg-gray-750 px-4 py-3 text-left text-sm font-medium [&[data-state=open]>svg]:rotate-180">
-                  <div className="grid grid-cols-3 md:grid-cols-6 gap-2 w-full items-center">
-                    <span className="col-span-2 md:col-span-1 truncate">{campaign.name}</span>
-                    <span className="text-right hidden md:block">
-                      {formatCurrency(campaign.processedInsights.spend)}
-                    </span>
-                    <span className="text-right hidden md:block">{`${campaign.processedInsights.roas.toFixed(2)}x`}</span>
-                    <span className="text-right">{formatNumberWithCommas(campaign.processedInsights.conversions)}</span>
-                    <span className="text-right hidden md:block">
-                      {formatPercentage(campaign.processedInsights.ctr)}
-                    </span>
-                    <span
-                      className={`text-xs ${campaign.effective_status === "ACTIVE" ? "text-green-400" : "text-gray-400"} hidden md:block text-right`}
-                    >
-                      {campaign.effective_status}
-                    </span>
-                  </div>
-                </AccordionTrigger>
-                <AccordionContent className="bg-gray-850 p-4 space-y-6">
-                  {campaign.expandedData?.isLoading && (
-                    <div className="flex justify-center py-4">
-                      <Loader2 className="h-6 w-6 animate-spin text-blue-400" />
+      {credentialsSubmitted && !isLoading && campaigns.length > 0 && (
+        <Card className="bg-gray-800 border-gray-700 shadow-xl">
+          <CardHeader>
+            <CardTitle className="text-xl">Campaigns Overview (Last 30 Days)</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Accordion
+              type="single"
+              collapsible
+              className="w-full"
+              value={expandedCampaignId || undefined}
+              onValueChange={onAccordionChange}
+            >
+              {campaigns.map((campaign) => (
+                <AccordionItem
+                  key={campaign.id}
+                  value={campaign.id}
+                  className="border-b border-gray-700 last:border-b-0"
+                >
+                  <AccordionTrigger className="hover:bg-gray-700/50 px-4 py-3 text-left text-sm font-medium [&[data-state=open]>svg]:rotate-180 transition-colors">
+                    <div className="grid grid-cols-3 md:grid-cols-6 gap-2 w-full items-center">
+                      <span className="col-span-2 md:col-span-1 truncate" title={campaign.name}>
+                        {campaign.name}
+                      </span>
+                      <span className="text-right hidden md:block">
+                        {formatCurrency(campaign.processedInsights.spend)}
+                      </span>
+                      <span className="text-right hidden md:block">{`${campaign.processedInsights.roas.toFixed(
+                        2,
+                      )}x`}</span>
+                      <span className="text-right">
+                        {formatNumberWithCommas(campaign.processedInsights.conversions)}
+                      </span>
+                      <span className="text-right hidden md:block">
+                        {formatPercentage(campaign.processedInsights.ctr)}
+                      </span>
+                      <span
+                        className={`text-xs ${
+                          campaign.effective_status === "ACTIVE" ? "text-green-400" : "text-gray-400"
+                        } hidden md:block text-right`}
+                      >
+                        {campaign.effective_status}
+                      </span>
                     </div>
-                  )}
-                  {campaign.expandedData?.error && (
-                    <Alert variant="destructive" className="bg-red-900 border-red-700 text-red-100">
-                      <AlertCircle className="h-4 w-4" />
-                      {campaign.expandedData.error}
-                    </Alert>
-                  )}
+                  </AccordionTrigger>
+                  <AccordionContent className="bg-gray-800/50 p-4 space-y-6 border-t border-gray-700">
+                    {campaign.expandedData?.isLoading && (
+                      <div className="flex justify-center items-center py-6">
+                        <Loader2 className="h-6 w-6 animate-spin text-blue-400" />
+                        <span className="ml-2 text-gray-400">Loading details...</span>
+                      </div>
+                    )}
+                    {campaign.expandedData?.error && (
+                      <Alert variant="destructive" className="bg-red-900/80 border-red-700 text-red-100">
+                        <AlertCircle className="h-4 w-4" />
+                        <AlertDescription>{campaign.expandedData.error}</AlertDescription>
+                      </Alert>
+                    )}
 
-                  {campaign.expandedData && !campaign.expandedData.isLoading && !campaign.expandedData.error && (
-                    <>
-                      {/* Hourly Chart */}
-                      <Card className="bg-gray-800 border-gray-700">
-                        <CardHeader>
-                          <CardTitle className="text-base">Today's Hourly Performance</CardTitle>
-                        </CardHeader>
-                        <CardContent className="h-[250px]">
-                          <ResponsiveContainer width="100%" height="100%">
-                            <AreaChart
-                              data={campaign.expandedData.hourlyData.map((h) => ({
-                                time: new Date(h.time_start).toLocaleTimeString([], {
-                                  hour: "2-digit",
-                                  minute: "2-digit",
-                                }),
-                                spend: Number.parseFloat(h.spend || "0"),
-                                impressions: Number.parseInt(h.impressions || "0", 10),
-                              }))}
-                            >
-                              <CartesianGrid strokeDasharray="3 3" stroke="#4A5568" />
-                              <XAxis dataKey="time" stroke="#9CA3AF" fontSize={12} />
-                              <YAxis yAxisId="left" stroke="#9CA3AF" fontSize={12} />
-                              <YAxis yAxisId="right" orientation="right" stroke="#9CA3AF" fontSize={12} />
-                              <Tooltip
-                                contentStyle={{
-                                  backgroundColor: "#1F2937",
-                                  border: "1px solid #374151",
-                                  borderRadius: "0.25rem",
-                                }}
-                                itemStyle={{ color: "#E5E7EB" }}
-                                labelStyle={{ color: "#CBD5E1" }}
-                              />
-                              <Legend wrapperStyle={{ fontSize: "12px" }} />
-                              <Area
-                                yAxisId="left"
-                                type="monotone"
-                                dataKey="spend"
-                                stroke="#3B82F6"
-                                fill="#3B82F6"
-                                fillOpacity={0.3}
-                                name="Spend ($)"
-                              />
-                              <Area
-                                yAxisId="right"
-                                type="monotone"
-                                dataKey="impressions"
-                                stroke="#10B981"
-                                fill="#10B981"
-                                fillOpacity={0.3}
-                                name="Impressions"
-                              />
-                            </AreaChart>
-                          </ResponsiveContainer>
-                        </CardContent>
-                      </Card>
-
-                      {/* Ad Sets Table */}
-                      <Card className="bg-gray-800 border-gray-700">
-                        <CardHeader>
-                          <CardTitle className="text-base">Ad Sets</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                          <Table>
-                            <TableHeader>
-                              <TableRow className="border-gray-700 hover:bg-gray-750">
-                                <TableHead>Name</TableHead>
-                                <TableHead>Status</TableHead>
-                                <TableHead className="text-right">Spend</TableHead>
-                              </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                              {campaign.expandedData.adSets.map((adSet) => {
-                                const adSetInsights = processCampaignInsights(adSet.insights?.data?.[0])
-                                return (
-                                  <TableRow key={adSet.id} className="border-gray-700 hover:bg-gray-750 text-xs">
-                                    <TableCell>{adSet.name}</TableCell>
-                                    <TableCell
-                                      className={adSet.status === "ACTIVE" ? "text-green-400" : "text-gray-400"}
-                                    >
-                                      {adSet.status}
-                                    </TableCell>
-                                    <TableCell className="text-right">{formatCurrency(adSetInsights.spend)}</TableCell>
-                                  </TableRow>
-                                )
-                              })}
-                            </TableBody>
-                          </Table>
-                        </CardContent>
-                      </Card>
-
-                      {/* AI Reco & Actions */}
-                      <div className="grid md:grid-cols-2 gap-4">
-                        <Card className="bg-gray-800 border-gray-700">
+                    {campaign.expandedData && !campaign.expandedData.isLoading && !campaign.expandedData.error && (
+                      <>
+                        <Card className="bg-gray-700/30 border-gray-600">
                           <CardHeader>
-                            <CardTitle className="text-base">Quick Analysis</CardTitle>
+                            <CardTitle className="text-base">Today's Hourly Performance</CardTitle>
                           </CardHeader>
-                          <CardContent className="text-xs">
-                            <p>ROAS: {campaign.processedInsights.roas.toFixed(2)}x</p>
-                            <p className="mt-1">
-                              {campaign.processedInsights.roas < 1
-                                ? "Recommendation: ROAS is low. Review ad creatives, targeting, and landing page."
-                                : campaign.processedInsights.roas > 3
-                                  ? "Recommendation: ROAS is strong! Consider scaling budget or exploring lookalike audiences."
-                                  : "Recommendation: Performance is moderate. Monitor closely and optimize."}
-                            </p>
-                            {campaign.processedInsights.frequency > 3 && (
-                              <p className="mt-2 text-yellow-400">
-                                <AlertCircle className="inline h-4 w-4 mr-1" />
-                                High Frequency ({campaign.processedInsights.frequency.toFixed(2)}). Consider audience
-                                refresh.
-                              </p>
-                            )}
+                          <CardContent className="h-[250px]">
+                            <ResponsiveContainer width="100%" height="100%">
+                              <AreaChart
+                                data={campaign.expandedData.hourlyData.map((h) => ({
+                                  time: new Date(
+                                    h.hourly_stats_aggregated_by_advertiser_time_zone || h.time_start || Date.now(),
+                                  ).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+                                  spend: Number.parseFloat(h.spend || "0"),
+                                  roas:
+                                    Number.parseFloat(h.spend || "0") > 0
+                                      ? findMetaActionValue(h.actions, ["omni_purchase", "purchase"]) /
+                                        Number.parseFloat(h.spend || "0")
+                                      : 0,
+                                }))}
+                              >
+                                <CartesianGrid strokeDasharray="3 3" stroke="rgba(107, 114, 128, 0.3)" />
+                                <XAxis dataKey="time" stroke="#9CA3AF" fontSize={12} />
+                                <YAxis yAxisId="left" stroke="#9CA3AF" fontSize={12} />
+                                <YAxis yAxisId="right" orientation="right" stroke="#9CA3AF" fontSize={12} />
+                                <Tooltip
+                                  contentStyle={{
+                                    backgroundColor: "rgba(31, 41, 55, 0.9)",
+                                    border: "1px solid #4B5563",
+                                    borderRadius: "0.375rem",
+                                    color: "#F3F4F6",
+                                  }}
+                                  itemStyle={{ color: "#D1D5DB" }}
+                                  labelStyle={{ color: "#E5E7EB", fontWeight: "bold" }}
+                                />
+                                <Legend wrapperStyle={{ fontSize: "12px", color: "#D1D5DB" }} />
+                                <Area
+                                  yAxisId="left"
+                                  type="monotone"
+                                  dataKey="spend"
+                                  stroke="#60A5FA"
+                                  fill="#60A5FA"
+                                  fillOpacity={0.2}
+                                  name="Spend ($)"
+                                />
+                                <Area
+                                  yAxisId="right"
+                                  type="monotone"
+                                  dataKey="roas"
+                                  stroke="#34D399"
+                                  fill="#34D399"
+                                  fillOpacity={0.2}
+                                  name="ROAS"
+                                />
+                              </AreaChart>
+                            </ResponsiveContainer>
                           </CardContent>
                         </Card>
-                        <div className="space-y-2 flex flex-col justify-center">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="border-gray-600 hover:bg-gray-700 hover:border-gray-500 text-xs"
-                            onClick={() => alert("Exporting campaign data (not implemented yet)...")}
-                          >
-                            <Download className="mr-2 h-3 w-3" /> Export Campaign Data
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            asChild
-                            className="border-gray-600 hover:bg-gray-700 hover:border-gray-500 text-xs"
-                          >
-                            <a
-                              href={`https://www.facebook.com/adsmanager/manage/campaigns/edit?act=${adAccountId}&campaign_id=${campaign.id}`}
-                              target="_blank"
-                              rel="noopener noreferrer"
+
+                        <Card className="bg-gray-700/30 border-gray-600">
+                          <CardHeader>
+                            <CardTitle className="text-base">Ad Sets</CardTitle>
+                          </CardHeader>
+                          <CardContent>
+                            <Table>
+                              <TableHeader>
+                                <TableRow className="border-gray-600 hover:bg-gray-700/50">
+                                  <TableHead className="text-gray-300">Name</TableHead>
+                                  <TableHead className="text-gray-300">Status</TableHead>
+                                  <TableHead className="text-right text-gray-300">Spend</TableHead>
+                                </TableRow>
+                              </TableHeader>
+                              <TableBody>
+                                {campaign.expandedData.adSets.map((adSet) => {
+                                  const adSetInsights = processCampaignInsights(adSet.insights?.data?.[0])
+                                  return (
+                                    <TableRow
+                                      key={adSet.id}
+                                      className="border-gray-600 hover:bg-gray-700/50 text-xs text-gray-400"
+                                    >
+                                      <TableCell className="text-gray-300">{adSet.name}</TableCell>
+                                      <TableCell
+                                        className={adSet.status === "ACTIVE" ? "text-green-400" : "text-gray-500"}
+                                      >
+                                        {adSet.status}
+                                      </TableCell>
+                                      <TableCell className="text-right text-gray-300">
+                                        {formatCurrency(adSetInsights.spend)}
+                                      </TableCell>
+                                    </TableRow>
+                                  )
+                                })}
+                                {campaign.expandedData.adSets.length === 0 && (
+                                  <TableRow>
+                                    <TableCell colSpan={3} className="text-center text-gray-500 py-4">
+                                      No ad sets found for this campaign.
+                                    </TableCell>
+                                  </TableRow>
+                                )}
+                              </TableBody>
+                            </Table>
+                          </CardContent>
+                        </Card>
+
+                        <div className="grid md:grid-cols-2 gap-4">
+                          <Card className="bg-gray-700/30 border-gray-600">
+                            <CardHeader>
+                              <CardTitle className="text-base">Quick Analysis</CardTitle>
+                            </CardHeader>
+                            <CardContent className="text-xs text-gray-300 space-y-2">
+                              <p>
+                                Overall ROAS (30d):{" "}
+                                <span className="font-semibold">{campaign.processedInsights.roas.toFixed(2)}x</span>
+                              </p>
+                              <p>
+                                {campaign.processedInsights.roas < 1
+                                  ? "Recommendation: ROAS is low. Review ad creatives, targeting, and landing page."
+                                  : campaign.processedInsights.roas > 3
+                                    ? "Recommendation: ROAS is strong! Consider scaling budget or exploring lookalike audiences."
+                                    : "Recommendation: Performance is moderate. Monitor closely and optimize."}
+                              </p>
+                              {campaign.processedInsights.frequency > 3 && (
+                                <p className="mt-2 text-yellow-400 flex items-center">
+                                  <AlertCircle className="h-4 w-4 mr-1 flex-shrink-0" />
+                                  High Frequency ({campaign.processedInsights.frequency.toFixed(2)}). Consider audience
+                                  refresh.
+                                </p>
+                              )}
+                            </CardContent>
+                          </Card>
+                          {/*
+                            FUTURE ENHANCEMENT: Anthropic Claude API Integration Point
+                            -----------------------------------------------------------
+                            This would be a good place to add a new Card or section
+                            that displays AI-powered insights generated by Claude.
+
+                            Example Workflow:
+                            1. When a campaign is expanded, or on a user action (e.g., "Get AI Insights" button):
+                            2. Collect relevant campaign data (name, status, metrics like ROAS, CPA, CTR, spend, conversions,
+                               ad set performance, potentially even creative text/image descriptions if available).
+                            3. Send this data to a new server-side API route (e.g., /api/claude-insights).
+                            4. This API route would then:
+                               a. Construct a prompt for Claude, e.g., "Analyze this Facebook ad campaign's performance
+                                  and provide actionable recommendations. Data: {campaignData}".
+                               b. Call the Anthropic Claude API using the 'ai' SDK (`@ai-sdk/anthropic`).
+                               c. Receive the AI-generated insights.
+                               d. Return these insights to the client.
+                            5. Display the insights here. You could use a <Card> similar to "Quick Analysis"
+                               or a more dedicated component for AI feedback.
+
+                            Considerations:
+                            - API Key Management: Store your Anthropic API key securely (e.g., Vercel Environment Variable).
+                            - Prompt Engineering: Craft effective prompts for Claude to get useful insights.
+                            - Cost: Be mindful of API usage costs.
+                            - User Experience: Show loading/error states for the AI insight generation.
+                          */}
+                          <div className="space-y-2 flex flex-col justify-center">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="border-gray-600 hover:bg-gray-700 hover:border-gray-500 text-xs text-gray-300"
+                              onClick={() => exportCampaignToJson(campaign)}
                             >
-                              <ExternalLink className="mr-2 h-3 w-3" /> View in Ads Manager
-                            </a>
-                          </Button>
+                              <Download className="mr-2 h-3 w-3" /> Export Campaign JSON
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              asChild
+                              className="border-gray-600 hover:bg-gray-700 hover:border-gray-500 text-xs text-gray-300"
+                            >
+                              <a
+                                href={`https://www.facebook.com/adsmanager/manage/campaigns/edit?act=${adAccountId}&campaign_id=${campaign.id}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                              >
+                                <ExternalLink className="mr-2 h-3 w-3" /> View in Ads Manager
+                              </a>
+                            </Button>
+                          </div>
                         </div>
-                      </div>
-                    </>
-                  )}
-                </AccordionContent>
-              </AccordionItem>
-            ))}
-          </Accordion>
-        </CardContent>
-      </Card>
+                      </>
+                    )}
+                  </AccordionContent>
+                </AccordionItem>
+              ))}
+            </Accordion>
+            {campaigns.length === 0 && !isLoading && (
+              <div className="text-center py-10 text-gray-500">
+                <Info className="mx-auto h-8 w-8 mb-2" />
+                No campaigns to display for the selected period.
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
       <footer className="text-center mt-12 py-6 border-t border-gray-700">
-        <p className="text-sm text-gray-400">Meta Ads Dashboard Pro | Built with Next.js & v0</p>
+        <p className="text-sm text-gray-500">Meta Ads Dashboard Pro | Built with Next.js & v0</p>
       </footer>
     </div>
   )
@@ -738,11 +842,11 @@ export default function AdvancedDashboardPage() {
 
 // Simple Stat Card component
 const StatCard = ({ title, value }: { title: string; value: string | number }) => (
-  <Card className="bg-gray-800 border-gray-700 shadow-lg hover:bg-gray-750 transition-colors">
-    <CardHeader className="pb-2">
-      <CardTitle className="text-sm font-medium text-gray-400">{title}</CardTitle>
+  <Card className="bg-gray-800 border-gray-700 shadow-lg hover:bg-gray-700/50 transition-colors">
+    <CardHeader className="pb-2 pt-4">
+      <CardTitle className="text-xs font-medium text-gray-400 uppercase tracking-wider">{title}</CardTitle>
     </CardHeader>
-    <CardContent>
+    <CardContent className="pb-4">
       <div className="text-2xl font-bold text-white">{value}</div>
     </CardContent>
   </Card>
