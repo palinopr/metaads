@@ -7,7 +7,7 @@ async function fetchMeta(url: string, accessToken: string) {
   const response = await fetch(`${url}&access_token=${accessToken}`, {
     method: "GET",
     headers: { "Content-Type": "application/json" },
-    cache: "no-store",
+    cache: "no-store", // Ensure fresh data
   })
   if (!response.ok) {
     const errorData = await response.json()
@@ -23,9 +23,10 @@ export async function POST(request: NextRequest) {
     const {
       accessToken,
       adAccountId,
-      type, // 'overview', 'campaign_details'
-      campaignId, // for 'campaign_details'
-      datePreset = "last_30d", // Default date preset for campaign list
+      type, // 'overview', 'campaign_details', 'historical_campaign_data'
+      campaignId,
+      datePreset = "last_30d", // Default for overview and campaign details if not specified
+      // timeRange, // For custom date range in future {since: 'YYYY-MM-DD', until: 'YYYY-MM-DD'}
     } = body
 
     if (!accessToken || !adAccountId) {
@@ -33,27 +34,25 @@ export async function POST(request: NextRequest) {
     }
 
     if (type === "overview") {
-      // Fetch today's account-level insights
-      const todayInsightsFields = "spend,actions" // actions for conversions
+      const todayInsightsFields = "spend,actions"
       const todayInsightsUrl = `https://graph.facebook.com/${META_API_VERSION}/${adAccountId}/insights?fields=${todayInsightsFields}&date_preset=today`
       const todayData = await fetchMeta(todayInsightsUrl, accessToken)
 
-      // Fetch active campaigns count (can also get status in campaign list)
-      const activeCampaignsUrl = `https://graph.facebook.com/${META_API_VERSION}/${adAccountId}/campaigns?fields=id&filtering=[{'field':'effective_status','operator':'IN','value':['ACTIVE']}]&limit=500` // limit for counting
+      const activeCampaignsUrl = `https://graph.facebook.com/${META_API_VERSION}/${adAccountId}/campaigns?fields=id&filtering=[{'field':'effective_status','operator':'IN','value':['ACTIVE']}]&limit=500`
       const activeCampaignsData = await fetchMeta(activeCampaignsUrl, accessToken)
       const activeCampaignsCount = activeCampaignsData.data?.length || 0
 
-      // Fetch campaign list with their insights for the specified datePreset
-      const campaignListFields =
+      // Fetch campaign list with their insights for the specified datePreset (overall summary for the period)
+      const campaignListSummaryFields =
         "name,created_time,effective_status,insights.date_preset(" +
         datePreset +
-        "){spend,impressions,clicks,ctr,cpc,actions,action_values,frequency}"
-      const campaignsUrl = `https://graph.facebook.com/${META_API_VERSION}/${adAccountId}/campaigns?fields=${campaignListFields}&limit=100` // Add pagination if more campaigns
-      const campaignsData = await fetchMeta(campaignsUrl, accessToken)
+        "){spend,impressions,clicks,ctr,cpc,actions,action_values,frequency,roas}" // Added roas here
+      const campaignsSummaryUrl = `https://graph.facebook.com/${META_API_VERSION}/${adAccountId}/campaigns?fields=${campaignListSummaryFields}&limit=100`
+      const campaignsSummaryData = await fetchMeta(campaignsSummaryUrl, accessToken)
 
       // Sort campaigns by created_time (newest first)
-      if (campaignsData.data && Array.isArray(campaignsData.data)) {
-        campaignsData.data.sort((a: any, b: any) => {
+      if (campaignsSummaryData.data && Array.isArray(campaignsSummaryData.data)) {
+        campaignsSummaryData.data.sort((a: any, b: any) => {
           const dateA = a.created_time ? new Date(a.created_time).getTime() : 0
           const dateB = b.created_time ? new Date(b.created_time).getTime() : 0
           return dateB - dateA
@@ -63,27 +62,34 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({
         todayData: todayData.data?.[0] || {},
         activeCampaignsCount,
-        campaigns: campaignsData.data || [],
+        campaigns: campaignsSummaryData.data || [], // These are summary insights for the period
       })
     } else if (type === "campaign_details" && campaignId) {
-      // Fetch ad sets for the campaign
+      // Ad sets for the campaign (summary for the period)
       const adSetFields =
-        "name,status,insights.date_preset(" + datePreset + "){spend,impressions,clicks,actions,action_values}"
+        "name,status,insights.date_preset(" + datePreset + "){spend,impressions,clicks,actions,action_values,roas}" // Added roas
       const adSetsUrl = `https://graph.facebook.com/${META_API_VERSION}/${campaignId}/adsets?fields=${adSetFields}&limit=50`
       const adSetsData = await fetchMeta(adSetsUrl, accessToken)
 
-      // Fetch hourly insights for the campaign (e.g., for today or yesterday)
-      // Note: Hourly data can be very large. Use a narrow date range.
-      const hourlyInsightFields = "spend,impressions,clicks,actions"
-      const hourlyInsightsUrl = `https://graph.facebook.com/${META_API_VERSION}/${campaignId}/insights?fields=${hourlyInsightFields}&time_increment=1&date_preset=today` // or 'yesterday'
+      // Hourly insights for today (or a narrow recent range)
+      const hourlyInsightFields = "spend,impressions,clicks,actions,roas" // Added roas
+      const hourlyInsightsUrl = `https://graph.facebook.com/${META_API_VERSION}/${campaignId}/insights?fields=${hourlyInsightFields}&time_increment=1&date_preset=today` // time_increment=1 means hourly for date_preset=today
       const hourlyData = await fetchMeta(hourlyInsightsUrl, accessToken)
 
       return NextResponse.json({
         adSets: adSetsData.data || [],
         hourlyData: hourlyData.data || [],
       })
+    } else if (type === "historical_campaign_data" && campaignId) {
+      // Fetch daily historical data for a specific campaign over the datePreset
+      const historicalFields = "spend,impressions,clicks,ctr,cpc,actions,action_values,roas"
+      const historicalDataUrl = `https://graph.facebook.com/${META_API_VERSION}/${campaignId}/insights?fields=${historicalFields}&date_preset=${datePreset}&time_increment=1` // time_increment=1 means daily here
+      const historicalData = await fetchMeta(historicalDataUrl, accessToken)
+      return NextResponse.json({
+        historicalData: historicalData.data || [],
+      })
     } else {
-      return NextResponse.json({ error: "Invalid request type or missing campaignId." }, { status: 400 })
+      return NextResponse.json({ error: "Invalid request type or missing parameters." }, { status: 400 })
     }
   } catch (error: any) {
     console.error("Error in Meta API proxy:", error)

@@ -14,8 +14,8 @@ Clicking the "Deploy with Vercel" button will take you to Vercel to deploy this 
 
 -   Connect to Meta Ads API via user-provided credentials.
 -   Display key campaign metrics:
-    -   Spend, Revenue, ROAS, Conversions
-    -   Impressions, Clicks, CTR, CPC
+  -   Spend, Revenue, ROAS, Conversions
+  -   Impressions, Clicks, CTR, CPC
 -   Sort campaigns by creation date (newest first).
 -   Client-side storage of API credentials in `localStorage`.
 -   Refresh button to manually update data.
@@ -35,29 +35,29 @@ Clicking the "Deploy with Vercel" button will take you to Vercel to deploy this 
 ## Local Development Setup
 
 1.  **Clone the repository (if you haven't already):**
-    \`\`\`bash
-    # If your project is already synced via v0, you might already have it locally.
-    # Otherwise, clone from your GitHub:
-    git clone https://github.com/palinopr/metaads.git meta-ads-dashboard-local
-    cd meta-ads-dashboard-local
-    \`\`\`
-    *(Replace `palinopr/metaads` with your actual GitHub repo if different)*
+  \`\`\`bash
+  # If your project is already synced via v0, you might already have it locally.
+  # Otherwise, clone from your GitHub:
+  git clone https://github.com/palinopr/metaads.git meta-ads-dashboard-local
+  cd meta-ads-dashboard-local
+  \`\`\`
+  *(Replace `palinopr/metaads` with your actual GitHub repo if different)*
 
 2.  **Install dependencies:**
-    \`\`\`bash
-    npm install
-    \`\`\`
+  \`\`\`bash
+  npm install
+  \`\`\`
 
 3.  **Run the development server:**
-    \`\`\`bash
-    npm run dev
-    \`\`\`
-    Open [http://localhost:3000](http://localhost:3000) in your browser.
+  \`\`\`bash
+  npm run dev
+  \`\`\`
+  Open [http://localhost:3000](http://localhost:3000) in your browser.
 
 4.  **Enter Credentials (Locally):**
-    -   On the dashboard, click the Settings (gear) icon.
-    -   Enter your Meta Ads API Access Token and Ad Account ID.
-    -   Click "Save & Fetch Data".
+  -   On the dashboard, click the Settings (gear) icon.
+  -   Enter your Meta Ads API Access Token and Ad Account ID.
+  -   Click "Save & Fetch Data".
 
 ## Manual Deployment to Vercel (If not using Deploy Button)
 
@@ -65,13 +65,13 @@ If you prefer to set up the Vercel project manually by importing from GitHub:
 
 1.  **Ensure code is on GitHub:** Push your latest local changes to your `metaads` repository on the `main` branch.
 2.  **Deploy on Vercel:**
-    -   Go to your [Vercel Dashboard](https://vercel.com/dashboard).
-    -   Click "Add New..." -> "Project".
-    -   Connect your GitHub account.
-    -   Select your `metaads` repository.
-    -   Vercel automatically detects it as a Next.js project.
-    -   No special environment variables are needed for Vercel for this client-side credential setup.
-    -   Click "Deploy".
+  -   Go to your [Vercel Dashboard](https://vercel.com/dashboard).
+  -   Click "Add New..." -> "Project".
+  -   Connect your GitHub account.
+  -   Select your `metaads` repository.
+  -   Vercel automatically detects it as a Next.js project.
+  -   No special environment variables are needed for Vercel for this client-side credential setup.
+  -   Click "Deploy".
 
 ## Security Note
 
