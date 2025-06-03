@@ -13,6 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs" // Added Tabs
 import { DateRangeSelector, type DateRangePreset } from "@/components/date-range-selector"
 import { CampaignPredictions } from "@/components/campaign-predictions" // Added CampaignPredictions
+import { AIAnalysisModal } from "@/components/ai-analysis-modal"
 import {
   Settings,
   Loader2,
@@ -1008,6 +1009,12 @@ export default function AdvancedDashboardPage() {
                                 </CardContent>
                               </Card>
                               <div className="space-y-2 flex flex-col justify-center">
+                                <AIAnalysisModal
+                                  campaign={campaign}
+                                  // Pass the correct historical data for predictions, which is processedHistoricalDailyData
+                                  historicalData={campaign.expandedData?.processedHistoricalDailyData}
+                                  allCampaigns={campaigns} // Pass the list of all campaigns for comparison context
+                                />
                                 <Button
                                   variant="outline"
                                   size="sm"
