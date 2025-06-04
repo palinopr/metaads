@@ -2,6 +2,43 @@ import { NextResponse, type NextRequest } from "next/server"
 
 const META_API_VERSION = "v19.0" // Keep your desired API version
 
+// Add this helper function at the top of app/api/meta/route.ts if not already present
+// or import if it's in a shared lib.
+const findMetaActionValueApi = (items: any[] | undefined, targetTypes: string[]): number => {
+  if (!items) return 0
+  return items
+    .filter((item) => targetTypes.includes(item.action_type))
+    .reduce((sum, item) => sum + Number.parseFloat(item.value || "0"), 0)
+}
+
+const processCampaignInsightsHelper = (insightData?: any): any => {
+  const data = insightData || {}
+  const spend = Number.parseFloat(data.spend || "0")
+  const revenue = findMetaActionValueApi(data.action_values, [
+    "omni_purchase",
+    "purchase",
+    "offsite_conversion.fb_pixel_purchase",
+  ])
+  const conversions = findMetaActionValueApi(data.actions, [
+    "omni_purchase",
+    "purchase",
+    "offsite_conversion.fb_pixel_purchase",
+    "complete_registration",
+    "lead",
+  ])
+  return {
+    spend,
+    revenue,
+    conversions,
+    roas: spend > 0 ? revenue / spend : 0,
+    impressions: Number.parseInt(data.impressions || "0", 10),
+    clicks: Number.parseInt(data.clicks || "0", 10),
+    ctr: Number.parseFloat(data.ctr || "0"),
+    cpc: Number.parseFloat(data.cpc || "0"),
+    frequency: Number.parseFloat(data.frequency || "0"),
+  }
+}
+
 // Helper to fetch from Meta API
 async function fetchMeta(url: string, accessToken: string) {
   const fullUrl = url.includes("access_token=") ? url : `${url}&access_token=${accessToken}`
@@ -160,15 +197,20 @@ export async function POST(request: NextRequest) {
       const campaignsWithTodayData = await Promise.all(
         initialCampaigns.map(async (campaign: any) => {
           try {
-            const today = new Date().toISOString().split("T")[0]
+            const today = new Date()
+            // To ensure "today" refers to the ad account's timezone, it's best if the API handles this.
+            // If strictly client-side interpretation of "today" is needed, it can be complex.
+            // For Meta, date_preset=today usually works based on account's timezone.
+            // Here, we construct time_range for explicit today.
+            const todayStr = today.toISOString().split("T")[0]
+
             const todayUrl =
               `https://graph.facebook.com/${META_API_VERSION}/${campaign.id}/insights?` +
               `fields=spend,actions,action_values&` + // Only fetch necessary fields for today
-              `time_range={"since":"${today}","until":"${today}"}&` +
+              `time_range={"since":"${todayStr}","until":"${todayStr}"}&` +
               `access_token=${accessToken}`
 
-            // Use fetchMeta for consistent error handling and base URL
-            const todayInsightsData = await fetchMeta(todayUrl, accessToken) // Pass accessToken to fetchMeta
+            const todayInsightsData = await fetchMeta(todayUrl, accessToken)
 
             let todaySpend = 0
             let todayConversions = 0
@@ -177,13 +219,14 @@ export async function POST(request: NextRequest) {
               const todayInsights = todayInsightsData.data[0]
               todaySpend = Number.parseFloat(todayInsights.spend || "0")
 
-              // Simplified conversion counting for today
               if (todayInsights.actions) {
                 todayInsights.actions.forEach((action: any) => {
                   if (
                     action.action_type === "purchase" ||
                     action.action_type === "omni_purchase" ||
-                    action.action_type === "offsite_conversion.fb_pixel_purchase"
+                    action.action_type === "offsite_conversion.fb_pixel_purchase" ||
+                    action.action_type === "complete_registration" || // As per user's code
+                    action.action_type === "lead" // As per user's code
                   ) {
                     todayConversions += Number.parseInt(action.value || "0", 10)
                   }
@@ -191,9 +234,24 @@ export async function POST(request: NextRequest) {
               }
             }
 
+            // Ensure processedInsights is attached if not already
+            const processedInsights = campaign.insights?.data?.[0]
+              ? processCampaignInsightsHelper(campaign.insights.data[0])
+              : {
+                  spend: 0,
+                  revenue: 0,
+                  conversions: 0,
+                  roas: 0,
+                  impressions: 0,
+                  clicks: 0,
+                  ctr: 0,
+                  cpc: 0,
+                  frequency: 0,
+                }
+
             return {
               ...campaign,
-              // processedInsights will be handled client-side or ensure it's done here if needed
+              processedInsights, // Ensure processedInsights is part of the returned campaign object
               todayData: {
                 spend: todaySpend,
                 conversions: todayConversions,
@@ -201,13 +259,27 @@ export async function POST(request: NextRequest) {
             }
           } catch (err: any) {
             console.error(`Error fetching today's data for campaign ${campaign.id}:`, err.message)
+            const processedInsights = campaign.insights?.data?.[0]
+              ? processCampaignInsightsHelper(campaign.insights.data[0])
+              : {
+                  spend: 0,
+                  revenue: 0,
+                  conversions: 0,
+                  roas: 0,
+                  impressions: 0,
+                  clicks: 0,
+                  ctr: 0,
+                  cpc: 0,
+                  frequency: 0,
+                }
             return {
               ...campaign,
+              processedInsights,
               todayData: {
                 spend: 0,
                 conversions: 0,
               },
-              errorTodayData: err.message, // Optionally pass error info
+              errorTodayData: err.message,
             }
           }
         }),
