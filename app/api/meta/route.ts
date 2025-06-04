@@ -136,33 +136,88 @@ export async function POST(request: NextRequest) {
     }
 
     if (type === "overview") {
-      const todayInsightsFields = "spend,actions" // ROAS is not directly available here for 'today' preset in a simple way
-      const todayInsightsUrl = `https://graph.facebook.com/${META_API_VERSION}/${adAccountId}/insights?fields=${todayInsightsFields}&date_preset=today`
-      const todayData = await fetchMeta(todayInsightsUrl, accessToken)
-
-      const activeCampaignsUrl = `https://graph.facebook.com/${META_API_VERSION}/${adAccountId}/campaigns?fields=id&filtering=[{'field':'effective_status','operator':'IN','value':['ACTIVE']}]&limit=500`
-      const activeCampaignsData = await fetchMeta(activeCampaignsUrl, accessToken)
-      const activeCampaignsCount = activeCampaignsData.data?.length || 0
-
+      // Fetch initial campaign list with their period insights
       const campaignListSummaryFields =
-        "name,created_time,effective_status,insights.date_preset(" +
+        "id,name,created_time,effective_status,status,insights.date_preset(" + // Added 'status' here for client-side active check
         datePreset +
-        "){spend,impressions,clicks,ctr,cpc,actions,action_values,frequency}" // Removed roas as it's problematic
-      const campaignsSummaryUrl = `https://graph.facebook.com/${META_API_VERSION}/${adAccountId}/campaigns?fields=${campaignListSummaryFields}&limit=100`
+        "){spend,impressions,clicks,ctr,cpc,actions,action_values,frequency}"
+      const campaignsSummaryUrl = `https://graph.facebook.com/${META_API_VERSION}/${adAccountId}/campaigns?fields=${campaignListSummaryFields}&limit=100` // Consider pagination for more than 100 campaigns
+
       const campaignsSummaryData = await fetchMeta(campaignsSummaryUrl, accessToken)
 
-      if (campaignsSummaryData.data && Array.isArray(campaignsSummaryData.data)) {
-        campaignsSummaryData.data.sort((a: any, b: any) => {
+      const initialCampaigns = campaignsSummaryData.data || []
+
+      // Sort campaigns by creation time initially
+      if (Array.isArray(initialCampaigns)) {
+        initialCampaigns.sort((a: any, b: any) => {
           const dateA = a.created_time ? new Date(a.created_time).getTime() : 0
           const dateB = b.created_time ? new Date(b.created_time).getTime() : 0
           return dateB - dateA
         })
       }
 
+      // For each campaign, also fetch today's data
+      const campaignsWithTodayData = await Promise.all(
+        initialCampaigns.map(async (campaign: any) => {
+          try {
+            const today = new Date().toISOString().split("T")[0]
+            const todayUrl =
+              `https://graph.facebook.com/${META_API_VERSION}/${campaign.id}/insights?` +
+              `fields=spend,actions,action_values&` + // Only fetch necessary fields for today
+              `time_range={"since":"${today}","until":"${today}"}&` +
+              `access_token=${accessToken}`
+
+            // Use fetchMeta for consistent error handling and base URL
+            const todayInsightsData = await fetchMeta(todayUrl, accessToken) // Pass accessToken to fetchMeta
+
+            let todaySpend = 0
+            let todayConversions = 0
+
+            if (todayInsightsData.data && todayInsightsData.data[0]) {
+              const todayInsights = todayInsightsData.data[0]
+              todaySpend = Number.parseFloat(todayInsights.spend || "0")
+
+              // Simplified conversion counting for today
+              if (todayInsights.actions) {
+                todayInsights.actions.forEach((action: any) => {
+                  if (
+                    action.action_type === "purchase" ||
+                    action.action_type === "omni_purchase" ||
+                    action.action_type === "offsite_conversion.fb_pixel_purchase"
+                  ) {
+                    todayConversions += Number.parseInt(action.value || "0", 10)
+                  }
+                })
+              }
+            }
+
+            return {
+              ...campaign,
+              // processedInsights will be handled client-side or ensure it's done here if needed
+              todayData: {
+                spend: todaySpend,
+                conversions: todayConversions,
+              },
+            }
+          } catch (err: any) {
+            console.error(`Error fetching today's data for campaign ${campaign.id}:`, err.message)
+            return {
+              ...campaign,
+              todayData: {
+                spend: 0,
+                conversions: 0,
+              },
+              errorTodayData: err.message, // Optionally pass error info
+            }
+          }
+        }),
+      )
+
+      // The API no longer directly returns activeCampaignsCount or overall todayData.
+      // These will be calculated on the client-side from the campaignsWithTodayData.
       return NextResponse.json({
-        todayData: todayData.data?.[0] || {},
-        activeCampaignsCount,
-        campaigns: campaignsSummaryData.data || [],
+        campaigns: campaignsWithTodayData,
+        // dateRange: datePreset, // Client already knows this
       })
     } else if (type === "campaign_details" && campaignId) {
       const adSetFields =
