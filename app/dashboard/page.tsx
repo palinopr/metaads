@@ -1,3 +1,4 @@
+// app/dashboard/page.tsx - COMPLETE VERSION WITH ALL FEATURES
 "use client"
 
 import type React from "react"
@@ -24,7 +25,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert" // Added AlertTitle
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Switch } from "@/components/ui/switch"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -47,7 +48,7 @@ import Link from "next/link"
 import { DateRangeSelector } from "@/components/date-range-selector"
 import { CampaignPredictions } from "@/components/campaign-predictions"
 import { DemographicAnalytics } from "@/components/demographic-analytics"
-import { DayWeekPerformance } from "@/components/day-week-performance" // Assuming this is the correct name
+import { DayWeekPerformance } from "@/components/day-week-performance"
 import { AIAnalysisModal } from "@/components/ai-analysis-modal"
 
 // Interfaces
@@ -72,26 +73,26 @@ interface CampaignInsightData {
 interface ProcessedCampaignInsights {
   spend: number
   revenue: number
-  roas: string // Keep as string to match Campaign interface
+  roas: string
   conversions: number
   impressions: number
   clicks: number
   ctr: number
   cpc: number
-  frequency?: number // Added from previous version
+  frequency?: number
 }
 
 interface Campaign {
   id: string
   name: string
   status: string
-  effective_status?: string // Added from previous version
+  effective_status?: string
   created_time: string
   objective?: string
   daily_budget?: number
   lifetime_budget?: number
   processedInsights?: ProcessedCampaignInsights
-  insights?: { data?: CampaignInsightData[] } // Added from previous version
+  insights?: { data?: CampaignInsightData[] }
   todayData?: {
     spend: number
     conversions: number
@@ -100,8 +101,8 @@ interface Campaign {
     historicalDailyData?: any[]
     todayHourlyData?: any[]
     adSets?: any[]
-    isLoading?: boolean // Added from previous version
-    error?: string // Added from previous version
+    isLoading?: boolean
+    error?: string
   }
 }
 
@@ -181,7 +182,7 @@ interface MetricCardProps {
   subtitle: React.ReactNode
   gradient: string
   icon: React.ReactNode
-  pulse?: boolean // Added pulse
+  pulse?: boolean
 }
 
 function MetricCard({ title, value, subtitle, gradient, icon, pulse }: MetricCardProps) {
@@ -220,15 +221,15 @@ export default function DashboardPage() {
 
   const [isLoading, setIsLoading] = useState(false)
   const [isRefreshing, setIsRefreshing] = useState(false)
-  const [fetchError, setFetchError] = useState<string | null>(null)
+  const [fetchError, setFetchError] = useState<string | null>(null) // Changed from error to fetchError to match usage
   const [showSettings, setShowSettings] = useState(false)
   const [credentialsSubmitted, setCredentialsSubmitted] = useState(false)
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
   const [autoRefresh, setAutoRefresh] = useState(true)
   const [refreshInterval, setRefreshInterval] = useState(300000) // 5 minutes
   const [selectedDateRange, setSelectedDateRange] = useState("last_30d")
-  const [expandedCampaigns, setExpandedCampaigns] = useState<string[]>([]) // For accordion
-  const [activeTabs, setActiveTabs] = useState<{ [campaignId: string]: string }>({}) // For tabs within accordion
+  const [expandedCampaigns, setExpandedCampaigns] = useState<string[]>([])
+  const [activeTabs, setActiveTabs] = useState<{ [campaignId: string]: string }>({})
 
   const [campaignStatusFilter, setCampaignStatusFilter] = useState("all")
   const [sortBy, setSortBy] = useState("created_desc")
@@ -237,6 +238,17 @@ export default function DashboardPage() {
     accessToken: "",
     adAccountId: "",
   })
+
+  // Diagnostic useEffect
+  useEffect(() => {
+    console.log("Dashboard Debug:", {
+      campaignsCount: campaigns.length,
+      isLoading,
+      fetchError, // Using fetchError here
+      credentialsSubmitted: !!credentials.accessToken,
+      overviewData,
+    })
+  }, [campaigns, isLoading, fetchError, credentials, overviewData])
 
   useEffect(() => {
     const savedToken = localStorage.getItem("meta_access_token")
@@ -248,17 +260,17 @@ export default function DashboardPage() {
         adAccountId: savedAccountId,
       })
       setCredentialsSubmitted(true)
-      setShowSettings(false) // Hide settings if creds are loaded
+      setShowSettings(false)
     } else {
-      setShowSettings(true) // Show settings if no creds
+      setShowSettings(true)
     }
   }, [])
 
   const fetchOverviewData = useCallback(
-    async (isRefresh = false) => {
+    async (isRefreshOp = false) => {
       if (!credentials.accessToken || !credentials.adAccountId) return
 
-      if (!isRefresh) setIsLoading(true)
+      if (!isRefreshOp) setIsLoading(true)
       else setIsRefreshing(true)
       setFetchError(null)
 
@@ -282,62 +294,59 @@ export default function DashboardPage() {
         const data = await response.json()
         const fetchedCampaigns: Campaign[] = data.campaigns || []
 
-        let todaySpend = 0
-        let todayConversions = 0
-        let totalSpend = 0
-        let totalRevenue = 0
-        let totalConversions = 0
-        let totalImpressions = 0
-        let totalClicks = 0
-        let activeCampaigns = 0
+        let currentTodaySpend = 0
+        let currentTodayConversions = 0
+        let currentTotalSpend = 0
+        let currentTotalRevenue = 0
+        let currentTotalConversions = 0
+        let currentTotalImpressions = 0
+        let currentTotalClicks = 0
+        let currentActiveCampaigns = 0
 
         const processedCampaignsList = fetchedCampaigns.map((campaign: Campaign) => {
           if (campaign.status === "ACTIVE" || campaign.effective_status === "ACTIVE") {
-            activeCampaigns++
+            currentActiveCampaigns++
           }
-
           const insights = campaign.processedInsights || processCampaignInsightsHelper(campaign.insights?.data?.[0])
-
-          totalSpend += insights.spend || 0
-          totalRevenue += insights.revenue || 0
-          totalConversions += insights.conversions || 0
-          totalImpressions += insights.impressions || 0
-          totalClicks += insights.clicks || 0
+          currentTotalSpend += insights.spend || 0
+          currentTotalRevenue += insights.revenue || 0
+          currentTotalConversions += insights.conversions || 0
+          currentTotalImpressions += insights.impressions || 0
+          currentTotalClicks += insights.clicks || 0
 
           if (campaign.todayData) {
-            todaySpend += campaign.todayData.spend || 0
-            todayConversions += campaign.todayData.conversions || 0
+            currentTodaySpend += campaign.todayData.spend || 0
+            currentTodayConversions += campaign.todayData.conversions || 0
           }
           return { ...campaign, processedInsights: insights }
         })
 
-        const overallROAS = totalSpend > 0 ? totalRevenue / totalSpend : 0
-        const avgCTR = totalImpressions > 0 ? (totalClicks / totalImpressions) * 100 : 0
-        const avgCPC = totalClicks > 0 ? totalSpend / totalClicks : 0
-        const avgCPA = totalConversions > 0 ? totalSpend / totalConversions : 0
+        const overallROAS = currentTotalSpend > 0 ? currentTotalRevenue / currentTotalSpend : 0
+        const avgCTR = currentTotalImpressions > 0 ? (currentTotalClicks / currentTotalImpressions) * 100 : 0
+        const avgCPC = currentTotalClicks > 0 ? currentTotalSpend / currentTotalClicks : 0
+        const avgCPA = currentTotalConversions > 0 ? currentTotalSpend / currentTotalConversions : 0
 
         setCampaigns(processedCampaignsList)
         setOverviewData({
-          todaySpend,
-          todayConversions,
-          totalSpend,
-          totalRevenue,
-          totalConversions,
-          totalImpressions,
-          totalClicks,
-          activeCampaigns,
+          todaySpend: currentTodaySpend,
+          todayConversions: currentTodayConversions,
+          totalSpend: currentTotalSpend,
+          totalRevenue: currentTotalRevenue,
+          totalConversions: currentTotalConversions,
+          totalImpressions: currentTotalImpressions,
+          totalClicks: currentTotalClicks,
+          activeCampaigns: currentActiveCampaigns,
           overallROAS,
           avgCTR,
           avgCPC,
           avgCPA,
         })
-
         setLastUpdated(new Date())
       } catch (err: any) {
         console.error("Failed to fetch overview data:", err)
         setFetchError(err.message)
       } finally {
-        if (!isRefresh) setIsLoading(false)
+        if (!isRefreshOp) setIsLoading(false)
         else setIsRefreshing(false)
       }
     },
@@ -357,9 +366,9 @@ export default function DashboardPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          type: "campaign_details", // This should fetch adsets and today's hourly data
+          type: "campaign_details",
           campaignId,
-          datePreset: selectedDateRange, // Pass datePreset for historical daily data
+          datePreset: selectedDateRange,
           accessToken: credentials.accessToken,
           adAccountId: credentials.adAccountId,
         }),
@@ -377,7 +386,7 @@ export default function DashboardPage() {
             ? {
                 ...c,
                 expandedData: {
-                  historicalDailyData: detailsData.historicalDailyData || [], // API should provide this
+                  historicalDailyData: detailsData.historicalDailyData || [],
                   todayHourlyData: detailsData.todayHourlyData || [],
                   adSets: detailsData.adSets || [],
                   isLoading: false,
@@ -418,7 +427,7 @@ export default function DashboardPage() {
     if (credentialsSubmitted) {
       fetchOverviewData()
     }
-  }, [credentialsSubmitted, selectedDateRange, fetchOverviewData])
+  }, [credentialsSubmitted, selectedDateRange, fetchOverviewData]) // Added fetchOverviewData
 
   useEffect(() => {
     let intervalId: NodeJS.Timeout | null = null
@@ -428,7 +437,7 @@ export default function DashboardPage() {
     return () => {
       if (intervalId) clearInterval(intervalId)
     }
-  }, [autoRefresh, refreshInterval, credentialsSubmitted, fetchOverviewData])
+  }, [autoRefresh, refreshInterval, credentialsSubmitted, fetchOverviewData]) // Added fetchOverviewData
 
   const getFilteredAndSortedCampaigns = () => {
     let filtered = campaigns
@@ -455,7 +464,6 @@ export default function DashboardPage() {
           return 0
       }
     })
-
     return sorted
   }
 
@@ -466,7 +474,7 @@ export default function DashboardPage() {
       localStorage.setItem("meta_ad_account_id", credentials.adAccountId)
       setCredentialsSubmitted(true)
       setShowSettings(false)
-      fetchOverviewData() // Fetch data immediately after saving
+      fetchOverviewData()
     } else {
       setFetchError("Access Token and Ad Account ID are required.")
     }
@@ -479,7 +487,6 @@ export default function DashboardPage() {
     setCredentialsSubmitted(false)
     setCampaigns([])
     setOverviewData({
-      // Reset overview
       todaySpend: 0,
       todayConversions: 0,
       totalSpend: 0,
@@ -601,7 +608,6 @@ export default function DashboardPage() {
   return (
     <div className="min-h-screen bg-gray-900 text-white">
       <div className="p-4 md:p-6 space-y-6">
-        {/* Header */}
         <div className="mb-8">
           <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
             <div>
@@ -613,23 +619,18 @@ export default function DashboardPage() {
                 {selectedDateRange && ` (${selectedDateRange.replace(/_/g, " ")})`}
               </p>
             </div>
-
             <div className="flex items-center flex-wrap gap-2 md:gap-4">
               <DateRangeSelector
                 value={selectedDateRange}
-                onChange={(value) => {
-                  setSelectedDateRange(value)
-                  // fetchOverviewData will be called by useEffect
-                }}
+                onChange={(value) => setSelectedDateRange(value)}
+                disabled={isLoading || isRefreshing}
               />
-
               <Link href="/pattern-analysis" passHref>
                 <Button variant="outline" className="flex items-center gap-2 text-xs border-gray-700 hover:bg-gray-800">
                   <Brain className="w-3 h-3 md:w-4 md:h-4" />
                   Pattern Analysis
                 </Button>
               </Link>
-
               <div className="flex items-center gap-2">
                 <Switch
                   id="autoRefreshSwitch"
@@ -641,11 +642,10 @@ export default function DashboardPage() {
                   Auto-Refresh
                 </Label>
               </div>
-
               <Select
                 value={refreshInterval.toString()}
                 onValueChange={(value) => setRefreshInterval(Number.parseInt(value))}
-                disabled={!autoRefresh}
+                disabled={!autoRefresh || isLoading || isRefreshing}
               >
                 <SelectTrigger className="w-24 text-xs bg-gray-800 border-gray-700">
                   <SelectValue />
@@ -657,7 +657,6 @@ export default function DashboardPage() {
                   <SelectItem value="1800000">30 min</SelectItem>
                 </SelectContent>
               </Select>
-
               <Button
                 variant="outline"
                 size="icon"
@@ -694,13 +693,14 @@ export default function DashboardPage() {
                   <Label htmlFor="adAccountIdModal">Ad Account ID</Label>
                   <Input
                     id="adAccountIdModal"
+                    type="text"
                     value={credentials.adAccountId}
                     onChange={(e) => setCredentials({ ...credentials, adAccountId: e.target.value })}
                     placeholder="act_XXXXXXXXXX"
                     className="bg-gray-700 border-gray-600"
                   />
                 </div>
-                {fetchError && (
+                {fetchError && ( // Show error specific to this form
                   <Alert variant="destructive" className="bg-red-900/30 border-red-700 text-red-300">
                     <AlertCircle className="h-4 w-4" /> <AlertDescription>{fetchError}</AlertDescription>
                   </Alert>
@@ -723,16 +723,15 @@ export default function DashboardPage() {
           </Card>
         )}
 
-        {fetchError &&
-          !showSettings && ( // Only show general fetch error if settings panel is not open (as it has its own error display)
-            <Alert variant="destructive" className="mb-6 bg-red-900/20 border-red-700 text-red-300">
-              <AlertCircle className="h-4 w-4" />
-              <AlertTitle>Connection Error</AlertTitle>
-              <AlertDescription>
-                {fetchError}. Please check your API credentials in Settings or network connection.
-              </AlertDescription>
-            </Alert>
-          )}
+        {fetchError && !showSettings && (
+          <Alert variant="destructive" className="mb-6 bg-red-900/20 border-red-700 text-red-300">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>Connection Error</AlertTitle>
+            <AlertDescription>
+              {fetchError}. Please check your API credentials in Settings or network connection.
+            </AlertDescription>
+          </Alert>
+        )}
 
         {credentialsSubmitted ? (
           <>
@@ -742,7 +741,6 @@ export default function DashboardPage() {
                 <p className="ml-3 mt-4 text-lg text-gray-400">Loading Dashboard Data...</p>
               </div>
             )}
-            {/* Metric Cards */}
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
               <MetricCard
                 title="Today's Spend"
@@ -756,7 +754,6 @@ export default function DashboardPage() {
                 icon={<DollarSign className="w-4 h-4" />}
                 pulse={isRefreshing && overviewData.todaySpend === 0}
               />
-
               <MetricCard
                 title={`Revenue (${selectedDateRange.replace(/_/g, " ")})`}
                 value={formatCurrency(overviewData.totalRevenue)}
@@ -764,7 +761,6 @@ export default function DashboardPage() {
                 gradient="from-green-900/70 to-green-800/70"
                 icon={<TrendingUp className="w-4 h-4" />}
               />
-
               <MetricCard
                 title="Active Campaigns"
                 value={formatNumberWithCommas(overviewData.activeCampaigns)}
@@ -772,7 +768,6 @@ export default function DashboardPage() {
                 gradient="from-purple-900/70 to-purple-800/70"
                 icon={<Activity className="w-4 h-4" />}
               />
-
               <MetricCard
                 title={`Conversions (${selectedDateRange.replace(/_/g, " ")})`}
                 value={formatNumberWithCommas(overviewData.totalConversions)}
@@ -780,7 +775,6 @@ export default function DashboardPage() {
                 gradient="from-yellow-900/70 to-yellow-800/70"
                 icon={<Target className="w-4 h-4" />}
               />
-
               <MetricCard
                 title={`Avg CPA (${selectedDateRange.replace(/_/g, " ")})`}
                 value={formatCurrency(overviewData.avgCPA)}
@@ -788,7 +782,6 @@ export default function DashboardPage() {
                 gradient="from-red-900/70 to-red-800/70"
                 icon={<MousePointer className="w-4 h-4" />}
               />
-
               <div className="bg-gray-800 rounded-lg p-2 border border-gray-700 flex items-center justify-center">
                 <Button
                   onClick={handleRefreshAll}
@@ -803,7 +796,6 @@ export default function DashboardPage() {
               </div>
             </div>
 
-            {/* Stats Cards */}
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-4 mb-6 text-xs">
               {[
                 { label: "TOTAL SPEND", value: formatCurrency(overviewData.totalSpend) },
@@ -823,7 +815,6 @@ export default function DashboardPage() {
               ))}
             </div>
 
-            {/* Campaign Filters */}
             <div className="flex flex-wrap gap-3 mb-6">
               <Select
                 value={campaignStatusFilter}
@@ -839,7 +830,6 @@ export default function DashboardPage() {
                   <SelectItem value="PAUSED">Paused Only</SelectItem>
                 </SelectContent>
               </Select>
-
               <Select value={sortBy} onValueChange={setSortBy} disabled={isLoading || isRefreshing}>
                 <SelectTrigger className="w-full sm:w-48 text-xs bg-gray-800 border-gray-700">
                   <SelectValue placeholder="Sort by..." />
@@ -854,14 +844,12 @@ export default function DashboardPage() {
               </Select>
             </div>
 
-            {/* Campaigns Table/Accordion */}
             <div className="space-y-2">
               <h2 className="text-xl font-semibold mb-4">
                 Campaigns Overview ({getFilteredAndSortedCampaigns().length} campaigns)
               </h2>
-
-              {isLoading && campaigns.length === 0 && !isRefreshing ? null : // Already handled by main loader
-              getFilteredAndSortedCampaigns().length === 0 && !isLoading ? (
+              {isLoading && campaigns.length === 0 && !isRefreshing ? null : getFilteredAndSortedCampaigns().length ===
+                  0 && !isLoading ? (
                 <Card className="bg-gray-800 border-gray-700">
                   <CardContent className="text-center py-10 text-gray-500">
                     <Info className="mx-auto h-8 w-8 mb-2" />
@@ -903,7 +891,6 @@ export default function DashboardPage() {
                               <ChevronDown className="w-5 h-5 text-gray-400 transition-transform duration-200 group-data-[state=open]:rotate-180" />
                             </div>
                           </div>
-
                           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2 md:gap-4 text-xs text-gray-300">
                             {[
                               { label: "Spend", value: formatCurrency(campaign.processedInsights?.spend) },
@@ -940,7 +927,6 @@ export default function DashboardPage() {
                           </div>
                         </div>
                       </AccordionTrigger>
-
                       <AccordionContent className="border-t border-gray-700/50 bg-gray-800/30 rounded-b-lg">
                         <div className="p-3 md:p-4">
                           {campaign.expandedData?.isLoading ? (
@@ -966,7 +952,6 @@ export default function DashboardPage() {
                                 <TabsTrigger value="dayweek">Day/Time</TabsTrigger>
                                 <TabsTrigger value="insights">AI Insights</TabsTrigger>
                               </TabsList>
-
                               <TabsContent value="details" className="space-y-4">
                                 {campaign.expandedData?.historicalDailyData &&
                                   campaign.expandedData.historicalDailyData.length > 0 && (
@@ -1002,7 +987,7 @@ export default function DashboardPage() {
                                               orientation="right"
                                               stroke="#34D399"
                                               fontSize={10}
-                                              tickFormatter={(val) => `${val.toFixed(1)}x`}
+                                              tickFormatter={(val) => `${Number(val).toFixed(1)}x`}
                                             />
                                             <Tooltip
                                               contentStyle={{
@@ -1036,7 +1021,6 @@ export default function DashboardPage() {
                                       </CardContent>
                                     </Card>
                                   )}
-
                                 {campaign.expandedData?.todayHourlyData &&
                                   campaign.expandedData.todayHourlyData.length > 0 && (
                                     <Card className="bg-gray-700/50 border-gray-600/70">
@@ -1072,7 +1056,6 @@ export default function DashboardPage() {
                                       </CardContent>
                                     </Card>
                                   )}
-
                                 {campaign.expandedData?.adSets && campaign.expandedData.adSets.length > 0 && (
                                   <Card className="bg-gray-700/50 border-gray-600/70">
                                     <CardHeader>
@@ -1136,7 +1119,6 @@ export default function DashboardPage() {
                                     </CardContent>
                                   </Card>
                                 )}
-
                                 <div className="flex flex-wrap gap-2 mt-4">
                                   <AIAnalysisModal
                                     campaign={campaign}
@@ -1169,7 +1151,6 @@ export default function DashboardPage() {
                                   </Button>
                                 </div>
                               </TabsContent>
-
                               <TabsContent value="predictions">
                                 <CampaignPredictions
                                   campaignName={campaign.name}
@@ -1179,16 +1160,14 @@ export default function DashboardPage() {
                                   }
                                 />
                               </TabsContent>
-
                               <TabsContent value="demographics">
                                 <DemographicAnalytics
                                   campaignId={campaign.id}
-                                  campaignName={campaign.name} // Pass campaignName
+                                  campaignName={campaign.name}
                                   accessToken={credentials.accessToken}
-                                  // datePreset={selectedDateRange} // Pass datePreset if needed by component
+                                  datePreset={selectedDateRange}
                                 />
                               </TabsContent>
-
                               <TabsContent value="dayweek">
                                 <DayWeekPerformance
                                   campaignId={campaign.id}
@@ -1197,7 +1176,6 @@ export default function DashboardPage() {
                                   datePreset={selectedDateRange}
                                 />
                               </TabsContent>
-
                               <TabsContent value="insights">
                                 <Card className="bg-gray-700/50 border-gray-600/70">
                                   <CardHeader>
@@ -1214,7 +1192,7 @@ export default function DashboardPage() {
                                       campaign={campaign}
                                       historicalData={campaign.expandedData?.historicalDailyData}
                                       allCampaigns={campaigns}
-                                      triggerButtonText="Get Detailed AI Insights"
+                                      triggerButtonText="Get Detailed AI Insights" // Example of custom trigger text
                                     />
                                     <div className="mt-3 p-3 bg-gray-800/50 rounded-lg text-xs space-y-1.5 text-gray-300">
                                       <p>

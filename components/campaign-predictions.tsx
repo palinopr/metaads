@@ -1,3 +1,4 @@
+"use client"
 import {
   Line,
   AreaChart,
@@ -11,11 +12,11 @@ import {
   ReferenceLine,
 } from "recharts"
 import { TrendingUp, TrendingDown, AlertTriangle, Target, Users, Zap, Sparkles, Brain } from "lucide-react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card" // Added CardDescription
-import { formatCurrency, formatNumberWithCommas } from "@/lib/utils" // Assuming these exist and are correct
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { formatCurrency, formatNumberWithCommas } from "@/lib/utils"
 
 interface HistoricalDataPoint {
-  date: string // YYYY-MM-DD
+  date: string
   spend: number
   revenue: number
   roas: number
@@ -37,7 +38,7 @@ interface CampaignPredictionsProps {
   currentMetrics: {
     spend: number
     revenue: number
-    roas: string | number // Can be string or number
+    roas: string | number
     conversions: number
   }
 }
@@ -83,7 +84,7 @@ export function CampaignPredictions({ campaignName, historicalData, currentMetri
 
       const predictedSpend = prevDayMetrics.spend * (1 + avgSpendGrowthRate)
       const predictedRevenue = prevDayMetrics.revenue * (1 + avgRevenueGrowthRate)
-      const predictedConversions = prevDayMetrics.conversions * (1 + avgSpendGrowthRate * 0.95) // Slightly conservative for conversions
+      const predictedConversions = prevDayMetrics.conversions * (1 + avgSpendGrowthRate * 0.95)
       const confidence = 0.9 - i * 0.05
 
       predictions.push({
@@ -188,11 +189,11 @@ export function CampaignPredictions({ campaignName, historicalData, currentMetri
           <ResponsiveContainer width="100%" height={300}>
             <AreaChart data={chartData}>
               <defs>
-                <linearGradient id="predSpendGradient" x1="0" y1="0" x2="0" y2="1">
+                <linearGradient id="predSpendGradientChart" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.7} />
                   <stop offset="95%" stopColor="#3B82F6" stopOpacity={0.1} />
                 </linearGradient>
-                <linearGradient id="predRevenueGradient" x1="0" y1="0" x2="0" y2="1">
+                <linearGradient id="predRevenueGradientChart" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="5%" stopColor="#10B981" stopOpacity={0.7} />
                   <stop offset="95%" stopColor="#10B981" stopOpacity={0.1} />
                 </linearGradient>
@@ -314,8 +315,8 @@ export function CampaignPredictions({ campaignName, historicalData, currentMetri
                 yAxisId="left"
                 dataKey="spendUpper"
                 stroke={false}
-                fill="#3B82F6"
-                fillOpacity={0.05}
+                fill="url(#predSpendGradientChart)"
+                fillOpacity={0.05} // Use fillOpacity on Area itself
                 name="Spend CI Upper"
                 data={chartData.filter((d) => d.type === "prediction")}
               />
@@ -323,7 +324,7 @@ export function CampaignPredictions({ campaignName, historicalData, currentMetri
                 yAxisId="left"
                 dataKey="spendLower"
                 stroke={false}
-                fill="#3B82F6"
+                fill="url(#predSpendGradientChart)"
                 fillOpacity={0.05}
                 name="Spend CI Lower"
                 data={chartData.filter((d) => d.type === "prediction")}
@@ -332,7 +333,7 @@ export function CampaignPredictions({ campaignName, historicalData, currentMetri
                 yAxisId="left"
                 dataKey="revenueUpper"
                 stroke={false}
-                fill="#10B981"
+                fill="url(#predRevenueGradientChart)"
                 fillOpacity={0.05}
                 name="Revenue CI Upper"
                 data={chartData.filter((d) => d.type === "prediction")}
@@ -341,7 +342,7 @@ export function CampaignPredictions({ campaignName, historicalData, currentMetri
                 yAxisId="left"
                 dataKey="revenueLower"
                 stroke={false}
-                fill="#10B981"
+                fill="url(#predRevenueGradientChart)"
                 fillOpacity={0.05}
                 name="Revenue CI Lower"
                 data={chartData.filter((d) => d.type === "prediction")}
@@ -393,7 +394,9 @@ export function CampaignPredictions({ campaignName, historicalData, currentMetri
             </div>
           )}
           {predictions.length > 3 &&
-            predictions[3].spend > (currentMetrics.spend / (historicalData.length || 1)) * 1.5 * 4 && ( // Check if spend is significantly higher than daily avg
+            currentMetrics.spend > 0 && // Ensure currentMetrics.spend is valid
+            historicalData.length > 0 && // Ensure historicalData is not empty
+            predictions[3].spend > (currentMetrics.spend / (historicalData.length || 1)) * 1.5 * 4 && (
               <div className="flex items-start gap-2 p-2 bg-red-900/30 rounded-md border border-red-700/50">
                 <Target className="w-3.5 h-3.5 text-red-400 mt-0.5 shrink-0" />
                 <div>

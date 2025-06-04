@@ -5,7 +5,7 @@ import { Calendar } from "lucide-react"
 interface DateRangeSelectorProps {
   value: string
   onChange: (value: string) => void
-  disabled?: boolean // Added disabled prop
+  disabled?: boolean
 }
 
 export function DateRangeSelector({ value, onChange, disabled }: DateRangeSelectorProps) {

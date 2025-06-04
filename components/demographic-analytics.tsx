@@ -1,6 +1,6 @@
 "use client"
 
-import type React from "react" // Added useCallback
+import type React from "react"
 import { useEffect, useState, useCallback } from "react"
 import {
   BarChart,
@@ -50,9 +50,9 @@ interface DemographicData {
 
 interface DemographicAnalyticsProps {
   campaignId: string
-  campaignName?: string // Optional
+  campaignName?: string
   accessToken: string
-  datePreset?: string // Make datePreset optional or ensure it's always passed
+  datePreset?: string
 }
 
 export function DemographicAnalytics({ campaignId, campaignName, accessToken, datePreset }: DemographicAnalyticsProps) {
@@ -71,10 +71,9 @@ export function DemographicAnalytics({ campaignId, campaignName, accessToken, da
 
     try {
       const response = await fetch("/api/meta/demographics", {
-        // Ensure this API route exists and is correct
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ campaignId, accessToken, datePreset: datePreset || "last_30d" }), // Default datePreset if not provided
+        body: JSON.stringify({ campaignId, accessToken, datePreset: datePreset || "last_30d" }),
       })
 
       if (!response.ok) {
@@ -141,8 +140,8 @@ export function DemographicAnalytics({ campaignId, campaignName, accessToken, da
     )
   }
 
-  const COLORS_GENDER = ["#3B82F6", "#EC4899", "#F59E0B"] // Blue, Pink, Orange
-  const COLORS_DEVICE = ["#10B981", "#8B5CF6", "#EF4444", "#F97316"] // Green, Purple, Red, Orange
+  const COLORS_GENDER = ["#3B82F6", "#EC4899", "#F59E0B"]
+  const COLORS_DEVICE = ["#10B981", "#8B5CF6", "#EF4444", "#F97316"]
 
   const CustomTooltipContent = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
@@ -162,12 +161,12 @@ export function DemographicAnalytics({ campaignId, campaignName, accessToken, da
 
   const PieCustomLabelContent = ({ cx, cy, midAngle, innerRadius, outerRadius, percent, name }: any) => {
     const RADIAN = Math.PI / 180
-    const radius = innerRadius + (outerRadius - innerRadius) * 0.4 // Adjusted for better fit
+    const radius = innerRadius + (outerRadius - innerRadius) * 0.4
     const x = cx + radius * Math.cos(-midAngle * RADIAN)
     const y = cy + radius * Math.sin(-midAngle * RADIAN)
     const percentage = (percent * 100).toFixed(0)
 
-    if (Number.parseInt(percentage) < 8) return null // Hide small labels
+    if (Number.parseInt(percentage) < 8) return null
 
     return (
       <text
