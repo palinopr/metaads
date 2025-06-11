@@ -1,5 +1,7 @@
 'use client'
 
+export const dynamic = 'force-dynamic'
+
 import { useState } from 'react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -14,7 +16,7 @@ import { MultiAccountPortfolio } from '@/components/multi-account-portfolio'
 import { ConsolidatedReporting } from '@/components/consolidated-reporting'
 import { CrossAccountAnalytics } from '@/components/cross-account-analytics'
 import { AccountPermissionsManager } from '@/components/account-permissions-manager'
-// import { useMultiAccountStore } from '@/lib/multi-account-store'
+import { useMultiAccountStore } from '@/lib/multi-account-store'
 
 export default function PortfolioPage() {
   const [activeTab, setActiveTab] = useState('dashboard')

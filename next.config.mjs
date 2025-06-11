@@ -30,6 +30,8 @@ const nextConfig = {
     optimizePackageImports: ['lucide-react', 'recharts', 'date-fns', '@radix-ui/react-accordion', '@radix-ui/react-dialog'],
     // Optimize CSS
     optimizeCss: true,
+    // Skip static generation for problematic pages
+    isrMemoryCacheSize: 0,
   },
   
   // Optimize compilation

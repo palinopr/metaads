@@ -1,6 +1,8 @@
 // app/dashboard/page.tsx - OPTIMIZED VERSION WITH CODE SPLITTING
 "use client"
 
+export const dynamic = 'force-dynamic'
+
 import type React from "react"
 import { useState, useEffect, useCallback, type FormEvent, Suspense, lazy } from "react"
 import dynamic from 'next/dynamic'
