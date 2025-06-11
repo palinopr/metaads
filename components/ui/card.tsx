@@ -1,6 +1,5 @@
 import * as React from "react"
 import { cn } from "@/lib/utils"
-// import { motion, HTMLMotionProps } from "framer-motion"
 
 interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
   variant?: "default" | "interactive" | "elevated" | "glass"
@@ -31,35 +30,6 @@ const Card = React.forwardRef<HTMLDivElement, CardProps>(
   }
 )
 Card.displayName = "Card"
-
-// Motion Card Component for animations
-interface MotionCardProps extends HTMLMotionProps<"div">, CardProps {}
-
-const MotionCard = React.forwardRef<HTMLDivElement, MotionCardProps>(
-  ({ className, variant = "default", hover = false, ...props }, ref) => {
-    const variants = {
-      default: "border bg-card shadow-sm",
-      interactive: "border bg-card shadow-sm",
-      elevated: "bg-card shadow-lg",
-      glass: "glass border-white/10 shadow-lg",
-    }
-
-    return (
-      <motion.div
-        ref={ref}
-        className={cn(
-          "rounded-lg text-card-foreground",
-          variants[variant],
-          className
-        )}
-        whileHover={hover ? { y: -4, transition: { duration: 0.2 } } : undefined}
-        whileTap={hover ? { scale: 0.98 } : undefined}
-        {...props}
-      />
-    )
-  }
-)
-MotionCard.displayName = "MotionCard"
 
 const CardHeader = React.forwardRef<
   HTMLDivElement,
@@ -166,7 +136,6 @@ CardGrid.displayName = "CardGrid"
 
 export {
   Card,
-  MotionCard,
   CardHeader,
   CardFooter,
   CardTitle,
