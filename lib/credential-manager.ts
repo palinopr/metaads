@@ -211,7 +211,7 @@ export class CredentialManager {
 
     // Test API connection using our proxy
     try {
-      const response = await fetch('/api/meta-test', {
+      const response = await fetch('/api/meta', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

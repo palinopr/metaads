@@ -164,7 +164,7 @@ export function MetaStyleDashboard({
 
     try {
       // Use the API proxy route instead of direct client
-      const response = await fetch('/api/meta-test', {
+      const response = await fetch('/api/meta', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

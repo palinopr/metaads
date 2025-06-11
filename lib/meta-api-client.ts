@@ -117,10 +117,10 @@ export class MetaAPIClient {
         debugLog(`Proxying request to: ${endpoint}`)
         
         // Use our proxy API route
-        // Use the working test endpoint temporarily
+        // Use main API endpoint (security middleware disabled)
         const apiUrl = typeof window === 'undefined' 
-          ? `http://localhost:${process.env.PORT || 3000}/api/meta-test`
-          : '/api/meta-test'
+          ? `http://localhost:${process.env.PORT || 3000}/api/meta`
+          : '/api/meta'
           
         const response = await fetch(apiUrl, {
           method: 'POST',
@@ -130,9 +130,7 @@ export class MetaAPIClient {
           body: JSON.stringify({
             endpoint,
             params,
-            accessToken: this.accessToken,
-            adAccountId: this.adAccountId,
-            type: 'insights'
+            accessToken: this.accessToken
           })
         })
 

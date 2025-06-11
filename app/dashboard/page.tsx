@@ -362,7 +362,7 @@ export default function DashboardPage() {
       try {
         // Use optimized API manager
         const data = await optimizedApiManager.request<any>(
-          "/api/meta-test-test",
+          "/api/meta-test",
           {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -475,7 +475,7 @@ export default function DashboardPage() {
   // Prefetch campaign details for better performance
   const prefetchCampaignDetails = async (campaignIds: string[]) => {
     const requests = campaignIds.map(campaignId => ({
-      endpoint: "/api/meta-test",
+      endpoint: "/api/meta",
       options: {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -512,7 +512,7 @@ export default function DashboardPage() {
 
     try {
       const detailsData = await optimizedApiManager.request<any>(
-        "/api/meta-test",
+        "/api/meta",
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -634,7 +634,7 @@ export default function DashboardPage() {
       }
 
       const data = await optimizedApiManager.request<any>(
-        "/api/meta-test",
+        "/api/meta",
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
