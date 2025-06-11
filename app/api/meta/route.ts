@@ -114,18 +114,29 @@ async function handleMetaAPIRequest(request: NextRequest): Promise<NextResponse>
         
         console.log(`Fetching details for campaign ${campaignId}...`)
         
-        // Create API client instance
-        const client = new MetaAPIClient(accessToken, adAccountId)
-        const adSetClient = new AdSetAndAdAPI(accessToken, adAccountId, false)
+        // Directly fetch campaign insights from Meta API
+        const insightsUrl = `https://graph.facebook.com/v19.0/${campaignId}/insights`
+        const params = new URLSearchParams({
+          access_token: accessToken,
+          time_range: JSON.stringify({
+            since: datePreset === 'last_7d' ? '2024-06-04' : '2024-05-12',
+            until: '2024-06-11'
+          }),
+          fields: 'spend,impressions,clicks,ctr,cpc,actions,action_values,conversions,cost_per_conversion,reach,frequency,date_start,date_stop'
+        })
         
-        // Fetch historical daily data for the campaign
-        const historicalDailyData = await client.getHistoricalData(campaignId, datePreset || 'last_30d')
+        const insightsResponse = await fetch(`${insightsUrl}?${params}`)
+        const insightsData = await insightsResponse.json()
         
-        // Fetch today's hourly data
-        const todayHourlyData = await client.getHourlyData(campaignId)
+        // Also fetch ad sets for this campaign
+        const adSetsUrl = `https://graph.facebook.com/v19.0/${campaignId}/adsets`
+        const adSetsParams = new URLSearchParams({
+          access_token: accessToken,
+          fields: 'id,name,status,created_time,updated_time,insights{spend,impressions,clicks,ctr,cpc,actions,action_values}'
+        })
         
-        // Fetch ad sets for the campaign
-        const adSets = await adSetClient.getAdSetsForCampaign(campaignId, datePreset || 'last_30d')
+        const adSetsResponse = await fetch(`${adSetsUrl}?${adSetsParams}`)
+        const adSetsData = await adSetsResponse.json()
         
         // Process historical daily data
         const processedHistoricalData = historicalDailyData.map((day: any) => {
@@ -175,13 +186,51 @@ async function handleMetaAPIRequest(request: NextRequest): Promise<NextResponse>
           }
         })
         
-        console.log(`Campaign ${campaignId} details: ${processedHistoricalData.length} days, ${processedHourlyData.length} hours, ${adSets.length} ad sets`)
+        // Process insights data
+        const processedInsights = insightsData.data ? insightsData.data.map((insight: any) => {
+          const spend = parseFloat(insight.spend || '0')
+          let revenue = 0
+          let conversions = 0
+          
+          if (insight.action_values) {
+            insight.action_values.forEach((actionValue: any) => {
+              if (['purchase', 'omni_purchase', 'offsite_conversion.fb_pixel_purchase'].includes(actionValue.action_type)) {
+                revenue += parseFloat(actionValue.value || '0')
+              }
+            })
+          }
+          
+          if (insight.actions) {
+            insight.actions.forEach((action: any) => {
+              if (['purchase', 'omni_purchase', 'offsite_conversion.fb_pixel_purchase'].includes(action.action_type)) {
+                conversions += parseInt(action.value || '0')
+              }
+            })
+          }
+          
+          return {
+            date: insight.date_start,
+            spend,
+            revenue,
+            conversions,
+            roas: spend > 0 ? revenue / spend : 0,
+            impressions: parseInt(insight.impressions || '0'),
+            clicks: parseInt(insight.clicks || '0'),
+            ctr: parseFloat(insight.ctr || '0'),
+            cpc: parseFloat(insight.cpc || '0'),
+            reach: parseInt(insight.reach || '0'),
+            frequency: parseFloat(insight.frequency || '0')
+          }
+        }) : []
+        
+        console.log(`Campaign ${campaignId} insights: ${processedInsights.length} data points`)
         
         return NextResponse.json({
-          historicalDailyData: processedHistoricalData,
-          todayHourlyData: processedHourlyData,
-          adSets,
-          success: true
+          success: true,
+          historicalDailyData: processedInsights,
+          todayHourlyData: [],
+          adSets: adSetsData.data || [],
+          rawInsights: insightsData
         })
       } catch (error) {
         console.error('Error fetching campaign details:', error)
