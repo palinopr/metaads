@@ -8,7 +8,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 
 export default function TestDebugPage() {
-  const [campaignId, setCampaignId] = useState('')
+  const [campaignId, setCampaignId] = useState('120224238698680525')
   const [result, setResult] = useState<any>(null)
   const [loading, setLoading] = useState(false)
 
@@ -17,32 +17,12 @@ export default function TestDebugPage() {
     setResult(null)
 
     try {
-      // Get credentials from storage - try multiple endpoints
-      let accessToken = ''
-      let adAccountId = ''
-      
-      // Try the working test endpoint first
-      try {
-        const testResponse = await fetch('/api/credentials-test')
-        const testData = await testResponse.json()
-        if (testResponse.ok) {
-          // Use your known working credentials
-          accessToken = 'EAATKZBg465ucBO7kjuFywVZACkgu1qeC97kmc00Y6wOeOQCdBye79lADtZBpdrMD6JXwEoDgu1ZCmvGfTOblNBtydgjgYAUwdA836vU1CSM94T3N7qeA6JIhauVfb4ZCJGpoXyRHxID9ZCGasxqoDaePLOgCt7ltUajoud0w6TZAeIShFerufB21ABffGFI8elxkGsTuAKXJDPrze3MwxBZC18oZD'
-          adAccountId = 'act_787610255314938'
-        }
-      } catch (e) {
-        console.log('Credentials test endpoint failed, using hardcoded values')
-        accessToken = 'EAATKZBg465ucBO7kjuFywVZACkgu1qeC97kmc00Y6wOeOQCdBye79lADtZBpdrMD6JXwEoDgu1ZCmvGfTOblNBtydgjgYAUwdA836vU1CSM94T3N7qeA6JIhauVfb4ZCJGpoXyRHxID9ZCGasxqoDaePLOgCt7ltUajoud0w6TZAeIShFerufB21ABffGFI8elxkGsTuAKXJDPrze3MwxBZC18oZD'
-        adAccountId = 'act_787610255314938'
-      }
-      
-      if (!accessToken || !adAccountId) {
-        setResult({ error: 'No valid credentials found' })
-        return
-      }
+      // Use your working credentials
+      const accessToken = 'EAATKZBg465ucBO7kjuFywVZACkgu1qeC97kmc00Y6wOeOQCdBye79lADtZBpdrMD6JXwEoDgu1ZCmvGfTOblNBtydgjgYAUwdA836vU1CSM94T3N7qeA6JIhauVfb4ZCJGpoXyRHxID9ZCGasxqoDaePLOgCt7ltUajoud0w6TZAeIShFerufB21ABffGFI8elxkGsTuAKXJDPrze3MwxBZC18oZD'
+      const adAccountId = 'act_787610255314938'
 
-      // Test campaign details
-      const response = await fetch('/api/debug-campaign', {
+      // Test the actual /api/meta endpoint that the dashboard uses
+      const response = await fetch('/api/meta', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -57,7 +37,13 @@ export default function TestDebugPage() {
       })
 
       const data = await response.json()
-      setResult({ status: response.status, data })
+      setResult({ 
+        status: response.status, 
+        data,
+        campaignId,
+        endpoint: '/api/meta'
+      })
+      
     } catch (error: any) {
       setResult({
         status: 'error',
@@ -72,7 +58,7 @@ export default function TestDebugPage() {
     <div className="container mx-auto p-4 max-w-4xl">
       <Card>
         <CardHeader>
-          <CardTitle>Debug Campaign Details</CardTitle>
+          <CardTitle>Test Actual Campaign Details API</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div>
@@ -82,11 +68,8 @@ export default function TestDebugPage() {
               type="text"
               value={campaignId}
               onChange={(e) => setCampaignId(e.target.value)}
-              placeholder="Enter campaign ID (e.g., 120212686948790433)"
+              placeholder="Enter campaign ID"
             />
-            <p className="text-sm text-gray-500 mt-1">
-              You can find campaign IDs in the main dashboard URL when you click on a campaign
-            </p>
           </div>
 
           <Button 
@@ -94,28 +77,46 @@ export default function TestDebugPage() {
             disabled={loading || !campaignId}
             className="w-full"
           >
-            {loading ? 'Testing...' : 'Test Campaign Details API'}
+            {loading ? 'Testing...' : 'Test /api/meta Campaign Details'}
           </Button>
 
           {result && (
             <Alert className={result.status === 200 ? 'border-green-500' : 'border-red-500'}>
               <AlertDescription>
-                <pre className="text-xs overflow-auto max-h-96">
-                  {JSON.stringify(result, null, 2)}
-                </pre>
+                <div className="space-y-2">
+                  <div><strong>Status:</strong> {result.status}</div>
+                  <div><strong>Endpoint:</strong> {result.endpoint}</div>
+                  <div><strong>Campaign ID:</strong> {result.campaignId}</div>
+                  
+                  {result.data?.summary && (
+                    <div className="bg-green-100 p-3 rounded">
+                      <strong>Summary Found!</strong>
+                      <div>Spend: ${result.data.summary.spend}</div>
+                      <div>Revenue: ${result.data.summary.revenue}</div>
+                      <div>ROAS: {result.data.summary.roas}x</div>
+                      <div>CTR: {result.data.summary.ctr}%</div>
+                    </div>
+                  )}
+                  
+                  <details>
+                    <summary>Full Response</summary>
+                    <pre className="text-xs overflow-auto max-h-96 mt-2">
+                      {JSON.stringify(result.data, null, 2)}
+                    </pre>
+                  </details>
+                </div>
               </AlertDescription>
             </Alert>
           )}
 
           <div className="mt-4 p-4 bg-gray-100 rounded">
-            <h3 className="font-semibold mb-2">How to use:</h3>
-            <ol className="list-decimal list-inside space-y-1 text-sm">
-              <li>Go to the main dashboard</li>
-              <li>Click on any campaign (like "House78 - Rise and Rose - Brooklyn")</li>
-              <li>Look at the URL - it will show something like `/campaign/120212686948790433`</li>
-              <li>Copy the number part and paste it here</li>
-              <li>Click "Test Campaign Details API" to see the raw API response</li>
-            </ol>
+            <h3 className="font-semibold mb-2">This will test:</h3>
+            <ul className="list-disc list-inside space-y-1 text-sm">
+              <li>The exact same API endpoint the dashboard uses: <code>/api/meta</code></li>
+              <li>With the same parameters: campaign_details type</li>
+              <li>Should show if summary data is being returned</li>
+              <li>Help identify why the dashboard shows zeros</li>
+            </ul>
           </div>
         </CardContent>
       </Card>
