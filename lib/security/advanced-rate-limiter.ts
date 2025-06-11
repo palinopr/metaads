@@ -1,4 +1,4 @@
-import { LRUCache } from 'lru-cache';
+import LRUCache from 'lru-cache';
 import { NextRequest, NextResponse } from 'next/server';
 
 interface RateLimitEntry {

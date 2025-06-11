@@ -107,7 +107,8 @@
     "react-window-infinite-loader": "^1.0.9",
     "ws": "^8.14.0",
     "@types/ws": "^8.5.10",
-    "framer-motion": "^10.16.0"
+    "framer-motion": "^10.16.0",
+    "lru-cache": "^10.0.0"
   },
   "devDependencies": {
     "@types/node": "^22",
