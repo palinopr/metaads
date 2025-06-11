@@ -41,8 +41,17 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Handle other requests
-    const metaEndpoint = endpoint || `${adAccountId}/insights`
+    // Handle other requests  
+    let metaEndpoint = endpoint || `${adAccountId}/insights`
+    
+    // If no endpoint specified but we have a type
+    if (!endpoint && type) {
+      if (type === 'insights' || type === 'overview') {
+        metaEndpoint = `${adAccountId}/insights`
+      } else if (type === 'campaigns') {
+        metaEndpoint = `${adAccountId}/campaigns`
+      }
+    }
     const url = new URL(`https://graph.facebook.com/v19.0/${metaEndpoint}`)
     url.searchParams.append('access_token', accessToken)
     

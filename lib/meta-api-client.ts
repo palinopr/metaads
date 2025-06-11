@@ -117,10 +117,10 @@ export class MetaAPIClient {
         debugLog(`Proxying request to: ${endpoint}`)
         
         // Use our proxy API route
-        // In server context, we need to use absolute URL
+        // Use the working test endpoint temporarily
         const apiUrl = typeof window === 'undefined' 
-          ? `http://localhost:${process.env.PORT || 3000}/api/meta`
-          : '/api/meta'
+          ? `http://localhost:${process.env.PORT || 3000}/api/meta-test`
+          : '/api/meta-test'
           
         const response = await fetch(apiUrl, {
           method: 'POST',
@@ -130,7 +130,9 @@ export class MetaAPIClient {
           body: JSON.stringify({
             endpoint,
             params,
-            accessToken: this.accessToken
+            accessToken: this.accessToken,
+            adAccountId: this.adAccountId,
+            type: 'insights'
           })
         })
 
