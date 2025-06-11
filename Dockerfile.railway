@@ -1,0 +1,23 @@
+FROM node:20-alpine
+
+WORKDIR /app
+
+# Copy package files
+COPY package*.json ./
+COPY pnpm-lock.yaml* ./
+
+# Install dependencies
+RUN corepack enable && corepack prepare pnpm@latest --activate
+RUN pnpm install --frozen-lockfile
+
+# Copy application code
+COPY . .
+
+# Build Next.js app
+RUN pnpm run build || true
+
+# Expose port
+EXPOSE 3000
+
+# Start the application
+CMD ["pnpm", "run", "start"]
