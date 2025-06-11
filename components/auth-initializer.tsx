@@ -69,7 +69,7 @@ export function AuthInitializer({ onInitialized, onNeedsSetup }: AuthInitializer
       }
       
       // Check for old credentials to migrate
-      const oldCreds = CredentialManager.load()
+      const oldCreds = await CredentialManager.load()
       
       if (oldCreds) {
         setStep('migrating')

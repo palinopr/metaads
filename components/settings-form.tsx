@@ -144,7 +144,7 @@ export function SettingsForm({ onSuccess, initialToken = "", initialAccountId = 
         result = await CredentialManager.validate(credentials)
         
         if (result.isValid) {
-          const saveResult = CredentialManager.save(credentials, true)
+          const saveResult = await CredentialManager.save(credentials, true)
           
           if (saveResult) {
             console.log('Credentials saved successfully')

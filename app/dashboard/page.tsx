@@ -313,26 +313,29 @@ export default function DashboardPage() {
 
   // Load credentials on mount
   useEffect(() => {
-    const savedCredentials = CredentialManager.load()
+    const loadCredentials = async () => {
+      const savedCredentials = await CredentialManager.load()
 
-    if (savedCredentials) {
-      const formatValidation = CredentialManager.validateFormat(savedCredentials)
-      
-      if (formatValidation.isValid) {
-        setCredentials(savedCredentials)
-        setCredentialsSubmitted(true)
-        setShowSettings(false)
-        console.log('Loaded valid credentials from storage')
+      if (savedCredentials) {
+        const formatValidation = CredentialManager.validateFormat(savedCredentials)
+        
+        if (formatValidation.isValid) {
+          setCredentials(savedCredentials)
+          setCredentialsSubmitted(true)
+          setShowSettings(false)
+          console.log('Loaded valid credentials from storage')
+        } else {
+          console.warn('Invalid stored credentials found:', formatValidation.errors)
+          await CredentialManager.clear()
+          setShowSettings(true)
+          setFetchError('Stored credentials are invalid: ' + formatValidation.errors.join(', '))
+        }
       } else {
-        console.warn('Invalid stored credentials found:', formatValidation.errors)
-        CredentialManager.clear()
+        console.log('No stored credentials found')
         setShowSettings(true)
-        setFetchError('Stored credentials are invalid: ' + formatValidation.errors.join(', '))
       }
-    } else {
-      console.log('No stored credentials found')
-      setShowSettings(true)
     }
+    loadCredentials()
   }, [])
 
   // Optimized fetch function using the new API manager

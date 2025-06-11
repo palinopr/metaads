@@ -39,14 +39,17 @@ export default function PatternAnalysisPage() {
   const [hasCredentials, setHasCredentials] = useState(false)
 
   useEffect(() => {
-    // Check if user has valid credentials
-    const credentials = CredentialManager.load()
-    setHasCredentials(!!credentials?.accessToken && !!credentials?.adAccountId)
+    const checkCredentials = async () => {
+      // Check if user has valid credentials
+      const credentials = await CredentialManager.load()
+      setHasCredentials(!!credentials?.accessToken && !!credentials?.adAccountId)
 
-    // Generate sample insights for demo
-    if (credentials?.accessToken) {
-      generateSampleInsights()
+      // Generate sample insights for demo
+      if (credentials?.accessToken) {
+        generateSampleInsights()
+      }
     }
+    checkCredentials()
   }, [])
 
   const generateSampleInsights = () => {

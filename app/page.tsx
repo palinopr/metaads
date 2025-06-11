@@ -32,7 +32,7 @@ function MetaAdsDashboardContent() {
     const init = async () => {
       try {
         console.log('Initializing dashboard...')
-        const savedCreds = CredentialManager.load()
+        const savedCreds = await CredentialManager.load()
         console.log('Loaded credentials:', savedCreds ? 'Found' : 'Not found')
         
         if (!cancelled && savedCreds) {
@@ -89,12 +89,12 @@ function MetaAdsDashboardContent() {
     }
   }, [])
 
-  const handleSettingsSuccess = () => {
+  const handleSettingsSuccess = async () => {
     if (!isMounted.current) return
     
     console.log('Settings saved successfully')
     // Reload credentials
-    const savedCreds = CredentialManager.load()
+    const savedCreds = await CredentialManager.load()
     if (savedCreds) {
       setCredentials(savedCreds)
       setHasValidCredentials(true)

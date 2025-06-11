@@ -40,7 +40,7 @@ export function SettingsModal({ open, onOpenChange, onSuccess, useSecureAuth = t
     try {
       if (useSecureAuth) {
         // Check if migration is needed
-        const oldCreds = CredentialManager.load()
+        const oldCreds = await CredentialManager.load()
         const newCreds = await SecureCredentialManager.load()
         
         if (!newCreds && oldCreds) {
@@ -54,7 +54,7 @@ export function SettingsModal({ open, onOpenChange, onSuccess, useSecureAuth = t
           setCredentials(null)
         }
       } else {
-        const savedCreds = CredentialManager.load()
+        const savedCreds = await CredentialManager.load()
         setCredentials(savedCreds)
         setMigrationStatus('complete')
       }

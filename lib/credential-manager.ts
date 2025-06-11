@@ -25,7 +25,7 @@ export class CredentialManager {
   private static readonly VALIDATED_KEY = 'metaCredentialsValidated'
 
   // Save credentials with validation flag and error handling
-  static save(credentials: Credentials, validated: boolean = false): boolean {
+  static async save(credentials: Credentials, validated: boolean = false): Promise<boolean> {
     try {
       // Clean credentials before saving
       const cleanToken = credentials.accessToken.trim()
@@ -36,37 +36,70 @@ export class CredentialManager {
         ? cleanAccountId 
         : `act_${cleanAccountId}`
       
+      // Try to save to server first
+      if (typeof window !== 'undefined') {
+        try {
+          const response = await fetch('/api/credentials', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              accessToken: cleanToken,
+              adAccountId: formattedAccountId
+            })
+          })
+          
+          if (response.ok) {
+            console.log('Credentials saved to server')
+            // Also save to localStorage for immediate access
+            localStorage.setItem(this.TOKEN_KEY, cleanToken)
+            localStorage.setItem(this.ACCOUNT_KEY, formattedAccountId)
+            localStorage.setItem(this.VALIDATED_KEY, validated ? 'true' : 'false')
+            return true
+          }
+        } catch (error) {
+          console.warn('Failed to save to server, saving to localStorage only:', error)
+        }
+      }
+      
+      // Fall back to localStorage only
       localStorage.setItem(this.TOKEN_KEY, cleanToken)
       localStorage.setItem(this.ACCOUNT_KEY, formattedAccountId)
       localStorage.setItem(this.VALIDATED_KEY, validated ? 'true' : 'false')
       
       // Verify the save worked by reading back
-      const saved = this.load()
+      const saved = await this.load()
       return saved !== null && saved.accessToken === cleanToken && saved.adAccountId === formattedAccountId
     } catch (error) {
-      console.error('Failed to save credentials to localStorage:', error)
+      console.error('Failed to save credentials:', error)
       return false
     }
   }
 
   // Load credentials with error handling
-  static load(): Credentials | null {
+  static async load(): Promise<Credentials | null> {
     try {
-      // First check environment variables (for Railway deployment)
+      // First try to load from server storage
       if (typeof window !== 'undefined') {
-        const envToken = process.env.NEXT_PUBLIC_META_ACCESS_TOKEN
-        const envAccountId = process.env.NEXT_PUBLIC_META_AD_ACCOUNT_ID
-        
-        if (envToken && envAccountId) {
-          console.log('Using credentials from environment variables')
-          return {
-            accessToken: envToken.trim(),
-            adAccountId: envAccountId.trim()
+        try {
+          const response = await fetch('/api/credentials')
+          if (response.ok) {
+            const data = await response.json()
+            if (data.success && data.credentials) {
+              console.log(`Using credentials from ${data.credentials.source}`)
+              return {
+                accessToken: data.credentials.accessToken,
+                adAccountId: data.credentials.adAccountId
+              }
+            }
           }
+        } catch (error) {
+          console.warn('Failed to load from server, falling back to localStorage:', error)
         }
       }
       
-      // Fall back to localStorage
+      // Fall back to localStorage for local development
       const token = localStorage.getItem(this.TOKEN_KEY)
       const accountId = localStorage.getItem(this.ACCOUNT_KEY)
       
@@ -86,7 +119,7 @@ export class CredentialManager {
         adAccountId: accountId.trim() 
       }
     } catch (error) {
-      console.error('Failed to load credentials from localStorage:', error)
+      console.error('Failed to load credentials:', error)
       return null
     }
   }
@@ -97,7 +130,17 @@ export class CredentialManager {
   }
 
   // Clear all credentials
-  static clear(): void {
+  static async clear(): Promise<void> {
+    // Clear from server
+    if (typeof window !== 'undefined') {
+      try {
+        await fetch('/api/credentials', { method: 'DELETE' })
+      } catch (error) {
+        console.warn('Failed to clear server credentials:', error)
+      }
+    }
+    
+    // Clear from localStorage
     localStorage.removeItem(this.TOKEN_KEY)
     localStorage.removeItem(this.ACCOUNT_KEY)
     localStorage.removeItem(this.VALIDATED_KEY)

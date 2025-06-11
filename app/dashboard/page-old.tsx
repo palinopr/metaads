@@ -265,28 +265,31 @@ export default function DashboardPage() {
   }, [campaigns, isLoading, fetchError, credentials, overviewData])
 
   useEffect(() => {
-    const savedCredentials = CredentialManager.load()
+    const loadCredentials = async () => {
+      const savedCredentials = await CredentialManager.load()
 
-    if (savedCredentials) {
-      // Validate credential format using CredentialManager
-      const formatValidation = CredentialManager.validateFormat(savedCredentials)
-      
-      if (formatValidation.isValid) {
-        setCredentials(savedCredentials)
-        setCredentialsSubmitted(true)
-        setShowSettings(false)
-        console.log('Loaded valid credentials from storage')
-      } else {
-        // Clear invalid credentials
-        console.warn('Invalid stored credentials found:', formatValidation.errors)
-        CredentialManager.clear()
+      if (savedCredentials) {
+        // Validate credential format using CredentialManager
+        const formatValidation = CredentialManager.validateFormat(savedCredentials)
+        
+        if (formatValidation.isValid) {
+          setCredentials(savedCredentials)
+          setCredentialsSubmitted(true)
+          setShowSettings(false)
+          console.log('Loaded valid credentials from storage')
+        } else {
+          // Clear invalid credentials
+          console.warn('Invalid stored credentials found:', formatValidation.errors)
+          await CredentialManager.clear()
         setShowSettings(true)
-        setFetchError('Stored credentials are invalid: ' + formatValidation.errors.join(', '))
+          setFetchError('Stored credentials are invalid: ' + formatValidation.errors.join(', '))
+        }
+      } else {
+        console.log('No stored credentials found')
+        setShowSettings(true)
       }
-    } else {
-      console.log('No stored credentials found')
-      setShowSettings(true)
     }
+    loadCredentials()
   }, [])
 
   const fetchOverviewData = useCallback(
