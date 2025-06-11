@@ -1,5 +1,13 @@
-import LRUCache from 'lru-cache';
 import { NextRequest, NextResponse } from 'next/server';
+
+// Try to import LRUCache, but make it optional
+let LRUCache: any;
+try {
+  const lruCacheModule = require('lru-cache');
+  LRUCache = lruCacheModule.LRUCache || lruCacheModule.default || lruCacheModule;
+} catch (e) {
+  console.warn('LRUCache not available, using Map fallback');
+}
 
 interface RateLimitEntry {
   count: number;
@@ -55,23 +63,40 @@ const DEFAULT_CONFIG: RateLimitConfig = {
 };
 
 export class AdvancedRateLimiter {
-  private cache: LRUCache<string, RateLimitEntry>;
-  private suspiciousIPs: LRUCache<string, SuspiciousActivity>;
+  private cache: any;
+  private suspiciousIPs: any;
   private config: RateLimitConfig;
   private patterns: Map<string, RegExp[]>;
 
   constructor(config: Partial<RateLimitConfig> = {}) {
     this.config = { ...DEFAULT_CONFIG, ...config };
     
-    this.cache = new LRUCache({
-      max: 10000,
-      ttl: this.config.windowMs
-    });
-    
-    this.suspiciousIPs = new LRUCache({
-      max: 5000,
-      ttl: 24 * 60 * 60 * 1000 // 24 hours
-    });
+    // Use LRUCache if available, otherwise use Map
+    if (LRUCache) {
+      this.cache = new LRUCache({
+        max: 10000,
+        ttl: this.config.windowMs
+      });
+      
+      this.suspiciousIPs = new LRUCache({
+        max: 5000,
+        ttl: 24 * 60 * 60 * 1000 // 24 hours
+      });
+    } else {
+      // Fallback to Map
+      this.cache = new Map();
+      this.suspiciousIPs = new Map();
+      
+      // Clean up old entries periodically
+      setInterval(() => {
+        const now = Date.now();
+        for (const [key, value] of this.cache.entries()) {
+          if (value.firstRequest + this.config.windowMs < now) {
+            this.cache.delete(key);
+          }
+        }
+      }, this.config.windowMs);
+    }
     
     this.patterns = new Map([
       ['scan_patterns', [
