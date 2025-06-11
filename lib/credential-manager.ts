@@ -39,7 +39,7 @@ export class CredentialManager {
       // Try to save to server first
       if (typeof window !== 'undefined') {
         try {
-          const response = await fetch('/api/credentials', {
+          const response = await fetch('/api/credentials-simple', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -83,7 +83,7 @@ export class CredentialManager {
       // First try to load from server storage
       if (typeof window !== 'undefined') {
         try {
-          const response = await fetch('/api/credentials')
+          const response = await fetch('/api/credentials-simple')
           if (response.ok) {
             const data = await response.json()
             if (data.success && data.credentials) {
@@ -134,7 +134,7 @@ export class CredentialManager {
     // Clear from server
     if (typeof window !== 'undefined') {
       try {
-        await fetch('/api/credentials', { method: 'DELETE' })
+        await fetch('/api/credentials-simple', { method: 'DELETE' })
       } catch (error) {
         console.warn('Failed to clear server credentials:', error)
       }
