@@ -225,11 +225,41 @@ async function handleMetaAPIRequest(request: NextRequest): Promise<NextResponse>
         
         console.log(`Campaign ${campaignId} insights: ${processedInsights.length} data points`)
         
+        // Calculate summary metrics for the entire period
+        const totalData = processedInsights.reduce((acc, insight) => {
+          return {
+            spend: acc.spend + insight.spend,
+            revenue: acc.revenue + insight.revenue,
+            conversions: acc.conversions + insight.conversions,
+            impressions: acc.impressions + insight.impressions,
+            clicks: acc.clicks + insight.clicks
+          }
+        }, { spend: 0, revenue: 0, conversions: 0, impressions: 0, clicks: 0 })
+
+        // Calculate aggregate metrics
+        const totalROAS = totalData.spend > 0 ? totalData.revenue / totalData.spend : 0
+        const totalCTR = totalData.impressions > 0 ? (totalData.clicks / totalData.impressions) * 100 : 0
+        const totalCPC = totalData.clicks > 0 ? totalData.spend / totalData.clicks : 0
+        const conversionRate = totalData.clicks > 0 ? (totalData.conversions / totalData.clicks) * 100 : 0
+
         return NextResponse.json({
           success: true,
           historicalDailyData: processedInsights,
           todayHourlyData: [],
           adSets: adSetsData.data || [],
+          // Add summary metrics that the frontend expects
+          summary: {
+            spend: totalData.spend,
+            revenue: totalData.revenue,
+            conversions: totalData.conversions,
+            impressions: totalData.impressions,
+            clicks: totalData.clicks,
+            roas: totalROAS,
+            ctr: totalCTR,
+            cpc: totalCPC,
+            conversionRate,
+            performanceScore: Math.min(100, Math.max(0, (totalROAS * 20) + (totalCTR * 2)))
+          },
           rawInsights: insightsData
         })
       } catch (error) {
