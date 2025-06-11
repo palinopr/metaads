@@ -332,7 +332,7 @@ export default function DashboardPage() {
           setFetchError('Stored credentials are invalid: ' + formatValidation.errors.join(', '))
         }
       } else {
-        console.log('No stored credentials found')
+        console.log('No stored credentials found - v2')
         setShowSettings(true)
       }
     }
