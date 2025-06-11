@@ -14,14 +14,6 @@ export const metadata: Metadata = {
   title: "Meta Ads Dashboard Pro",
   description: "Advanced Meta Ads performance dashboard with historical analysis and predictions",
   manifest: "/manifest.json?v=2",
-  themeColor: "#0f172a",
-  viewport: {
-    width: "device-width",
-    initialScale: 1,
-    maximumScale: 5,
-    userScalable: true,
-    viewportFit: "cover",
-  },
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
@@ -36,6 +28,15 @@ export const metadata: Metadata = {
       { url: "/icons/icon-192x192.svg", sizes: "192x192", type: "image/svg+xml" },
     ],
   },
+}
+
+export const viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 5,
+  userScalable: true,
+  viewportFit: "cover",
+  themeColor: "#0f172a",
 }
 
 export default function RootLayout({

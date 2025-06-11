@@ -2,6 +2,7 @@
 "use client"
 
 export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
 
 import type React from "react"
 import { useState, useEffect, useCallback, type FormEvent, Suspense, lazy } from "react"
