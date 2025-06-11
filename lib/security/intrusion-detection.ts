@@ -263,29 +263,33 @@ export class IntrusionDetectionSystem {
       const indicators: string[] = [];
       
       // Check request frequency anomaly
-      if (currentBehavior.requestFrequency > profile.patterns.requestFrequency * 5) {
+      if (currentBehavior?.requestFrequency && profile?.patterns?.requestFrequency && 
+          currentBehavior.requestFrequency > profile.patterns.requestFrequency * 5) {
         anomalyScore += 30;
         indicators.push('unusual_request_frequency');
       }
       
       // Check path anomaly
-      const newPaths = currentBehavior.paths.filter(
-        (path: string) => !profile.patterns.typicalPaths.includes(path)
-      );
-      if (newPaths.length > 10) {
-        anomalyScore += 25;
-        indicators.push('unusual_path_access');
+      if (currentBehavior?.paths && profile?.patterns?.typicalPaths) {
+        const newPaths = currentBehavior.paths.filter(
+          (path: string) => !profile.patterns.typicalPaths.includes(path)
+        );
+        if (newPaths.length > 10) {
+          anomalyScore += 25;
+          indicators.push('unusual_path_access');
+        }
       }
       
       // Check user agent change
-      if (!profile.patterns.userAgents.includes(currentBehavior.userAgent)) {
+      if (currentBehavior?.userAgent && profile?.patterns?.userAgents && 
+          !profile.patterns.userAgents.includes(currentBehavior.userAgent)) {
         anomalyScore += 20;
         indicators.push('user_agent_change');
       }
       
       // Check time pattern anomaly
       const currentHour = new Date().getHours();
-      if (!profile.patterns.timePatterns.includes(currentHour)) {
+      if (profile?.patterns?.timePatterns && !profile.patterns.timePatterns.includes(currentHour)) {
         anomalyScore += 15;
         indicators.push('unusual_time_access');
       }

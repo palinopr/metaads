@@ -7,7 +7,7 @@ const SECURITY_PATTERNS = {
   SQL_INJECTION: /('|(\-\-)|(;)|(\||\|)|(\*|\*))|(select|union|insert|drop|delete|update|create|alter|exec|execute|script|declare|grant|revoke)/i,
   XSS: /<[^>]*script[^>]*>|javascript:|vbscript:|onload|onerror|onclick|onmouseover|onfocus|onblur|onchange|onsubmit/i,
   NOSQL_INJECTION: /\$where|\$ne|\$gt|\$lt|\$gte|\$lte|\$in|\$nin|\$regex|\$exists|\$type|\$all|\$size|\$elemMatch|\$eval/i,
-  COMMAND_INJECTION: /[;&|`$(){}\[\]<>]/,
+  COMMAND_INJECTION: /[;&|`$].*[;&|`$]/,
   PATH_TRAVERSAL: /\.\.[\/\\]/,
   LDAP_INJECTION: /[\(\)\*\\\x00]/,
   XML_INJECTION: /<\?xml|<!DOCTYPE|<!ENTITY/i,
