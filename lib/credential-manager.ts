@@ -52,6 +52,21 @@ export class CredentialManager {
   // Load credentials with error handling
   static load(): Credentials | null {
     try {
+      // First check environment variables (for Railway deployment)
+      if (typeof window !== 'undefined') {
+        const envToken = process.env.NEXT_PUBLIC_META_ACCESS_TOKEN
+        const envAccountId = process.env.NEXT_PUBLIC_META_AD_ACCOUNT_ID
+        
+        if (envToken && envAccountId) {
+          console.log('Using credentials from environment variables')
+          return {
+            accessToken: envToken.trim(),
+            adAccountId: envAccountId.trim()
+          }
+        }
+      }
+      
+      // Fall back to localStorage
       const token = localStorage.getItem(this.TOKEN_KEY)
       const accountId = localStorage.getItem(this.ACCOUNT_KEY)
       
