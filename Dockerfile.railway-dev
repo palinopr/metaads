@@ -1,0 +1,19 @@
+# Ultra simple Dockerfile for Railway - just run in dev mode
+FROM node:20-alpine
+
+WORKDIR /app
+
+# Copy everything
+COPY . .
+
+# Install dependencies
+RUN npm install --legacy-peer-deps
+
+# Set port
+ENV PORT=3000
+
+# Expose port
+EXPOSE 3000
+
+# Just run in development mode
+CMD ["npm", "run", "dev"]
