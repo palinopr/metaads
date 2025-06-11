@@ -37,14 +37,15 @@ Since the app is running in development mode on Railway, credentials saved in th
    - Copy the Account ID (it looks like: 1234567890)
    - Add `act_` prefix: `act_1234567890`
 
-### Why Settings Don't Save in the UI?
+### Settings Now Persist!
 
-The app is running in development mode on Railway, which means:
-- Settings are stored in browser localStorage
-- They don't persist between sessions
-- Each deployment creates a new container
+The app now supports server-side credential storage:
+- Enter credentials through the web interface
+- They're stored encrypted on the server
+- Persist across deployments and sessions
+- No need to use environment variables (unless you want to)
 
-**Solution**: Use environment variables as shown above!
+**Note**: The app is now running in production mode for better performance and proper API route handling.
 
 ### Testing Your Setup
 

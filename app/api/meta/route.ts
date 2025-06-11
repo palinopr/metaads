@@ -68,6 +68,7 @@ function getClientIP(request: NextRequest): string {
 
 async function handleMetaAPIRequest(request: NextRequest): Promise<NextResponse> {
   let response: Response | null = null
+  const clientIP = getClientIP(request)
   
   try {
     // Validate and sanitize request
