@@ -39,7 +39,7 @@ export function APIMonitor() {
       const method = config?.method || 'GET'
       
       // Only monitor Meta API calls
-      if (!url.includes('graph.facebook.com') && !url.includes('/api/meta') && !url.includes('/api/simple-meta')) {
+      if (!url.includes('graph.facebook.com') && !url.includes('/api/meta-test') && !url.includes('/api/simple-meta')) {
         return originalFetch(...args)
       }
 

@@ -146,7 +146,7 @@ export class TokenManager {
   // Test token validity with Meta API
   static async validateToken(token: string, adAccountId: string): Promise<boolean> {
     try {
-      const response = await fetch('/api/meta', {
+      const response = await fetch('/api/meta-test', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

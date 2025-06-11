@@ -112,7 +112,7 @@ export function SecurityDashboard() {
               type: 'suspicious_activity',
               severity: 'medium',
               source: { ip: '192.168.1.100', userAgent: 'curl/7.68.0' },
-              target: { endpoint: '/api/meta', method: 'POST' },
+              target: { endpoint: '/api/meta-test', method: 'POST' },
               details: {
                 description: 'Suspicious user agent detected',
                 riskScore: 65
