@@ -6,8 +6,8 @@ const nextConfig = {
   compress: true,
   poweredByHeader: false,
   
-  // Generate standalone output for Docker
-  output: 'standalone',
+  // Don't use standalone for simpler deployment
+  // output: 'standalone',
   
   // Disable source maps in production to save memory
   productionBrowserSourceMaps: false,

@@ -3,8 +3,8 @@ const nextConfig = {
   // Disable strict mode to prevent double renders
   reactStrictMode: false,
   
-  // Enable standalone output for Docker
-  output: 'standalone',
+  // Disable standalone for Railway
+  // output: 'standalone',
   
   eslint: {
     ignoreDuringBuilds: true,
