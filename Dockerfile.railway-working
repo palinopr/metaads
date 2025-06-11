@@ -1,0 +1,28 @@
+# Working Dockerfile for Railway - using npm install
+FROM node:20-alpine
+
+WORKDIR /app
+
+# Copy package.json only first
+COPY package.json ./
+
+# Install dependencies (ignore lock file issues)
+RUN npm install --legacy-peer-deps
+
+# Copy the rest of the application
+COPY . .
+
+# Set environment variables
+ENV NODE_ENV=production
+ENV NEXT_TELEMETRY_DISABLED=1
+ENV SKIP_ENV_VALIDATION=1
+
+# Build the application
+RUN npm run build
+
+# Set port
+ENV PORT=3000
+EXPOSE 3000
+
+# Start production server
+CMD ["npm", "start"]
