@@ -13,8 +13,12 @@ RUN pnpm install --frozen-lockfile
 # Copy application code
 COPY . .
 
+# Set environment
+ENV NODE_ENV=development
+ENV PORT=3000
+
 # Expose port
 EXPOSE 3000
 
-# Start in development mode (no build required)
-CMD ["pnpm", "run", "dev"]
+# Start with the simple Railway server
+CMD ["node", "railway-server.js"]
