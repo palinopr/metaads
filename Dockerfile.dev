@@ -18,5 +18,5 @@ ENV PORT=3000
 # Expose port
 EXPOSE 3000
 
-# Start with the simple Railway server
-CMD ["node", "railway-server.js"]
+# Start with npm script
+CMD ["npm", "run", "start:railway"]
