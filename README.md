@@ -1,86 +1,198 @@
-# Meta Ads Dashboard
+# Meta Ads Dashboard Pro 🚀
 
-A Next.js application to display your Meta (Facebook) Ads campaign performance. Connects to the Meta Graph API to fetch data like spend, revenue, ROAS, conversions, impressions, clicks, CTR, and CPC.
+An advanced Meta Ads management platform with AI-powered insights, predictive analytics, and comprehensive campaign tracking. Built to be the best Meta Ads platform available.
 
-## Quick Deploy to Vercel
+## ✨ Features
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/palinopr/metaads.git&project-name=meta-ads-dashboard&repository-name=meta-ads-dashboard)
+### Core Dashboard
+- 📊 **Real-time Dashboard** - Complete overview of all campaigns with live metrics
+- 📈 **Campaign Details** - Full historical data from campaign start date
+- 📅 **Date Filtering** - View today, yesterday, or all-time data
+- 🔍 **Debug Panel** - Built-in API troubleshooting tools
+- 💾 **Data Export** - Download campaign data as CSV
 
-**Note:** Please verify that `https://github.com/palinopr/metaads.git` in the URL above points to *your correct GitHub repository* containing this project's code. If your GitHub username or repository name is different, update the `repository-url` parameter in the link.
+### AI-Powered Features
+- 🧠 **AI Insights** - Automatic recommendations and opportunity detection
+- ✨ **Predictive Analytics** - 7/30/90 day forecasts with multiple scenarios
+- 🎯 **Individual Campaign Predictions** - AI forecasts for each campaign
+- 🚨 **Anomaly Detection** - Real-time alerts for unusual performance
+- 🤖 **Claude AI Integration** - Optional advanced ML predictions
 
-Clicking the "Deploy with Vercel" button will take you to Vercel to deploy this project from your specified GitHub repository.
+### Advanced Analytics
+- 🏆 **Competitor Benchmarking** - Compare to industry standards
+- 📊 **Campaign Comparison** - Side-by-side analysis of up to 4 campaigns
+- 📈 **Performance Scoring** - 0-100 rating for each campaign
+- 🎨 **Visual Analytics** - Interactive charts and graphs
+- 🔄 **Trend Analysis** - Week-over-week performance tracking
 
-## Features
+### User Experience
+- 🎯 **Expandable Rows** - See predictions without leaving the table
+- 🔔 **Smart Notifications** - Performance alerts and anomalies
+- 💻 **System Status** - Real-time diagnostics panel
+- 🛠️ **Health Check Scripts** - Automated troubleshooting
 
--   Connect to Meta Ads API via user-provided credentials.
--   Display key campaign metrics:
-  -   Spend, Revenue, ROAS, Conversions
-  -   Impressions, Clicks, CTR, CPC
--   Sort campaigns by creation date (newest first).
--   Client-side storage of API credentials in `localStorage`.
--   Refresh button to manually update data.
--   Responsive design with Tailwind CSS and shadcn/ui.
--   Dark mode support.
--   Loading and error states with UI feedback.
--   Formatted numbers for readability.
+## 🚀 Quick Start
 
-## Prerequisites for Local Development
+1. **Install dependencies**
+   ```bash
+   npm install
+   ```
 
--   Node.js (v18 or later recommended)
--   npm, yarn, or pnpm
--   Git
--   A Meta Developer Account with an app that has access to the Ads Management API.
--   Your Meta Ads API Access Token and Ad Account ID.
+2. **Start the development server**
+   ```bash
+   npm run dev
+   ```
 
-## Local Development Setup
+3. **Open your browser**
+   ```
+   http://localhost:3000
+   ```
 
-1.  **Clone the repository (if you haven't already):**
-  \`\`\`bash
-  # If your project is already synced via v0, you might already have it locally.
-  # Otherwise, clone from your GitHub:
-  git clone https://github.com/palinopr/metaads.git meta-ads-dashboard-local
-  cd meta-ads-dashboard-local
-  \`\`\`
-  *(Replace `palinopr/metaads` with your actual GitHub repo if different)*
+4. **Add your Meta API credentials**
+   - Click the Settings icon (⚙️)
+   - Enter your Meta API Access Token
+   - Enter your Ad Account ID (format: act_123456789)
+   - Click "Save & Connect"
 
-2.  **Install dependencies:**
-  \`\`\`bash
-  npm install
-  \`\`\`
+## 🔧 Troubleshooting
 
-3.  **Run the development server:**
-  \`\`\`bash
-  npm run dev
-  \`\`\`
-  Open [http://localhost:3000](http://localhost:3000) in your browser.
+**Quick diagnosis:**
+```bash
+./diagnose.sh
+```
 
-4.  **Enter Credentials (Locally):**
-  -   On the dashboard, click the Settings (gear) icon.
-  -   Enter your Meta Ads API Access Token and Ad Account ID.
-  -   Click "Save & Fetch Data".
+**Full system check:**
+```bash
+./scripts/health-check.sh
+```
 
-## Manual Deployment to Vercel (If not using Deploy Button)
+**Common issues:**
+- "No campaigns found" → Add Meta API credentials in Settings
+- Server crashes → Run `rm -rf .next && npm run dev`
+- Port conflicts → Kill existing processes: `pkill -f "next dev"`
 
-If you prefer to set up the Vercel project manually by importing from GitHub:
+## 📋 Prerequisites
 
-1.  **Ensure code is on GitHub:** Push your latest local changes to your `metaads` repository on the `main` branch.
-2.  **Deploy on Vercel:**
-  -   Go to your [Vercel Dashboard](https://vercel.com/dashboard).
-  -   Click "Add New..." -> "Project".
-  -   Connect your GitHub account.
-  -   Select your `metaads` repository.
-  -   Vercel automatically detects it as a Next.js project.
-  -   No special environment variables are needed for Vercel for this client-side credential setup.
-  -   Click "Deploy".
+- Node.js (v18 or later)
+- npm, yarn, or pnpm
+- Meta Developer Account with Ads Management API access
+- Meta Ads API Access Token and Ad Account ID
+- (Optional) Claude API key for enhanced AI features
 
-## Security Note
+## 🏗️ Project Structure
 
-This application stores your Meta API Access Token in your browser's `localStorage`. While convenient for personal use, be aware that this is less secure than server-side environment variables.
+```
+metaads/
+├── app/                    # Next.js app directory
+│   └── page.tsx           # Main dashboard
+├── components/            # React components
+│   ├── ai-insights.tsx    # AI recommendations
+│   ├── predictive-analytics.tsx
+│   ├── campaign-comparison.tsx
+│   ├── campaign-detail.tsx
+│   ├── competitor-benchmark.tsx
+│   └── ...
+├── lib/                   # Utilities and API clients
+│   ├── meta-api-client.ts # Meta API integration
+│   ├── meta-api-enhanced.ts
+│   └── ai-predictions.ts  # Claude AI integration
+├── scripts/              # Diagnostic tools
+│   └── health-check.sh
+├── diagnose.sh           # Quick diagnosis script
+├── TROUBLESHOOTING.md    # Detailed troubleshooting
+├── FEATURES_GUIDE.md     # Complete features guide
+└── PROJECT_HISTORY.md    # Development history
+```
 
-## Project Structure
+## 🔑 API Configuration
 
--   `app/page.tsx`: Main dashboard UI (Client Component).
--   `app/api/meta/route.ts`: API route to proxy requests to Meta Graph API.
--   `app/layout.tsx`: Root layout for the application.
--   `components/`: Reusable UI components.
--   `lib/utils.ts`: Utility functions.
+### Meta API (Required)
+1. Get Access Token from [Meta Business Manager](https://business.facebook.com)
+2. Get Ad Account ID (format: act_123456789)
+3. Add in Settings panel
+
+### Claude AI (Optional)
+1. Get API key from [console.anthropic.com](https://console.anthropic.com)
+2. Add in AI Settings panel
+3. Enable "Use AI-Powered Predictions"
+
+## 📚 Documentation
+
+- **[FEATURES_GUIDE.md](./FEATURES_GUIDE.md)** - Detailed guide to all features
+- **[TROUBLESHOOTING.md](./TROUBLESHOOTING.md)** - Solutions to common issues
+- **[PROJECT_HISTORY.md](./PROJECT_HISTORY.md)** - Complete development history
+
+## 🛡️ Security Notes
+
+- API keys stored in browser localStorage
+- No backend required - all client-side
+- Consider environment variables for production
+- HTTPS recommended for deployment
+
+## 🚀 Deployment
+
+### Deploy to Vercel
+1. Push code to GitHub
+2. Import project in Vercel
+3. Deploy (no environment variables needed)
+
+### Deploy to other platforms
+- Build: `npm run build`
+- Start: `npm start`
+- Static export: `npm run export`
+
+## 💻 Tech Stack
+
+- **Framework**: Next.js 14 with TypeScript
+- **UI**: shadcn/ui, Tailwind CSS
+- **Charts**: Recharts
+- **APIs**: Meta Graph API, Claude AI (optional)
+- **State**: React hooks and localStorage
+
+## 🎯 Key Features Explained
+
+### AI Insights
+Automatically analyzes campaigns and provides:
+- Optimization opportunities
+- Budget reallocation suggestions
+- Performance improvement tips
+- ROI estimates for each recommendation
+
+### Predictive Analytics
+- Individual campaign predictions
+- Portfolio-level forecasts
+- Multiple growth scenarios
+- Confidence intervals
+
+### Campaign Comparison
+- Visual side-by-side analysis
+- Winner identification
+- Multi-metric radar charts
+- Export comparison data
+
+### System Status
+Real-time diagnostics showing:
+- Connection status
+- API health
+- Error messages
+- Quick fixes
+
+## 📈 Performance
+
+- Lazy loaded components
+- Efficient data fetching
+- Client-side caching
+- Optimized re-renders
+- Responsive design
+
+## 🤝 Contributing
+
+This is a private project. For issues or suggestions, please use the built-in feedback system.
+
+## 📄 License
+
+All rights reserved - Private project
+
+---
+
+Built with ❤️ to be the best Meta Ads platform available

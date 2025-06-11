@@ -49,13 +49,16 @@ async function fetchBreakdownData(
   breakdown: string,
   fields: string,
 ): Promise<{ data?: any[]; error?: any; breakdownName?: string }> {
+  // Clean the access token to remove Bearer prefix
+  const cleanToken = accessToken.replace(/^Bearer\s+/i, '')
+  
   const url =
     `https://graph.facebook.com/${META_API_VERSION}/${campaignId}/insights?` +
     `fields=${fields}` +
     `&breakdowns=${breakdown}` +
     `&date_preset=${datePreset}` +
     `&limit=500` + // Increased limit slightly
-    `&access_token=${accessToken}`
+    `&access_token=${cleanToken}`
 
   try {
     const response = await fetch(url)
@@ -75,8 +78,11 @@ async function fetchBreakdownData(
 export async function POST(request: NextRequest) {
   try {
     const { campaignId, accessToken, datePreset = "last_30d" } = await request.json()
+    
+    // Strip Bearer prefix if present
+    const cleanToken = accessToken.replace(/^Bearer\s+/i, '')
 
-    if (!campaignId || !accessToken) {
+    if (!campaignId || !cleanToken) {
       return NextResponse.json({ error: "Campaign ID and Access Token are required." }, { status: 400 })
     }
 
@@ -85,7 +91,7 @@ export async function POST(request: NextRequest) {
     // 1. Fetch total campaign conversions for accurate percentage calculation
     let totalConversionsAll = 0
     try {
-      const totalStatsUrl = `https://graph.facebook.com/${META_API_VERSION}/${campaignId}/insights?fields=actions&date_preset=${datePreset}&access_token=${accessToken}`
+      const totalStatsUrl = `https://graph.facebook.com/${META_API_VERSION}/${campaignId}/insights?fields=actions&date_preset=${datePreset}&access_token=${cleanToken}`
       const totalStatsRes = await fetch(totalStatsUrl)
       const totalStatsData = await totalStatsRes.json()
       if (totalStatsData.data && totalStatsData.data[0] && totalStatsData.data[0].actions) {
@@ -106,10 +112,10 @@ export async function POST(request: NextRequest) {
     }
 
     const results = await Promise.all([
-      fetchBreakdownData(campaignId, accessToken, datePreset, "age", commonFields),
-      fetchBreakdownData(campaignId, accessToken, datePreset, "gender", commonFields),
-      fetchBreakdownData(campaignId, accessToken, datePreset, "region", commonFields),
-      fetchBreakdownData(campaignId, accessToken, datePreset, "device_platform", commonFields),
+      fetchBreakdownData(campaignId, cleanToken, datePreset, "age", commonFields),
+      fetchBreakdownData(campaignId, cleanToken, datePreset, "gender", commonFields),
+      fetchBreakdownData(campaignId, cleanToken, datePreset, "region", commonFields),
+      fetchBreakdownData(campaignId, cleanToken, datePreset, "device_platform", commonFields),
     ])
 
     const errors = results.filter((r) => r.error)

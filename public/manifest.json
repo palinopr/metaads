@@ -1,0 +1,256 @@
+{
+  "name": "Meta Ads Dashboard Pro",
+  "short_name": "Meta Ads",
+  "description": "Advanced Meta Ads performance dashboard with AI insights, offline support, and real-time analytics",
+  "start_url": "/",
+  "id": "/",
+  "display": "standalone",
+  "display_override": ["window-controls-overlay", "standalone", "minimal-ui"],
+  "theme_color": "#0f172a",
+  "background_color": "#0f172a",
+  "orientation": "any",
+  "scope": "/",
+  "categories": ["business", "productivity", "utilities", "finance"],
+  "launch_handler": {
+    "client_mode": "navigate-existing"
+  },
+  "protocol_handlers": [
+    {
+      "protocol": "web+metaads",
+      "url": "/deep-link?action=%s"
+    }
+  ],
+  "file_handlers": [
+    {
+      "action": "/upload-creative",
+      "accept": {
+        "image/*": [".png", ".jpg", ".jpeg", ".gif", ".webp"],
+        "video/*": [".mp4", ".webm", ".mov"],
+        "text/csv": [".csv"],
+        "application/json": [".json"]
+      }
+    }
+  ],
+  "share_target": {
+    "action": "/share",
+    "method": "POST",
+    "enctype": "multipart/form-data",
+    "params": {
+      "title": "title",
+      "text": "text",
+      "url": "url",
+      "files": [
+        {
+          "name": "creative",
+          "accept": ["image/*", "video/*"]
+        }
+      ]
+    }
+  },
+  "edge_side_panel": {
+    "preferred_width": 400
+  },
+  "icons": [
+    {
+      "src": "/icons/icon-72x72.svg",
+      "sizes": "72x72",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-96x96.svg",
+      "sizes": "96x96",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-128x128.svg",
+      "sizes": "128x128",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-144x144.svg",
+      "sizes": "144x144",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/icons/icon-152x152.svg",
+      "sizes": "152x152",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-192x192.svg",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icons/icon-384x384.svg",
+      "sizes": "384x384",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-512x512.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/screenshots/mobile-dashboard.png",
+      "sizes": "360x640",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Mobile Dashboard"
+    },
+    {
+      "src": "/screenshots/mobile-analytics.png", 
+      "sizes": "360x640",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Mobile Analytics"
+    },
+    {
+      "src": "/screenshots/desktop-dashboard.png",
+      "sizes": "1280x720",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "Desktop Dashboard"
+    },
+    {
+      "src": "/screenshots/desktop-analytics.png",
+      "sizes": "1280x720", 
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "Desktop Analytics"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Dashboard",
+      "short_name": "Home",
+      "description": "View main dashboard with latest campaign performance",
+      "url": "/dashboard",
+      "icons": [
+        {
+          "src": "/icons/icon-96x96.svg",
+          "sizes": "96x96",
+          "type": "image/svg+xml"
+        }
+      ]
+    },
+    {
+      "name": "Analytics",
+      "short_name": "Analytics", 
+      "description": "Deep dive into campaign analytics and insights",
+      "url": "/analytics",
+      "icons": [
+        {
+          "src": "/icons/icon-96x96.svg",
+          "sizes": "96x96",
+          "type": "image/svg+xml"
+        }
+      ]
+    },
+    {
+      "name": "Create Campaign",
+      "short_name": "Create",
+      "description": "Quick campaign creation wizard",
+      "url": "/create-campaign",
+      "icons": [
+        {
+          "src": "/icons/icon-96x96.svg", 
+          "sizes": "96x96",
+          "type": "image/svg+xml"
+        }
+      ]
+    },
+    {
+      "name": "Reports",
+      "short_name": "Reports",
+      "description": "Generate and view performance reports",
+      "url": "/reports",
+      "icons": [
+        {
+          "src": "/icons/icon-96x96.svg",
+          "sizes": "96x96", 
+          "type": "image/svg+xml"
+        }
+      ]
+    },
+    {
+      "name": "Settings",
+      "short_name": "Settings",
+      "description": "Configure accounts and preferences",
+      "url": "/settings",
+      "icons": [
+        {
+          "src": "/icons/icon-96x96.svg",
+          "sizes": "96x96",
+          "type": "image/svg+xml"
+        }
+      ]
+    }
+  ],
+  "widgets": [
+    {
+      "name": "Campaign Performance",
+      "short_name": "Performance",
+      "description": "Live campaign performance metrics",
+      "tag": "campaign-performance",
+      "template": "campaign-widget",
+      "ms_ac_template": "campaign-template.json",
+      "data": "performance-data.json",
+      "type": "application/json",
+      "screenshots": [
+        {
+          "src": "/screenshots/widget-performance.png",
+          "sizes": "320x200",
+          "label": "Campaign Performance Widget"
+        }
+      ],
+      "icons": [
+        {
+          "src": "/icons/icon-96x96.svg",
+          "sizes": "96x96"
+        }
+      ],
+      "auth": true,
+      "update": 300
+    }
+  ],
+  "related_applications": [
+    {
+      "platform": "play",
+      "url": "https://play.google.com/store/apps/details?id=com.meta.ads.dashboard",
+      "id": "com.meta.ads.dashboard"
+    },
+    {
+      "platform": "itunes",
+      "url": "https://apps.apple.com/app/meta-ads-dashboard/id123456789",
+      "id": "123456789"
+    }
+  ],
+  "prefer_related_applications": false,
+  "dir": "ltr",
+  "lang": "en-US",
+  "iarc_rating_id": "",
+  "handle_links": "preferred",
+  "scope_extensions": [
+    {
+      "origin": "https://business.facebook.com"
+    },
+    {
+      "origin": "https://adsmanager.facebook.com"
+    }
+  ],
+  "note_taking": {
+    "new_note_url": "/new-note"
+  },
+  "capture_links": "new-client"
+}

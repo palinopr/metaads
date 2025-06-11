@@ -17,12 +17,13 @@ interface HourlyDataPoint {
 
 interface DayWeekPerformanceProps {
   campaignId: string
-  campaignName: string // Used for context, can be optional if not displayed
+  campaignName?: string // Used for context, can be optional if not displayed
   accessToken: string
-  datePreset: string
+  adAccountId: string
+  datePreset?: string
 }
 
-export function DayWeekPerformance({ campaignId, campaignName, accessToken, datePreset }: DayWeekPerformanceProps) {
+export function DayWeekPerformance({ campaignId, campaignName, accessToken, adAccountId, datePreset = "last_30d" }: DayWeekPerformanceProps) {
   const [heatmapData, setHeatmapData] = useState<HourlyDataPoint[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -135,7 +136,7 @@ export function DayWeekPerformance({ campaignId, campaignName, accessToken, date
       <div className="bg-gray-800/70 rounded-lg p-4 md:p-6 border border-gray-700">
         <h3 className="text-base md:text-lg font-semibold mb-3 flex items-center gap-2">
           <Calendar className="w-4 h-4 md:w-5 md:h-5 text-blue-400" />
-          Performance Heatmap (ROAS by Day/Hour)
+          Historical Performance Heatmap
         </h3>
         <div className="overflow-x-auto">
           <div className="min-w-[700px] md:min-w-[800px]">

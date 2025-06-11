@@ -52,6 +52,7 @@ interface DemographicAnalyticsProps {
   campaignId: string
   campaignName?: string
   accessToken: string
+  adAccountId?: string
   datePreset?: string
 }
 

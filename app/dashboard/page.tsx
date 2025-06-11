@@ -1,8 +1,12 @@
-// app/dashboard/page.tsx - COMPLETE VERSION WITH ALL FEATURES
+// app/dashboard/page.tsx - OPTIMIZED VERSION WITH CODE SPLITTING
 "use client"
 
 import type React from "react"
-import { useState, useEffect, useCallback, type FormEvent } from "react"
+import { useState, useEffect, useCallback, type FormEvent, Suspense, lazy } from "react"
+import dynamic from 'next/dynamic'
+import { safeToFixed } from "@/lib/safe-utils"
+import { CredentialManager, type Credentials } from "@/lib/credential-manager"
+import { optimizedApiManager } from "@/lib/api-manager-optimized"
 import {
   TrendingUp,
   Target,
@@ -30,28 +34,111 @@ import { Switch } from "@/components/ui/switch"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
-import {
-  LineChart,
-  Line,
-  AreaChart,
-  Area,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-  ResponsiveContainer,
-} from "recharts"
+import { Skeleton } from "@/components/ui/skeleton"
 import Link from "next/link"
 
-// Import components
-import { DateRangeSelector } from "@/components/date-range-selector"
-import { CampaignPredictions } from "@/components/campaign-predictions"
-import { DemographicAnalytics } from "@/components/demographic-analytics"
-import { DayWeekPerformance } from "@/components/day-week-performance"
-import { AIAnalysisModal } from "@/components/ai-analysis-modal"
+// Lazy load heavy components
+const DateRangeSelector = dynamic(() => 
+  import('@/components/date-range-selector').then(mod => ({ default: mod.DateRangeSelector })),
+  { 
+    loading: () => <Skeleton className="w-40 h-10" />,
+    ssr: false 
+  }
+)
 
-// Interfaces
+const CampaignPredictions = dynamic(() => 
+  import('@/components/campaign-predictions').then(mod => ({ default: mod.CampaignPredictions })),
+  { 
+    loading: () => <div className="h-64 flex items-center justify-center"><Loader2 className="w-6 h-6 animate-spin" /></div>,
+    ssr: false 
+  }
+)
+
+const DemographicAnalytics = dynamic(() => 
+  import('@/components/demographic-analytics').then(mod => ({ default: mod.DemographicAnalytics })),
+  { 
+    loading: () => <div className="h-64 flex items-center justify-center"><Loader2 className="w-6 h-6 animate-spin" /></div>,
+    ssr: false 
+  }
+)
+
+const DayWeekPerformance = dynamic(() => 
+  import('@/components/day-week-performance').then(mod => ({ default: mod.DayWeekPerformance })),
+  { 
+    loading: () => <div className="h-64 flex items-center justify-center"><Loader2 className="w-6 h-6 animate-spin" /></div>,
+    ssr: false 
+  }
+)
+
+const AIAnalysisModal = dynamic(() => 
+  import('@/components/ai-analysis-modal').then(mod => ({ default: mod.AIAnalysisModal })),
+  { 
+    loading: () => <Button disabled size="sm" variant="outline"><Loader2 className="w-3 h-3 mr-1 animate-spin" />Loading...</Button>,
+    ssr: false 
+  }
+)
+
+// Lazy load charts only when needed
+const LineChart = dynamic(() => 
+  import('recharts').then(mod => ({ default: mod.LineChart })),
+  { ssr: false }
+)
+
+const Line = dynamic(() => 
+  import('recharts').then(mod => ({ default: mod.Line })),
+  { ssr: false }
+)
+
+const AreaChart = dynamic(() => 
+  import('recharts').then(mod => ({ default: mod.AreaChart })),
+  { ssr: false }
+)
+
+const Area = dynamic(() => 
+  import('recharts').then(mod => ({ default: mod.Area })),
+  { ssr: false }
+)
+
+const XAxis = dynamic(() => 
+  import('recharts').then(mod => ({ default: mod.XAxis })),
+  { ssr: false }
+)
+
+const YAxis = dynamic(() => 
+  import('recharts').then(mod => ({ default: mod.YAxis })),
+  { ssr: false }
+)
+
+const CartesianGrid = dynamic(() => 
+  import('recharts').then(mod => ({ default: mod.CartesianGrid })),
+  { ssr: false }
+)
+
+const Tooltip = dynamic(() => 
+  import('recharts').then(mod => ({ default: mod.Tooltip })),
+  { ssr: false }
+)
+
+const Legend = dynamic(() => 
+  import('recharts').then(mod => ({ default: mod.Legend })),
+  { ssr: false }
+)
+
+const ResponsiveContainer = dynamic(() => 
+  import('recharts').then(mod => ({ default: mod.ResponsiveContainer })),
+  { ssr: false }
+)
+
+// Performance monitor - lazy loaded
+const PerformanceMonitor = dynamic(() => 
+  import('@/components/performance-monitor').then(mod => ({ default: mod.PerformanceMonitor })),
+  { 
+    loading: () => <Skeleton className="w-full h-96" />,
+    ssr: false 
+  }
+)
+
+// Interfaces (same as before)
 interface MetaAction {
   action_type: string
   value: string
@@ -93,6 +180,16 @@ interface Campaign {
   lifetime_budget?: number
   processedInsights?: ProcessedCampaignInsights
   insights?: { data?: CampaignInsightData[] }
+  spend?: number
+  impressions?: number
+  clicks?: number
+  ctr?: number
+  cpc?: number
+  conversions?: number
+  revenue?: number
+  roas?: number
+  cpa?: number
+  adsets_count?: number
   todayData?: {
     spend: number
     conversions: number
@@ -121,15 +218,15 @@ interface OverviewData {
   avgCPA: number
 }
 
-// Utility functions
-function formatNumberWithCommas(num: number | string | undefined): string {
+// Utility functions (optimized)
+const formatNumberWithCommas = (num: number | string | undefined): string => {
   if (num === undefined) return "0"
   const number = typeof num === "string" ? Number.parseFloat(num) : num
   if (isNaN(number)) return "0"
   return number.toLocaleString("en-US")
 }
 
-function formatCurrency(num: number | undefined): string {
+const formatCurrency = (num: number | undefined): string => {
   if (num === undefined) return "$0.00"
   return new Intl.NumberFormat("en-US", {
     style: "currency",
@@ -146,36 +243,7 @@ const findMetaActionValue = (items: MetaAction[] | undefined, targetTypes: strin
     .reduce((sum, item) => sum + Number.parseFloat(item.value || "0"), 0)
 }
 
-const processCampaignInsightsHelper = (insightData?: CampaignInsightData): ProcessedCampaignInsights => {
-  const data = insightData || {}
-  const spend = Number.parseFloat(data.spend || "0")
-  const revenue = findMetaActionValue(data.action_values, [
-    "omni_purchase",
-    "purchase",
-    "offsite_conversion.fb_pixel_purchase",
-  ])
-  const conversions = findMetaActionValue(data.actions, [
-    "omni_purchase",
-    "purchase",
-    "offsite_conversion.fb_pixel_purchase",
-    "complete_registration",
-    "lead",
-  ])
-
-  return {
-    spend,
-    revenue,
-    conversions,
-    roas: (spend > 0 ? revenue / spend : 0).toFixed(2),
-    impressions: Number.parseInt(data.impressions || "0", 10),
-    clicks: Number.parseInt(data.clicks || "0", 10),
-    ctr: Number.parseFloat(data.ctr || "0"),
-    cpc: Number.parseFloat(data.cpc || "0"),
-    frequency: Number.parseFloat(data.frequency || "0"),
-  }
-}
-
-// MetricCard Component
+// MetricCard Component (optimized with React.memo)
 interface MetricCardProps {
   title: string
   value: string
@@ -185,7 +253,7 @@ interface MetricCardProps {
   pulse?: boolean
 }
 
-function MetricCard({ title, value, subtitle, gradient, icon, pulse }: MetricCardProps) {
+const MetricCard = React.memo(function MetricCard({ title, value, subtitle, gradient, icon, pulse }: MetricCardProps) {
   return (
     <div
       className={`bg-gradient-to-br ${gradient} rounded-lg p-4 border border-gray-700 hover:scale-[1.02] transition-transform relative overflow-hidden`}
@@ -199,9 +267,9 @@ function MetricCard({ title, value, subtitle, gradient, icon, pulse }: MetricCar
       <div className="text-xs text-gray-300 opacity-80 mt-1 relative z-10">{subtitle}</div>
     </div>
   )
-}
+})
 
-// Main Dashboard Component
+// Main Dashboard Component (optimized)
 export default function DashboardPage() {
   const [campaigns, setCampaigns] = useState<Campaign[]>([])
   const [overviewData, setOverviewData] = useState<OverviewData>({
@@ -221,9 +289,11 @@ export default function DashboardPage() {
 
   const [isLoading, setIsLoading] = useState(false)
   const [isRefreshing, setIsRefreshing] = useState(false)
-  const [fetchError, setFetchError] = useState<string | null>(null) // Changed from error to fetchError to match usage
+  const [fetchError, setFetchError] = useState<string | null>(null)
   const [showSettings, setShowSettings] = useState(false)
+  const [showPerformanceMonitor, setShowPerformanceMonitor] = useState(false)
   const [credentialsSubmitted, setCredentialsSubmitted] = useState(false)
+  const [isTestingConnection, setIsTestingConnection] = useState(false)
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
   const [autoRefresh, setAutoRefresh] = useState(true)
   const [refreshInterval, setRefreshInterval] = useState(300000) // 5 minutes
@@ -239,130 +309,168 @@ export default function DashboardPage() {
     adAccountId: "",
   })
 
-  // Diagnostic useEffect
+  // Load credentials on mount
   useEffect(() => {
-    console.log("Dashboard Debug:", {
-      campaignsCount: campaigns.length,
-      isLoading,
-      fetchError, // Using fetchError here
-      credentialsSubmitted: !!credentials.accessToken,
-      overviewData,
-    })
-  }, [campaigns, isLoading, fetchError, credentials, overviewData])
+    const savedCredentials = CredentialManager.load()
 
-  useEffect(() => {
-    const savedToken = localStorage.getItem("meta_access_token")
-    const savedAccountId = localStorage.getItem("meta_ad_account_id")
-
-    if (savedToken && savedAccountId) {
-      setCredentials({
-        accessToken: savedToken,
-        adAccountId: savedAccountId,
-      })
-      setCredentialsSubmitted(true)
-      setShowSettings(false)
+    if (savedCredentials) {
+      const formatValidation = CredentialManager.validateFormat(savedCredentials)
+      
+      if (formatValidation.isValid) {
+        setCredentials(savedCredentials)
+        setCredentialsSubmitted(true)
+        setShowSettings(false)
+        console.log('Loaded valid credentials from storage')
+      } else {
+        console.warn('Invalid stored credentials found:', formatValidation.errors)
+        CredentialManager.clear()
+        setShowSettings(true)
+        setFetchError('Stored credentials are invalid: ' + formatValidation.errors.join(', '))
+      }
     } else {
+      console.log('No stored credentials found')
       setShowSettings(true)
     }
   }, [])
 
+  // Optimized fetch function using the new API manager
   const fetchOverviewData = useCallback(
     async (isRefreshOp = false) => {
       if (!credentials.accessToken || !credentials.adAccountId) return
+
+      const formatValidation = CredentialManager.validateFormat(credentials)
+      if (!formatValidation.isValid) {
+        console.error('Invalid credentials detected before API call:', formatValidation.errors)
+        CredentialManager.clear()
+        setCredentials({ accessToken: "", adAccountId: "" })
+        setCredentialsSubmitted(false)
+        setShowSettings(true)
+        setFetchError('Invalid credentials: ' + formatValidation.errors.join(', '))
+        return
+      }
 
       if (!isRefreshOp) setIsLoading(true)
       else setIsRefreshing(true)
       setFetchError(null)
 
       try {
-        const response = await fetch("/api/meta", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            type: "overview",
-            datePreset: selectedDateRange,
-            accessToken: credentials.accessToken,
-            adAccountId: credentials.adAccountId,
-          }),
-        })
+        // Use optimized API manager
+        const data = await optimizedApiManager.request<any>(
+          "/api/meta",
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              type: "overview",
+              datePreset: selectedDateRange,
+              accessToken: credentials.accessToken,
+              adAccountId: credentials.adAccountId,
+            }),
+          },
+          {
+            forceRefresh: isRefreshOp,
+            priority: isRefreshOp ? 2 : 1
+          }
+        )
 
-        if (!response.ok) {
-          const errorData = await response.json()
-          throw new Error(errorData.error || "Failed to fetch overview data")
-        }
-
-        const data = await response.json()
         const fetchedCampaigns: Campaign[] = data.campaigns || []
 
-        let currentTodaySpend = 0
-        let currentTodayConversions = 0
-        let currentTotalSpend = 0
-        let currentTotalRevenue = 0
-        let currentTotalConversions = 0
-        let currentTotalImpressions = 0
-        let currentTotalClicks = 0
-        let currentActiveCampaigns = 0
+        // Process campaigns (same logic as before but optimized)
+        let totals = {
+          todaySpend: 0,
+          todayConversions: 0,
+          totalSpend: 0,
+          totalRevenue: 0,
+          totalConversions: 0,
+          totalImpressions: 0,
+          totalClicks: 0,
+          activeCampaigns: 0
+        }
 
         const processedCampaignsList = fetchedCampaigns.map((campaign: Campaign) => {
           if (campaign.status === "ACTIVE" || campaign.effective_status === "ACTIVE") {
-            currentActiveCampaigns++
+            totals.activeCampaigns++
           }
-          const insights = campaign.processedInsights || processCampaignInsightsHelper(campaign.insights?.data?.[0])
-          currentTotalSpend += insights.spend || 0
-          currentTotalRevenue += insights.revenue || 0
-          currentTotalConversions += insights.conversions || 0
-          currentTotalImpressions += insights.impressions || 0
-          currentTotalClicks += insights.clicks || 0
+
+          const insights = {
+            spend: campaign.spend || 0,
+            revenue: campaign.revenue || 0,
+            conversions: campaign.conversions || 0,
+            impressions: campaign.impressions || 0,
+            clicks: campaign.clicks || 0,
+            ctr: campaign.ctr || 0,
+            cpc: campaign.cpc || 0,
+            roas: String(campaign.roas || 0)
+          }
+          
+          totals.totalSpend += insights.spend
+          totals.totalRevenue += insights.revenue
+          totals.totalConversions += insights.conversions
+          totals.totalImpressions += insights.impressions
+          totals.totalClicks += insights.clicks
 
           if (campaign.todayData) {
-            currentTodaySpend += campaign.todayData.spend || 0
-            currentTodayConversions += campaign.todayData.conversions || 0
+            totals.todaySpend += campaign.todayData.spend || 0
+            totals.todayConversions += campaign.todayData.conversions || 0
           }
+
           return { ...campaign, processedInsights: insights }
         })
 
-        const overallROAS = currentTotalSpend > 0 ? currentTotalRevenue / currentTotalSpend : 0
-        const avgCTR = currentTotalImpressions > 0 ? (currentTotalClicks / currentTotalImpressions) * 100 : 0
-        const avgCPC = currentTotalClicks > 0 ? currentTotalSpend / currentTotalClicks : 0
-        const avgCPA = currentTotalConversions > 0 ? currentTotalSpend / currentTotalConversions : 0
+        const overallROAS = totals.totalSpend > 0 ? totals.totalRevenue / totals.totalSpend : 0
+        const avgCTR = totals.totalImpressions > 0 ? (totals.totalClicks / totals.totalImpressions) * 100 : 0
+        const avgCPC = totals.totalClicks > 0 ? totals.totalSpend / totals.totalClicks : 0
+        const avgCPA = totals.totalConversions > 0 ? totals.totalSpend / totals.totalConversions : 0
 
         setCampaigns(processedCampaignsList)
         setOverviewData({
-          todaySpend: currentTodaySpend,
-          todayConversions: currentTodayConversions,
-          totalSpend: currentTotalSpend,
-          totalRevenue: currentTotalRevenue,
-          totalConversions: currentTotalConversions,
-          totalImpressions: currentTotalImpressions,
-          totalClicks: currentTotalClicks,
-          activeCampaigns: currentActiveCampaigns,
+          ...totals,
           overallROAS,
           avgCTR,
           avgCPC,
           avgCPA,
         })
         setLastUpdated(new Date())
+
+        // Prefetch data for expanded campaigns
+        const expandedCampaignIds = expandedCampaigns.filter(id => 
+          processedCampaignsList.some(c => c.id === id)
+        )
+        
+        if (expandedCampaignIds.length > 0) {
+          prefetchCampaignDetails(expandedCampaignIds)
+        }
+
       } catch (err: any) {
         console.error("Failed to fetch overview data:", err)
-        setFetchError(err.message)
+        
+        // Handle token errors
+        if (err.message && (
+          err.message.toLowerCase().includes("oauth") || 
+          err.message.toLowerCase().includes("access token") || 
+          err.message.toLowerCase().includes("invalid token")
+        )) {
+          CredentialManager.clear()
+          setCredentials({ accessToken: "", adAccountId: "" })
+          setCredentialsSubmitted(false)
+          setShowSettings(true)
+          setFetchError("Invalid or expired access token. Please re-enter your credentials.")
+        } else {
+          setFetchError(err.message)
+        }
       } finally {
         if (!isRefreshOp) setIsLoading(false)
         else setIsRefreshing(false)
       }
     },
-    [credentials, selectedDateRange],
+    [credentials, selectedDateRange, expandedCampaigns],
   )
 
-  const fetchCampaignDetails = async (campaignId: string) => {
-    setCampaigns((prev) =>
-      prev.map((c) =>
-        c.id === campaignId
-          ? { ...c, expandedData: { ...(c.expandedData || {}), isLoading: true, error: undefined } }
-          : c,
-      ),
-    )
-    try {
-      const detailsResponse = await fetch("/api/meta", {
+  // Prefetch campaign details for better performance
+  const prefetchCampaignDetails = async (campaignIds: string[]) => {
+    const requests = campaignIds.map(campaignId => ({
+      endpoint: "/api/meta",
+      options: {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -372,13 +480,49 @@ export default function DashboardPage() {
           accessToken: credentials.accessToken,
           adAccountId: credentials.adAccountId,
         }),
-      })
+      },
+      ttl: 10 * 60 * 1000 // 10 minutes
+    }))
 
-      if (!detailsResponse.ok) {
-        const errorData = await detailsResponse.json()
-        throw new Error(errorData.error || `Failed to fetch details for campaign ${campaignId}`)
-      }
-      const detailsData = await detailsResponse.json()
+    await optimizedApiManager.prefetch(requests)
+  }
+
+  // Optimized campaign details fetch
+  const fetchCampaignDetails = async (campaignId: string) => {
+    const formatValidation = CredentialManager.validateFormat(credentials)
+    if (!formatValidation.isValid) {
+      console.error('Invalid credentials detected before campaign details API call:', formatValidation.errors)
+      setFetchError('Invalid credentials: ' + formatValidation.errors.join(', '))
+      return
+    }
+
+    setCampaigns((prev) =>
+      prev.map((c) =>
+        c.id === campaignId
+          ? { ...c, expandedData: { ...(c.expandedData || {}), isLoading: true, error: undefined } }
+          : c,
+      ),
+    )
+
+    try {
+      const detailsData = await optimizedApiManager.request<any>(
+        "/api/meta",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            type: "campaign_details",
+            campaignId,
+            datePreset: selectedDateRange,
+            accessToken: credentials.accessToken,
+            adAccountId: credentials.adAccountId,
+          }),
+        },
+        {
+          priority: 2,
+          batch: true
+        }
+      )
 
       setCampaigns((prev) =>
         prev.map((c) =>
@@ -423,23 +567,25 @@ export default function DashboardPage() {
     })
   }
 
+  // Auto-refresh effect
   useEffect(() => {
-    if (credentialsSubmitted) {
+    if (credentialsSubmitted && credentials.accessToken && credentials.adAccountId) {
       fetchOverviewData()
     }
-  }, [credentialsSubmitted, selectedDateRange, fetchOverviewData]) // Added fetchOverviewData
+  }, [credentialsSubmitted, selectedDateRange, credentials.accessToken, credentials.adAccountId])
 
   useEffect(() => {
     let intervalId: NodeJS.Timeout | null = null
-    if (autoRefresh && credentialsSubmitted && refreshInterval > 0) {
+    if (autoRefresh && credentialsSubmitted && refreshInterval > 0 && credentials.accessToken && credentials.adAccountId) {
       intervalId = setInterval(() => fetchOverviewData(true), refreshInterval)
     }
     return () => {
       if (intervalId) clearInterval(intervalId)
     }
-  }, [autoRefresh, refreshInterval, credentialsSubmitted, fetchOverviewData]) // Added fetchOverviewData
+  }, [autoRefresh, refreshInterval, credentialsSubmitted, credentials.accessToken, credentials.adAccountId])
 
-  const getFilteredAndSortedCampaigns = () => {
+  // Filter and sort campaigns (memoized)
+  const getFilteredAndSortedCampaigns = useCallback(() => {
     let filtered = campaigns
 
     if (campaignStatusFilter !== "all") {
@@ -447,17 +593,20 @@ export default function DashboardPage() {
     }
 
     const sorted = [...filtered].sort((a, b) => {
-      const aInsights = a.processedInsights || { spend: 0, roas: "0" }
-      const bInsights = b.processedInsights || { spend: 0, roas: "0" }
+      const aSpend = a.spend || 0
+      const bSpend = b.spend || 0
+      const aRoas = a.roas || 0
+      const bRoas = b.roas || 0
+      
       switch (sortBy) {
         case "created_desc":
           return new Date(b.created_time).getTime() - new Date(a.created_time).getTime()
         case "created_asc":
           return new Date(a.created_time).getTime() - new Date(b.created_time).getTime()
         case "spend_desc":
-          return (bInsights.spend || 0) - (aInsights.spend || 0)
+          return bSpend - aSpend
         case "roas_desc":
-          return Number.parseFloat(bInsights.roas || "0") - Number.parseFloat(aInsights.roas || "0")
+          return bRoas - aRoas
         case "name_asc":
           return a.name.localeCompare(b.name)
         default:
@@ -465,24 +614,96 @@ export default function DashboardPage() {
       }
     })
     return sorted
-  }
+  }, [campaigns, campaignStatusFilter, sortBy])
 
-  const handleSaveCredentials = (e: FormEvent) => {
-    e.preventDefault()
-    if (credentials.accessToken && credentials.adAccountId) {
-      localStorage.setItem("meta_access_token", credentials.accessToken)
-      localStorage.setItem("meta_ad_account_id", credentials.adAccountId)
-      setCredentialsSubmitted(true)
-      setShowSettings(false)
-      fetchOverviewData()
-    } else {
-      setFetchError("Access Token and Ad Account ID are required.")
+  // Test connection function
+  const testConnection = async (token: string, accountId: string): Promise<boolean> => {
+    try {
+      const credentials: Credentials = { accessToken: token, adAccountId: accountId }
+      const formatValidation = CredentialManager.validateFormat(credentials)
+      
+      if (!formatValidation.isValid) {
+        setFetchError('Invalid credential format: ' + formatValidation.errors.join(', '))
+        return false
+      }
+
+      const data = await optimizedApiManager.request<any>(
+        "/api/meta",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            type: "test_connection",
+            accessToken: token,
+            adAccountId: accountId,
+          }),
+        },
+        {
+          forceRefresh: true,
+          priority: 3
+        }
+      )
+      
+      if (data.success) {
+        console.log('Connection test successful:', data.accountInfo)
+        return true
+      } else {
+        setFetchError(data.error || "Connection test failed")
+        return false
+      }
+    } catch (error: any) {
+      console.error("Connection test error:", error)
+      setFetchError(error.message || "Failed to test connection. Please check your network.")
+      return false
     }
   }
 
+  // Form handlers (same as before)
+  const handleSaveCredentials = async (e: FormEvent) => {
+    e.preventDefault()
+    
+    const cleanToken = credentials.accessToken.trim()
+    const cleanAccountId = credentials.adAccountId.trim()
+    
+    if (!cleanToken || !cleanAccountId) {
+      setFetchError("Access Token and Ad Account ID are required.")
+      return
+    }
+    
+    const formattedAccountId = cleanAccountId.startsWith("act_") ? cleanAccountId : `act_${cleanAccountId}`
+    
+    const credentialsToValidate: Credentials = {
+      accessToken: cleanToken,
+      adAccountId: formattedAccountId,
+    }
+    
+    const formatValidation = CredentialManager.validateFormat(credentialsToValidate)
+    if (!formatValidation.isValid) {
+      setFetchError('Invalid credentials: ' + formatValidation.errors.join(', '))
+      return
+    }
+    
+    setIsTestingConnection(true)
+    setFetchError(null)
+    
+    const isValid = await testConnection(cleanToken, formattedAccountId)
+    setIsTestingConnection(false)
+    
+    if (!isValid) {
+      return
+    }
+    
+    CredentialManager.save(credentialsToValidate, true)
+    
+    setCredentials(credentialsToValidate)
+    setCredentialsSubmitted(true)
+    setShowSettings(false)
+    setFetchError(null)
+    fetchOverviewData()
+  }
+
   const handleClearCredentials = () => {
-    localStorage.removeItem("meta_access_token")
-    localStorage.removeItem("meta_ad_account_id")
+    CredentialManager.clear()
     setCredentials({ accessToken: "", adAccountId: "" })
     setCredentialsSubmitted(false)
     setCampaigns([])
@@ -509,6 +730,7 @@ export default function DashboardPage() {
     fetchOverviewData(true)
   }
 
+  // Export campaign data
   const exportCampaignData = (campaign: Campaign) => {
     const dataToExport = {
       campaignInfo: {
@@ -540,6 +762,7 @@ export default function DashboardPage() {
     setActiveTabs((prev) => ({ ...prev, [campaignId]: newTabValue }))
   }
 
+  // Render credentials form
   if (!credentialsSubmitted && showSettings) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gray-900 p-4">
@@ -595,8 +818,19 @@ export default function DashboardPage() {
               >
                 Clear Credentials
               </Button>
-              <Button type="submit" className="bg-blue-600 hover:bg-blue-700 w-full sm:w-auto">
-                Save & Connect
+              <Button 
+                type="submit" 
+                className="bg-blue-600 hover:bg-blue-700 w-full sm:w-auto"
+                disabled={isTestingConnection}
+              >
+                {isTestingConnection ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Testing Connection...
+                  </>
+                ) : (
+                  "Save & Connect"
+                )}
               </Button>
             </CardContent>
           </form>
@@ -605,9 +839,11 @@ export default function DashboardPage() {
     )
   }
 
+  // Main dashboard render
   return (
     <div className="min-h-screen bg-gray-900 text-white">
       <div className="p-4 md:p-6 space-y-6">
+        {/* Header */}
         <div className="mb-8">
           <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
             <div>
@@ -620,17 +856,28 @@ export default function DashboardPage() {
               </p>
             </div>
             <div className="flex items-center flex-wrap gap-2 md:gap-4">
-              <DateRangeSelector
-                value={selectedDateRange}
-                onChange={(value) => setSelectedDateRange(value)}
-                disabled={isLoading || isRefreshing}
-              />
+              <Suspense fallback={<Skeleton className="w-40 h-10" />}>
+                <DateRangeSelector
+                  value={selectedDateRange}
+                  onChange={(value) => setSelectedDateRange(value)}
+                  disabled={isLoading || isRefreshing}
+                />
+              </Suspense>
               <Link href="/pattern-analysis" passHref>
                 <Button variant="outline" className="flex items-center gap-2 text-xs border-gray-700 hover:bg-gray-800">
                   <Brain className="w-3 h-3 md:w-4 md:h-4" />
                   Pattern Analysis
                 </Button>
               </Link>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowPerformanceMonitor(!showPerformanceMonitor)}
+                className="border-gray-700 hover:bg-gray-800"
+                title="Performance Monitor"
+              >
+                <Activity className="w-4 h-4" />
+              </Button>
               <div className="flex items-center gap-2">
                 <Switch
                   id="autoRefreshSwitch"
@@ -670,6 +917,14 @@ export default function DashboardPage() {
           </div>
         </div>
 
+        {/* Performance Monitor */}
+        {showPerformanceMonitor && (
+          <Suspense fallback={<Skeleton className="w-full h-96" />}>
+            <PerformanceMonitor />
+          </Suspense>
+        )}
+
+        {/* Settings Panel */}
         {showSettings && (
           <Card className="mb-8 bg-gray-800 border-gray-700">
             <CardHeader>
@@ -700,7 +955,7 @@ export default function DashboardPage() {
                     className="bg-gray-700 border-gray-600"
                   />
                 </div>
-                {fetchError && ( // Show error specific to this form
+                {fetchError && (
                   <Alert variant="destructive" className="bg-red-900/30 border-red-700 text-red-300">
                     <AlertCircle className="h-4 w-4" /> <AlertDescription>{fetchError}</AlertDescription>
                   </Alert>
@@ -715,14 +970,26 @@ export default function DashboardPage() {
                 >
                   Clear & Disconnect
                 </Button>
-                <Button type="submit" className="bg-blue-600 hover:bg-blue-700 w-full sm:w-auto">
-                  Update & Reconnect
+                <Button 
+                  type="submit" 
+                  className="bg-blue-600 hover:bg-blue-700 w-full sm:w-auto"
+                  disabled={isTestingConnection}
+                >
+                  {isTestingConnection ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Testing Connection...
+                    </>
+                  ) : (
+                    "Update & Reconnect"
+                  )}
                 </Button>
               </CardContent>
             </form>
           </Card>
         )}
 
+        {/* Error Alert */}
         {fetchError && !showSettings && (
           <Alert variant="destructive" className="mb-6 bg-red-900/20 border-red-700 text-red-300">
             <AlertCircle className="h-4 w-4" />
@@ -733,6 +1000,7 @@ export default function DashboardPage() {
           </Alert>
         )}
 
+        {/* Main Content */}
         {credentialsSubmitted ? (
           <>
             {isLoading && campaigns.length === 0 && !isRefreshing && (
@@ -741,6 +1009,8 @@ export default function DashboardPage() {
                 <p className="ml-3 mt-4 text-lg text-gray-400">Loading Dashboard Data...</p>
               </div>
             )}
+
+            {/* Metrics Grid */}
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
               <MetricCard
                 title="Today's Spend"
@@ -757,7 +1027,7 @@ export default function DashboardPage() {
               <MetricCard
                 title={`Revenue (${selectedDateRange.replace(/_/g, " ")})`}
                 value={formatCurrency(overviewData.totalRevenue)}
-                subtitle={`${overviewData.overallROAS.toFixed(2)}x ROAS`}
+                subtitle={`${safeToFixed(overviewData.overallROAS, 2)}x ROAS`}
                 gradient="from-green-900/70 to-green-800/70"
                 icon={<TrendingUp className="w-4 h-4" />}
               />
@@ -796,12 +1066,13 @@ export default function DashboardPage() {
               </div>
             </div>
 
+            {/* Summary Stats */}
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-4 mb-6 text-xs">
               {[
                 { label: "TOTAL SPEND", value: formatCurrency(overviewData.totalSpend) },
                 { label: "TOTAL CONVERSIONS", value: formatNumberWithCommas(overviewData.totalConversions) },
-                { label: "OVERALL ROAS", value: `${overviewData.overallROAS.toFixed(2)}x` },
-                { label: "AVG CTR", value: `${overviewData.avgCTR.toFixed(2)}%` },
+                { label: "OVERALL ROAS", value: `${safeToFixed(overviewData.overallROAS, 2)}x` },
+                { label: "AVG CTR", value: `${safeToFixed(overviewData.avgCTR, 2)}%` },
                 { label: "AVG CPC", value: formatCurrency(overviewData.avgCPC) },
               ].map((stat) => (
                 <Card key={stat.label} className="bg-gray-800/80 border-gray-700">
@@ -815,6 +1086,7 @@ export default function DashboardPage() {
               ))}
             </div>
 
+            {/* Filters */}
             <div className="flex flex-wrap gap-3 mb-6">
               <Select
                 value={campaignStatusFilter}
@@ -844,12 +1116,12 @@ export default function DashboardPage() {
               </Select>
             </div>
 
+            {/* Campaigns List */}
             <div className="space-y-2">
               <h2 className="text-xl font-semibold mb-4">
                 Campaigns Overview ({getFilteredAndSortedCampaigns().length} campaigns)
               </h2>
-              {isLoading && campaigns.length === 0 && !isRefreshing ? null : getFilteredAndSortedCampaigns().length ===
-                  0 && !isLoading ? (
+              {isLoading && campaigns.length === 0 && !isRefreshing ? null : getFilteredAndSortedCampaigns().length === 0 && !isLoading ? (
                 <Card className="bg-gray-800 border-gray-700">
                   <CardContent className="text-center py-10 text-gray-500">
                     <Info className="mx-auto h-8 w-8 mb-2" />
@@ -879,6 +1151,9 @@ export default function DashboardPage() {
                               {campaign.name}
                             </h3>
                             <div className="flex items-center gap-2">
+                              <span className="text-xs text-gray-400">
+                                {campaign.adsets_count || 0} ad sets
+                              </span>
                               <span
                                 className={`px-2 py-0.5 rounded-full text-xs font-medium ${
                                   campaign.status === "ACTIVE" || campaign.effective_status === "ACTIVE"
@@ -893,30 +1168,33 @@ export default function DashboardPage() {
                           </div>
                           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2 md:gap-4 text-xs text-gray-300">
                             {[
-                              { label: "Spend", value: formatCurrency(campaign.processedInsights?.spend) },
+                              { 
+                                label: "Spend", 
+                                value: formatCurrency(campaign.spend || 0) 
+                              },
                               {
                                 label: "ROAS",
-                                value: `${campaign.processedInsights?.roas || "0.00"}x`,
+                                value: `${safeToFixed(campaign.roas || 0, 2)}x`,
                                 color:
-                                  Number.parseFloat(campaign.processedInsights?.roas || "0") > 2
+                                  (campaign.roas || 0) > 2
                                     ? "text-green-400"
-                                    : Number.parseFloat(campaign.processedInsights?.roas || "0") > 1
+                                    : (campaign.roas || 0) > 1
                                       ? "text-yellow-400"
                                       : "text-red-400",
                               },
                               {
                                 label: "Conversions",
-                                value: formatNumberWithCommas(campaign.processedInsights?.conversions),
+                                value: formatNumberWithCommas(campaign.conversions || 0),
                               },
                               {
                                 label: "CTR",
-                                value: `${campaign.processedInsights?.ctr?.toFixed(2) || "0.00"}%`,
+                                value: `${safeToFixed(campaign.ctr || 0, 2)}%`,
                                 className: "hidden md:block",
                               },
                               {
-                                label: "Created",
-                                value: new Date(campaign.created_time).toLocaleDateString(),
-                                className: "hidden md:block text-gray-400",
+                                label: "CPC",
+                                value: formatCurrency(campaign.cpc || 0),
+                                className: "hidden md:block",
                               },
                             ].map((metric) => (
                               <div key={metric.label} className={metric.className || ""}>
@@ -962,62 +1240,64 @@ export default function DashboardPage() {
                                         </CardTitle>
                                       </CardHeader>
                                       <CardContent className="h-[250px] md:h-[300px]">
-                                        <ResponsiveContainer width="100%" height="100%">
-                                          <LineChart data={campaign.expandedData.historicalDailyData}>
-                                            <CartesianGrid strokeDasharray="3 3" stroke="rgba(107, 114, 128, 0.2)" />
-                                            <XAxis
-                                              dataKey="date"
-                                              stroke="#9CA3AF"
-                                              fontSize={10}
-                                              tickFormatter={(date) =>
-                                                new Date(date).toLocaleDateString("en", {
-                                                  month: "short",
-                                                  day: "numeric",
-                                                })
-                                              }
-                                            />
-                                            <YAxis
-                                              yAxisId="left"
-                                              stroke="#818CF8"
-                                              fontSize={10}
-                                              tickFormatter={(val) => `$${formatNumberWithCommas(val)}`}
-                                            />
-                                            <YAxis
-                                              yAxisId="right"
-                                              orientation="right"
-                                              stroke="#34D399"
-                                              fontSize={10}
-                                              tickFormatter={(val) => `${Number(val).toFixed(1)}x`}
-                                            />
-                                            <Tooltip
-                                              contentStyle={{
-                                                backgroundColor: "rgba(31, 41, 55, 0.9)",
-                                                border: "1px solid #4B5563",
-                                                borderRadius: "0.375rem",
-                                              }}
-                                              labelFormatter={(date) => new Date(date).toLocaleDateString()}
-                                            />
-                                            <Legend wrapperStyle={{ fontSize: "10px" }} />
-                                            <Line
-                                              yAxisId="left"
-                                              type="monotone"
-                                              dataKey="spend"
-                                              stroke="#3B82F6"
-                                              name="Spend"
-                                              dot={false}
-                                              strokeWidth={1.5}
-                                            />
-                                            <Line
-                                              yAxisId="right"
-                                              type="monotone"
-                                              dataKey="roas"
-                                              stroke="#10B981"
-                                              name="ROAS"
-                                              dot={false}
-                                              strokeWidth={1.5}
-                                            />
-                                          </LineChart>
-                                        </ResponsiveContainer>
+                                        <Suspense fallback={<Skeleton className="w-full h-full" />}>
+                                          <ResponsiveContainer width="100%" height="100%">
+                                            <LineChart data={campaign.expandedData.historicalDailyData}>
+                                              <CartesianGrid strokeDasharray="3 3" stroke="rgba(107, 114, 128, 0.2)" />
+                                              <XAxis
+                                                dataKey="date"
+                                                stroke="#9CA3AF"
+                                                fontSize={10}
+                                                tickFormatter={(date) =>
+                                                  new Date(date).toLocaleDateString("en", {
+                                                    month: "short",
+                                                    day: "numeric",
+                                                  })
+                                                }
+                                              />
+                                              <YAxis
+                                                yAxisId="left"
+                                                stroke="#818CF8"
+                                                fontSize={10}
+                                                tickFormatter={(val) => `$${formatNumberWithCommas(val)}`}
+                                              />
+                                              <YAxis
+                                                yAxisId="right"
+                                                orientation="right"
+                                                stroke="#34D399"
+                                                fontSize={10}
+                                                tickFormatter={(val) => `${safeToFixed(Number(val), 1)}x`}
+                                              />
+                                              <Tooltip
+                                                contentStyle={{
+                                                  backgroundColor: "rgba(31, 41, 55, 0.9)",
+                                                  border: "1px solid #4B5563",
+                                                  borderRadius: "0.375rem",
+                                                }}
+                                                labelFormatter={(date) => new Date(date).toLocaleDateString()}
+                                              />
+                                              <Legend wrapperStyle={{ fontSize: "10px" }} />
+                                              <Line
+                                                yAxisId="left"
+                                                type="monotone"
+                                                dataKey="spend"
+                                                stroke="#3B82F6"
+                                                name="Spend"
+                                                dot={false}
+                                                strokeWidth={1.5}
+                                              />
+                                              <Line
+                                                yAxisId="right"
+                                                type="monotone"
+                                                dataKey="roas"
+                                                stroke="#10B981"
+                                                name="ROAS"
+                                                dot={false}
+                                                strokeWidth={1.5}
+                                              />
+                                            </LineChart>
+                                          </ResponsiveContainer>
+                                        </Suspense>
                                       </CardContent>
                                     </Card>
                                   )}
@@ -1028,31 +1308,33 @@ export default function DashboardPage() {
                                         <CardTitle className="text-base">Today's Hourly Performance</CardTitle>
                                       </CardHeader>
                                       <CardContent className="h-[200px] md:h-[250px]">
-                                        <ResponsiveContainer width="100%" height="100%">
-                                          <AreaChart data={campaign.expandedData.todayHourlyData}>
-                                            <CartesianGrid strokeDasharray="3 3" stroke="rgba(107, 114, 128, 0.2)" />
-                                            <XAxis dataKey="hour" stroke="#9CA3AF" fontSize={10} />
-                                            <YAxis
-                                              stroke="#9CA3AF"
-                                              fontSize={10}
-                                              tickFormatter={(val) => `$${formatNumberWithCommas(val)}`}
-                                            />
-                                            <Tooltip
-                                              contentStyle={{
-                                                backgroundColor: "rgba(31, 41, 55, 0.9)",
-                                                border: "1px solid #4B5563",
-                                              }}
-                                            />
-                                            <Area
-                                              type="monotone"
-                                              dataKey="spend"
-                                              stroke="#3B82F6"
-                                              fill="#3B82F6"
-                                              fillOpacity={0.3}
-                                              name="Spend"
-                                            />
-                                          </AreaChart>
-                                        </ResponsiveContainer>
+                                        <Suspense fallback={<Skeleton className="w-full h-full" />}>
+                                          <ResponsiveContainer width="100%" height="100%">
+                                            <AreaChart data={campaign.expandedData.todayHourlyData}>
+                                              <CartesianGrid strokeDasharray="3 3" stroke="rgba(107, 114, 128, 0.2)" />
+                                              <XAxis dataKey="hour" stroke="#9CA3AF" fontSize={10} />
+                                              <YAxis
+                                                stroke="#9CA3AF"
+                                                fontSize={10}
+                                                tickFormatter={(val) => `$${formatNumberWithCommas(val)}`}
+                                              />
+                                              <Tooltip
+                                                contentStyle={{
+                                                  backgroundColor: "rgba(31, 41, 55, 0.9)",
+                                                  border: "1px solid #4B5563",
+                                                }}
+                                              />
+                                              <Area
+                                                type="monotone"
+                                                dataKey="spend"
+                                                stroke="#3B82F6"
+                                                fill="#3B82F6"
+                                                fillOpacity={0.3}
+                                                name="Spend"
+                                              />
+                                            </AreaChart>
+                                          </ResponsiveContainer>
+                                        </Suspense>
                                       </CardContent>
                                     </Card>
                                   )}
@@ -1076,9 +1358,10 @@ export default function DashboardPage() {
                                           </thead>
                                           <tbody className="text-gray-300">
                                             {campaign.expandedData.adSets.map((adSet: any) => {
-                                              const adSetInsights = processCampaignInsightsHelper(
-                                                adSet.insights?.data?.[0],
-                                              )
+                                              const adSetSpend = adSet.spend || 0
+                                              const adSetRevenue = adSet.revenue || 0
+                                              const adSetRoas = adSetSpend > 0 ? adSetRevenue / adSetSpend : 0
+                                              
                                               return (
                                                 <tr
                                                   key={adSet.id}
@@ -1099,16 +1382,16 @@ export default function DashboardPage() {
                                                     </span>
                                                   </td>
                                                   <td className="py-1.5 px-2 text-right">
-                                                    {formatCurrency(adSetInsights.spend)}
+                                                    {formatCurrency(adSetSpend)}
                                                   </td>
                                                   <td className="py-1.5 px-2 text-right">
-                                                    {formatCurrency(adSetInsights.revenue)}
+                                                    {formatCurrency(adSetRevenue)}
                                                   </td>
                                                   <td className="py-1.5 px-2 text-right font-medium">
-                                                    {adSetInsights.roas}x
+                                                    {safeToFixed(adSetRoas, 2)}x
                                                   </td>
                                                   <td className="py-1.5 px-2 text-right">
-                                                    {formatNumberWithCommas(adSetInsights.conversions)}
+                                                    {formatNumberWithCommas(adSet.conversions || 0)}
                                                   </td>
                                                 </tr>
                                               )
@@ -1120,11 +1403,13 @@ export default function DashboardPage() {
                                   </Card>
                                 )}
                                 <div className="flex flex-wrap gap-2 mt-4">
-                                  <AIAnalysisModal
-                                    campaign={campaign}
-                                    historicalData={campaign.expandedData?.historicalDailyData}
-                                    allCampaigns={campaigns}
-                                  />
+                                  <Suspense fallback={<Button disabled size="sm" variant="outline"><Loader2 className="w-3 h-3 mr-1 animate-spin" />Loading...</Button>}>
+                                    <AIAnalysisModal
+                                      campaign={campaign}
+                                      historicalData={campaign.expandedData?.historicalDailyData}
+                                      allCampaigns={campaigns}
+                                    />
+                                  </Suspense>
                                   <Button
                                     variant="outline"
                                     size="sm"
@@ -1152,29 +1437,38 @@ export default function DashboardPage() {
                                 </div>
                               </TabsContent>
                               <TabsContent value="predictions">
-                                <CampaignPredictions
-                                  campaignName={campaign.name}
-                                  historicalData={campaign.expandedData?.historicalDailyData || []}
-                                  currentMetrics={
-                                    campaign.processedInsights || { spend: 0, revenue: 0, roas: "0", conversions: 0 }
-                                  }
-                                />
+                                <Suspense fallback={<div className="h-64 flex items-center justify-center"><Loader2 className="w-6 h-6 animate-spin" /></div>}>
+                                  <CampaignPredictions
+                                    campaignName={campaign.name}
+                                    historicalData={campaign.expandedData?.historicalDailyData || []}
+                                    currentMetrics={{
+                                      spend: campaign.spend || 0,
+                                      revenue: campaign.revenue || 0,
+                                      roas: String(campaign.roas || 0),
+                                      conversions: campaign.conversions || 0
+                                    }}
+                                  />
+                                </Suspense>
                               </TabsContent>
                               <TabsContent value="demographics">
-                                <DemographicAnalytics
-                                  campaignId={campaign.id}
-                                  campaignName={campaign.name}
-                                  accessToken={credentials.accessToken}
-                                  datePreset={selectedDateRange}
-                                />
+                                <Suspense fallback={<div className="h-64 flex items-center justify-center"><Loader2 className="w-6 h-6 animate-spin" /></div>}>
+                                  <DemographicAnalytics
+                                    campaignId={campaign.id}
+                                    campaignName={campaign.name}
+                                    accessToken={credentials.accessToken}
+                                    datePreset={selectedDateRange}
+                                  />
+                                </Suspense>
                               </TabsContent>
                               <TabsContent value="dayweek">
-                                <DayWeekPerformance
-                                  campaignId={campaign.id}
-                                  campaignName={campaign.name}
-                                  accessToken={credentials.accessToken}
-                                  datePreset={selectedDateRange}
-                                />
+                                <Suspense fallback={<div className="h-64 flex items-center justify-center"><Loader2 className="w-6 h-6 animate-spin" /></div>}>
+                                  <DayWeekPerformance
+                                    campaignId={campaign.id}
+                                    campaignName={campaign.name}
+                                    accessToken={credentials.accessToken}
+                                    datePreset={selectedDateRange}
+                                  />
+                                </Suspense>
                               </TabsContent>
                               <TabsContent value="insights">
                                 <Card className="bg-gray-700/50 border-gray-600/70">
@@ -1188,12 +1482,14 @@ export default function DashboardPage() {
                                     </CardDescription>
                                   </CardHeader>
                                   <CardContent>
-                                    <AIAnalysisModal
-                                      campaign={campaign}
-                                      historicalData={campaign.expandedData?.historicalDailyData}
-                                      allCampaigns={campaigns}
-                                      triggerButtonText="Get Detailed AI Insights" // Example of custom trigger text
-                                    />
+                                    <Suspense fallback={<Button disabled size="sm" variant="outline"><Loader2 className="w-3 h-3 mr-1 animate-spin" />Loading...</Button>}>
+                                      <AIAnalysisModal
+                                        campaign={campaign}
+                                        historicalData={campaign.expandedData?.historicalDailyData}
+                                        allCampaigns={campaigns}
+                                        triggerButtonText="Get Detailed AI Insights"
+                                      />
+                                    </Suspense>
                                     <div className="mt-3 p-3 bg-gray-800/50 rounded-lg text-xs space-y-1.5 text-gray-300">
                                       <p>
                                         <strong>Status:</strong> {campaign.status}
@@ -1245,8 +1541,9 @@ export default function DashboardPage() {
             </CardContent>
           </Card>
         )}
+        
         <footer className="text-center mt-12 py-6 border-t border-gray-700">
-          <p className="text-xs text-gray-500">Meta Ads Dashboard Pro | Built with Next.js & v0</p>
+          <p className="text-xs text-gray-500">Meta Ads Dashboard Pro | Built with Next.js & v0 | Optimized for Performance</p>
         </footer>
       </div>
     </div>

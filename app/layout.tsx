@@ -1,16 +1,41 @@
-import type React from "react"
 import type { Metadata } from "next"
 import { Inter } from "next/font/google"
 import "./globals.css"
+import { ErrorBoundary } from "@/components/error-boundary"
+import { ServiceWorkerProvider } from "@/components/service-worker-provider"
 import { ThemeProvider } from "@/components/theme-provider"
-import Header from "@/components/header" // Assuming header is in components
+import { OfflineIndicator } from "@/components/ui/progressive-enhancement"
+import { AccessibleErrorBoundary } from "@/components/ui/accessibility"
+import { IntegrationProvider } from "@/components/integration-provider"
 
 const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
   title: "Meta Ads Dashboard Pro",
   description: "Advanced Meta Ads performance dashboard with historical analysis and predictions",
-  generator: "v0.dev",
+  manifest: "/manifest.json?v=2",
+  themeColor: "#0f172a",
+  viewport: {
+    width: "device-width",
+    initialScale: 1,
+    maximumScale: 5,
+    userScalable: true,
+    viewportFit: "cover",
+  },
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "Meta Ads Dashboard",
+  },
+  icons: {
+    icon: [
+      { url: "/icons/icon-192x192.svg", sizes: "192x192", type: "image/svg+xml" },
+      { url: "/icons/icon-512x512.svg", sizes: "512x512", type: "image/svg+xml" },
+    ],
+    apple: [
+      { url: "/icons/icon-192x192.svg", sizes: "192x192", type: "image/svg+xml" },
+    ],
+  },
 }
 
 export default function RootLayout({
@@ -20,11 +45,31 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={`${inter.className} bg-gray-900`}>
-        {" "}
-        <ThemeProvider attribute="class" defaultTheme="dark" enableSystem disableTransitionOnChange>
-          <Header />
-          <main className="container mx-auto px-4 py-8">{children}</main>
+      <head>
+        <link rel="manifest" href="/manifest.json?v=2" />
+        <meta name="mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+        <meta name="apple-mobile-web-app-title" content="Meta Ads" />
+        <meta name="theme-color" content="#0f172a" />
+      </head>
+      <body className={`${inter.className} antialiased`}>
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="dark"
+          enableSystem
+          disableTransitionOnChange={false}
+        >
+          <ServiceWorkerProvider>
+            <IntegrationProvider>
+              <AccessibleErrorBoundary>
+                <ErrorBoundary>
+                  <OfflineIndicator />
+                  {children}
+                </ErrorBoundary>
+              </AccessibleErrorBoundary>
+            </IntegrationProvider>
+          </ServiceWorkerProvider>
         </ThemeProvider>
       </body>
     </html>

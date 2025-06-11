@@ -29,6 +29,16 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Campaign ID and Access Token are required." }, { status: 400 })
     }
 
+    // Strip Bearer prefix if present
+    const cleanToken = accessToken.replace(/^Bearer\s+/i, '')
+    
+    // Log token info for debugging (remove in production)
+    console.log('Token debug:', {
+      original: accessToken.substring(0, 20) + '...',
+      cleaned: cleanToken.substring(0, 20) + '...',
+      hasBearer: accessToken.toLowerCase().startsWith('bearer')
+    })
+
     // Fetch hourly data for the campaign over the specified datePreset
     // We need 'hourly_stats_aggregated_by_advertiser_time_zone' for the hour in ad account's timezone
     // and 'actions'/'action_values' for performance metrics.
@@ -40,9 +50,9 @@ export async function POST(request: NextRequest) {
       `&date_preset=${datePreset}` +
       `&time_increment=1` + // Important: time_increment=1 with date_preset gives daily data, each with hourly breakdown
       `&limit=5000` + // Potentially many data points (e.g., 30 days * 24 hours)
-      `&access_token=${accessToken}`
+      `&access_token=${cleanToken}`
 
-    const apiResponse = await fetchMetaDayHour(insightsUrl, accessToken)
+    const apiResponse = await fetchMetaDayHour(insightsUrl, cleanToken)
 
     if (!apiResponse.data || apiResponse.data.length === 0) {
       return NextResponse.json({ dayHourData: [] }) // No data found

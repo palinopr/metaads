@@ -1,0 +1,248 @@
+import { NextRequest, NextResponse } from 'next/server'
+import { realtimeServer } from '@/lib/websocket/server'
+import { alertsEngine } from '@/lib/realtime/alerts-engine'
+import { streamingAnalytics } from '@/lib/realtime/streaming-analytics'
+import { pushNotificationService } from '@/lib/realtime/push-notifications'
+
+export const runtime = 'nodejs'
+
+// API endpoint for real-time system management and data injection
+export async function POST(request: NextRequest) {
+  try {
+    const body = await request.json()
+    const { action, data } = body
+
+    switch (action) {
+      case 'ingest_metrics':
+        // Inject real-time metrics data
+        if (data.metrics && Array.isArray(data.metrics)) {
+          data.metrics.forEach((metric: any) => {
+            // Process metric through alerts engine
+            alertsEngine.processMetric({
+              campaignId: metric.campaignId,
+              metric: metric.name,
+              value: metric.value,
+              timestamp: new Date(metric.timestamp)
+            })
+
+            // Process through streaming analytics
+            streamingAnalytics.ingestEvent({
+              id: `event_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+              timestamp: new Date(metric.timestamp),
+              type: metric.type || 'impression',
+              campaignId: metric.campaignId,
+              data: metric,
+              metadata: { source: 'meta_api' }
+            })
+
+            // Broadcast to WebSocket clients
+            realtimeServer.notifyMetricUpdate(metric.name, {
+              campaignId: metric.campaignId,
+              value: metric.value,
+              change: metric.change || 0,
+              timestamp: metric.timestamp
+            })
+          })
+        }
+        break
+
+      case 'campaign_update':
+        // Handle campaign-specific updates
+        if (data.campaignId) {
+          realtimeServer.notifyCampaignUpdate(data.campaignId, data)
+          
+          // Check for performance alerts
+          if (data.performance) {
+            await pushNotificationService.notifyPerformanceChange(
+              data.campaignId,
+              data.campaignName,
+              data.performance
+            )
+          }
+        }
+        break
+
+      case 'budget_alert':
+        // Handle budget-related alerts
+        if (data.campaignId && data.budgetData) {
+          await pushNotificationService.notifyBudgetAlert(
+            data.campaignId,
+            data.campaignName,
+            data.budgetData
+          )
+          
+          realtimeServer.sendAlert({
+            type: 'budget',
+            severity: data.budgetData.percentage > 90 ? 'critical' : 'high',
+            title: 'Budget Alert',
+            message: `Campaign "${data.campaignName}" has consumed ${data.budgetData.percentage}% of budget`,
+            data: data.budgetData
+          })
+        }
+        break
+
+      case 'ab_test_update':
+        // Handle A/B test significance updates
+        if (data.testId && data.results) {
+          await pushNotificationService.notifyABTestSignificance(
+            data.testId,
+            data.testName,
+            data.results
+          )
+          
+          realtimeServer.broadcastToChannel('ab_tests', {
+            type: 'update',
+            data: {
+              testId: data.testId,
+              results: data.results
+            }
+          })
+        }
+        break
+
+      case 'collaboration_event':
+        // Handle team collaboration events
+        realtimeServer.broadcastToChannel('collaboration', {
+          type: 'update',
+          data: data
+        })
+        break
+
+      case 'competitor_update':
+        // Handle competitor intelligence updates
+        realtimeServer.broadcastToChannel('competitor', {
+          type: 'update',
+          data: data
+        })
+        break
+
+      case 'system_status':
+        // Broadcast system status updates
+        realtimeServer.broadcast({
+          type: 'notification',
+          data: {
+            title: 'System Status',
+            message: data.message,
+            timestamp: new Date()
+          }
+        })
+        break
+
+      case 'get_stats':
+        // Return real-time system statistics
+        return NextResponse.json({
+          websocket: realtimeServer.getConnectionStats(),
+          alerts: {
+            activeRules: alertsEngine.getRules().length,
+            activeAlerts: alertsEngine.getActiveAlerts().length
+          },
+          streaming: streamingAnalytics.getQueryStats(),
+          notifications: pushNotificationService.getStats()
+        })
+
+      case 'test_connection':
+        // Test real-time connectivity
+        realtimeServer.broadcast({
+          type: 'ping',
+          data: { message: 'Connection test', timestamp: new Date() }
+        })
+        break
+
+      default:
+        return NextResponse.json(
+          { error: 'Unknown action' },
+          { status: 400 }
+        )
+    }
+
+    return NextResponse.json({ success: true })
+  } catch (error) {
+    console.error('Real-time API error:', error)
+    return NextResponse.json(
+      { error: 'Internal server error', message: error instanceof Error ? error.message : 'Unknown error' },
+      { status: 500 }
+    )
+  }
+}
+
+// Simulate real-time data for demo purposes
+export async function GET(request: NextRequest) {
+  try {
+    const url = new URL(request.url)
+    const demo = url.searchParams.get('demo')
+
+    if (demo === 'true') {
+      // Generate sample real-time data
+      const campaigns = ['campaign_1', 'campaign_2', 'campaign_3']
+      const metrics = ['impressions', 'clicks', 'conversions', 'spend']
+      
+      // Simulate metrics updates
+      campaigns.forEach(campaignId => {
+        metrics.forEach(metric => {
+          const value = Math.random() * 1000
+          const change = (Math.random() - 0.5) * 20 // -10% to +10% change
+          
+          realtimeServer.notifyMetricUpdate(metric, {
+            campaignId,
+            value,
+            change,
+            timestamp: new Date()
+          })
+        })
+      })
+
+      // Simulate budget alert
+      if (Math.random() > 0.7) {
+        realtimeServer.sendAlert({
+          type: 'budget',
+          severity: 'warning',
+          title: 'Budget Alert',
+          message: `Campaign has consumed 85% of daily budget`,
+          data: { percentage: 85 }
+        })
+      }
+
+      // Simulate performance update
+      if (Math.random() > 0.8) {
+        realtimeServer.broadcastToChannel('performance', {
+          type: 'update',
+          data: {
+            campaignId: campaigns[0],
+            metric: 'ctr',
+            value: 2.5 + (Math.random() - 0.5),
+            change: (Math.random() - 0.5) * 10
+          }
+        })
+      }
+
+      return NextResponse.json({
+        message: 'Demo data broadcasted',
+        timestamp: new Date(),
+        campaigns: campaigns.length,
+        metrics: campaigns.length * metrics.length
+      })
+    }
+
+    // Return system status
+    return NextResponse.json({
+      status: 'operational',
+      uptime: process.uptime(),
+      timestamp: new Date(),
+      stats: {
+        websocket: realtimeServer.getConnectionStats(),
+        streaming: streamingAnalytics.getQueryStats()
+      }
+    })
+  } catch (error) {
+    console.error('Real-time status error:', error)
+    return NextResponse.json(
+      { error: 'Failed to get status' },
+      { status: 500 }
+    )
+  }
+}
+
+// Health check endpoint
+export async function HEAD() {
+  return new NextResponse(null, { status: 200 })
+}

@@ -22,7 +22,8 @@ interface DayHourDataPoint {
 interface DayHourPerformanceProps {
   campaignId: string
   accessToken: string
-  datePreset: string
+  adAccountId: string
+  datePreset?: string
 }
 
 const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
@@ -30,7 +31,7 @@ const hours = Array.from({ length: 24 }, (_, i) => i) // 0-23
 
 type HeatmapMetric = "roas" | "revenue" | "conversions" | "spend"
 
-export function DayHourPerformance({ campaignId, accessToken, datePreset }: DayHourPerformanceProps) {
+export function DayHourPerformance({ campaignId, accessToken, adAccountId, datePreset = "last_30d" }: DayHourPerformanceProps) {
   const [data, setData] = useState<DayHourDataPoint[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)

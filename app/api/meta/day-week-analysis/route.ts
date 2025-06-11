@@ -1,4 +1,6 @@
 import { NextResponse } from "next/server"
+import { safeToFixed } from "@/lib/safe-utils"
+import { formatAccessToken } from "@/lib/meta-api-client"
 
 interface HourlyInsight {
   spend?: string
@@ -7,8 +9,9 @@ interface HourlyInsight {
   ctr?: string
   actions?: { action_type: string; value: string }[]
   action_values?: { action_type: string; value: string }[]
-  date_start: string // ISO 8601 format, e.g., "2023-10-26T00:00:00-0700"
+  date_start: string // ISO 8601 format, e.g., "2023-10-26"
   date_stop: string
+  hourly_stats_aggregated_by_advertiser_time_zone?: string // "HH:MM:SS - HH:MM:SS"
 }
 
 interface AggregatedHourData {
@@ -80,14 +83,38 @@ export async function POST(request: Request) {
       until: endDate.toISOString().split("T")[0],
     }
 
-    const insightsUrl =
-      `https://graph.facebook.com/v19.0/${campaignId}/insights?` +
-      `fields=spend,impressions,clicks,ctr,actions,action_values` +
-      `&time_increment=hourly` + // Fetches data aggregated by hour
-      `&time_range=${JSON.stringify(timeRange)}` +
-      `&limit=1000` + // Increased limit, consider pagination if needed for very long ranges
-      `&access_token=${accessToken}`
+    // Clean the access token to remove Bearer prefix
+    const cleanToken = accessToken.replace(/^Bearer\s+/i, '')
+    
+    // For historical data, we'll use date_preset or time_range with daily breakdown
+    // Then we'll make a separate call for hourly data if needed
+    let insightsUrl: string
+    
+    if (datePreset === 'today' || datePreset === 'yesterday') {
+      // For single day, use hourly breakdown
+      insightsUrl =
+        `https://graph.facebook.com/v19.0/${campaignId}/insights?` +
+        `fields=spend,impressions,clicks,ctr,actions,action_values` +
+        `&breakdowns=hourly_stats_aggregated_by_advertiser_time_zone` +
+        `&date_preset=${datePreset}` +
+        `&time_increment=1` +
+        `&limit=1000` +
+        `&access_token=${cleanToken}`
+    } else {
+      // For multi-day ranges, use daily data with hourly breakdown
+      insightsUrl =
+        `https://graph.facebook.com/v19.0/${campaignId}/insights?` +
+        `fields=spend,impressions,clicks,ctr,actions,action_values` +
+        `&breakdowns=hourly_stats_aggregated_by_advertiser_time_zone` +
+        `&date_preset=${datePreset}` +
+        `&time_increment=1` +
+        `&limit=5000` +
+        `&access_token=${cleanToken}`
+    }
 
+    console.log('Day/Week Analysis URL (without token):', insightsUrl.split('&access_token=')[0])
+    console.log('Time range:', timeRange)
+    
     const response = await fetch(insightsUrl)
     const apiResponseData = await response.json()
 
@@ -100,18 +127,18 @@ export async function POST(request: Request) {
     const heatmapData: any[] = []
     const dayHourAggregates: { [key: string]: AggregatedHourData } = {}
 
-    rawInsights.forEach((hourData: HourlyInsight) => {
-      // The date_start from Meta API is in the ad account's timezone.
-      // We need to parse this correctly. Example: "2023-10-26T00:00:00-0700"
-      // For simplicity, we'll assume the date string correctly represents the local time of the ad account.
-      // If the API returns UTC and you need to convert, more complex date handling is needed.
-      const date = new Date(hourData.date_start)
+    rawInsights.forEach((hourData: any) => {
+      // When using hourly_stats_aggregated_by_advertiser_time_zone breakdown,
+      // the hour is provided in the breakdown field, not in date_start
+      const date = new Date(hourData.date_start + "T00:00:00")
       const dayOfWeek = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"][date.getDay()]
-      const hour = date.getHours() // This will be in the local timezone of the server running this code if not careful.
-      // However, since Meta gives it with offset, new Date() should parse it to correct UTC moment,
-      // then getDay/getHours gives values based on server's locale.
-      // For advertiser timezone breakdown, Meta's `hourly_stats_aggregated_by_advertiser_time_zone` is better
-      // but here we are using `time_increment=hourly` which is by default advertiser timezone.
+      
+      // Extract hour from hourly_stats_aggregated_by_advertiser_time_zone field
+      // Format is "HH:MM:SS - HH:MM:SS"
+      let hour = 0
+      if (hourData.hourly_stats_aggregated_by_advertiser_time_zone) {
+        hour = Number.parseInt(hourData.hourly_stats_aggregated_by_advertiser_time_zone.split(":")[0], 10)
+      }
 
       const spend = Number.parseFloat(hourData.spend || "0")
       let revenue = 0
@@ -209,7 +236,7 @@ export async function POST(request: Request) {
       if (bestOverallRoas > worstOverallRoas * 2 && bestOverallRoas > 1) {
         // Check if best is significantly better
         recommendations.push(
-          `Top performing slots (e.g., ${bestTimes[0].dayOfWeek} ${bestTimes[0].hour}:00 at ${bestTimes[0].roas.toFixed(1)}x ROAS) are significantly better than lower ones (e.g., ${worstTimes[worstTimes.length - 1].dayOfWeek} ${worstTimes[worstTimes.length - 1].hour}:00 at ${worstOverallRoas.toFixed(1)}x ROAS). Consider reallocating budget or using ad scheduling.`,
+          `Top performing slots (e.g., ${bestTimes[0].dayOfWeek} ${bestTimes[0].hour}:00 at ${safeToFixed(bestTimes[0].roas, 1)}x ROAS) are significantly better than lower ones (e.g., ${worstTimes[worstTimes.length - 1].dayOfWeek} ${worstTimes[worstTimes.length - 1].hour}:00 at ${safeToFixed(worstOverallRoas, 1)}x ROAS). Consider reallocating budget or using ad scheduling.`,
         )
       }
     }
@@ -220,7 +247,7 @@ export async function POST(request: Request) {
 
     if (bestDay && worstDay && bestDay.avgRoas > worstDay.avgRoas * 1.5 && bestDay.avgRoas > 1) {
       recommendations.push(
-        `${bestDay.day}s (avg ${bestDay.avgRoas.toFixed(1)}x ROAS) perform notably better than ${worstDay.day}s (avg ${worstDay.avgRoas.toFixed(1)}x ROAS). Evaluate budget allocation across days.`,
+        `${bestDay.day}s (avg ${safeToFixed(bestDay.avgRoas, 1)}x ROAS) perform notably better than ${worstDay.day}s (avg ${safeToFixed(worstDay.avgRoas, 1)}x ROAS). Evaluate budget allocation across days.`,
       )
     }
 
@@ -237,11 +264,11 @@ export async function POST(request: Request) {
 
     if (morningAvgRoas > eveningAvgRoas * 1.2 && morningAvgRoas > 1) {
       recommendations.push(
-        `Morning hours (6am-11am, avg ${morningAvgRoas.toFixed(1)}x ROAS) tend to outperform evening hours (6pm-11pm, avg ${eveningAvgRoas.toFixed(1)}x ROAS).`,
+        `Morning hours (6am-11am, avg ${safeToFixed(morningAvgRoas, 1)}x ROAS) tend to outperform evening hours (6pm-11pm, avg ${safeToFixed(eveningAvgRoas, 1)}x ROAS).`,
       )
     } else if (eveningAvgRoas > morningAvgRoas * 1.2 && eveningAvgRoas > 1) {
       recommendations.push(
-        `Evening hours (6pm-11pm, avg ${eveningAvgRoas.toFixed(1)}x ROAS) tend to outperform morning hours (6am-11am, avg ${morningAvgRoas.toFixed(1)}x ROAS).`,
+        `Evening hours (6pm-11pm, avg ${safeToFixed(eveningAvgRoas, 1)}x ROAS) tend to outperform morning hours (6am-11am, avg ${safeToFixed(morningAvgRoas, 1)}x ROAS).`,
       )
     }
     if (recommendations.length === 0) {

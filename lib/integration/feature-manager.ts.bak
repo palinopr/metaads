@@ -1,0 +1,471 @@
+/**
+ * Unified Feature Management System
+ * Manages feature toggles, gradual rollout, and agent coordination
+ */
+
+import { storage } from '@/lib/storage-utils';
+
+export interface FeatureConfig {
+  id: string;
+  name: string;
+  description: string;
+  enabled: boolean;
+  rolloutPercentage: number;
+  dependencies: string[];
+  requiresAuth: boolean;
+  environments: ('development' | 'staging' | 'production')[];
+  version: string;
+  deprecated?: boolean;
+  deprecationDate?: string;
+}
+
+export interface UserProfile {
+  id: string;
+  roles: string[];
+  segment: string;
+  enrolledFeatures: string[];
+}
+
+export class FeatureManager {
+  private features: Map<string, FeatureConfig> = new Map();
+  private userProfile: UserProfile | null = null;
+  private environment: string = process.env.NODE_ENV || 'development';
+
+  constructor() {
+    this.initializeFeatures();
+    this.loadUserProfile();
+  }
+
+  private initializeFeatures() {
+    const defaultFeatures: FeatureConfig[] = [
+      // Authentication Features
+      {
+        id: 'auth_oauth_flow',
+        name: 'OAuth Authentication Flow',
+        description: 'Enhanced OAuth flow with secure token management',
+        enabled: true,
+        rolloutPercentage: 100,
+        dependencies: [],
+        requiresAuth: false,
+        environments: ['development', 'staging', 'production'],
+        version: '1.0.0'
+      },
+      {
+        id: 'auth_multi_account',
+        name: 'Multi-Account Support',
+        description: 'Support for multiple Meta ad accounts',
+        enabled: true,
+        rolloutPercentage: 100,
+        dependencies: ['auth_oauth_flow'],
+        requiresAuth: true,
+        environments: ['development', 'staging', 'production'],
+        version: '1.0.0'
+      },
+      {
+        id: 'auth_session_management',
+        name: 'Advanced Session Management',
+        description: 'Enhanced session handling with automatic refresh',
+        enabled: true,
+        rolloutPercentage: 100,
+        dependencies: ['auth_oauth_flow'],
+        requiresAuth: true,
+        environments: ['development', 'staging', 'production'],
+        version: '1.0.0'
+      },
+
+      // Data Pipeline Features
+      {
+        id: 'pipeline_batch_processing',
+        name: 'Batch Data Processing',
+        description: 'Efficient batch processing for large datasets',
+        enabled: true,
+        rolloutPercentage: 100,
+        dependencies: ['auth_oauth_flow'],
+        requiresAuth: true,
+        environments: ['development', 'staging', 'production'],
+        version: '1.0.0'
+      },
+      {
+        id: 'pipeline_real_time',
+        name: 'Real-time Data Pipeline',
+        description: 'Live data streaming and updates',
+        enabled: true,
+        rolloutPercentage: 90,
+        dependencies: ['pipeline_batch_processing'],
+        requiresAuth: true,
+        environments: ['development', 'staging', 'production'],
+        version: '1.0.0'
+      },
+      {
+        id: 'pipeline_caching',
+        name: 'Intelligent Caching',
+        description: 'Smart caching for API responses and data',
+        enabled: true,
+        rolloutPercentage: 100,
+        dependencies: [],
+        requiresAuth: false,
+        environments: ['development', 'staging', 'production'],
+        version: '1.0.0'
+      },
+
+      // AI Features
+      {
+        id: 'ai_insights_basic',
+        name: 'Basic AI Insights',
+        description: 'AI-powered campaign insights and recommendations',
+        enabled: true,
+        rolloutPercentage: 100,
+        dependencies: ['auth_oauth_flow', 'pipeline_batch_processing'],
+        requiresAuth: true,
+        environments: ['development', 'staging', 'production'],
+        version: '1.0.0'
+      },
+      {
+        id: 'ai_insights_advanced',
+        name: 'Advanced AI Analytics',
+        description: 'Deep learning predictions and trend analysis',
+        enabled: true,
+        rolloutPercentage: 75,
+        dependencies: ['ai_insights_basic'],
+        requiresAuth: true,
+        environments: ['development', 'staging', 'production'],
+        version: '1.0.0'
+      },
+      {
+        id: 'ai_creative_analysis',
+        name: 'AI Creative Analysis',
+        description: 'AI-powered creative performance analysis',
+        enabled: true,
+        rolloutPercentage: 80,
+        dependencies: ['ai_insights_basic'],
+        requiresAuth: true,
+        environments: ['development', 'staging', 'production'],
+        version: '1.0.0'
+      },
+
+      // Performance Features
+      {
+        id: 'performance_optimization',
+        name: 'Performance Optimization',
+        description: 'Advanced performance monitoring and optimization',
+        enabled: true,
+        rolloutPercentage: 100,
+        dependencies: [],
+        requiresAuth: false,
+        environments: ['development', 'staging', 'production'],
+        version: '1.0.0'
+      },
+      {
+        id: 'performance_memory_management',
+        name: 'Memory Management',
+        description: 'Intelligent memory usage optimization',
+        enabled: true,
+        rolloutPercentage: 100,
+        dependencies: ['performance_optimization'],
+        requiresAuth: false,
+        environments: ['development', 'staging', 'production'],
+        version: '1.0.0'
+      },
+
+      // UI/UX Features
+      {
+        id: 'ui_dark_mode',
+        name: 'Dark Mode',
+        description: 'Dark theme support',
+        enabled: true,
+        rolloutPercentage: 100,
+        dependencies: [],
+        requiresAuth: false,
+        environments: ['development', 'staging', 'production'],
+        version: '1.0.0'
+      },
+      {
+        id: 'ui_responsive_design',
+        name: 'Responsive Design',
+        description: 'Mobile-optimized interface',
+        enabled: true,
+        rolloutPercentage: 100,
+        dependencies: [],
+        requiresAuth: false,
+        environments: ['development', 'staging', 'production'],
+        version: '1.0.0'
+      },
+      {
+        id: 'ui_accessibility',
+        name: 'Accessibility Features',
+        description: 'Enhanced accessibility support',
+        enabled: true,
+        rolloutPercentage: 100,
+        dependencies: [],
+        requiresAuth: false,
+        environments: ['development', 'staging', 'production'],
+        version: '1.0.0'
+      },
+
+      // Automation Features
+      {
+        id: 'automation_reporting',
+        name: 'Automated Reporting',
+        description: 'Scheduled report generation and delivery',
+        enabled: true,
+        rolloutPercentage: 85,
+        dependencies: ['auth_oauth_flow', 'pipeline_batch_processing'],
+        requiresAuth: true,
+        environments: ['development', 'staging', 'production'],
+        version: '1.0.0'
+      },
+      {
+        id: 'automation_alerts',
+        name: 'Smart Alerts',
+        description: 'Intelligent alert system for performance changes',
+        enabled: true,
+        rolloutPercentage: 90,
+        dependencies: ['pipeline_real_time'],
+        requiresAuth: true,
+        environments: ['development', 'staging', 'production'],
+        version: '1.0.0'
+      },
+
+      // Error Handling Features
+      {
+        id: 'error_handling_enhanced',
+        name: 'Enhanced Error Handling',
+        description: 'Advanced error tracking and recovery',
+        enabled: true,
+        rolloutPercentage: 100,
+        dependencies: [],
+        requiresAuth: false,
+        environments: ['development', 'staging', 'production'],
+        version: '1.0.0'
+      },
+      {
+        id: 'error_analytics',
+        name: 'Error Analytics',
+        description: 'Error pattern analysis and insights',
+        enabled: true,
+        rolloutPercentage: 95,
+        dependencies: ['error_handling_enhanced'],
+        requiresAuth: true,
+        environments: ['development', 'staging', 'production'],
+        version: '1.0.0'
+      },
+
+      // Offline Features
+      {
+        id: 'offline_support',
+        name: 'Offline Support',
+        description: 'Offline data caching and sync',
+        enabled: true,
+        rolloutPercentage: 80,
+        dependencies: ['pipeline_caching'],
+        requiresAuth: false,
+        environments: ['development', 'staging', 'production'],
+        version: '1.0.0'
+      },
+
+      // Testing Features
+      {
+        id: 'testing_ab_framework',
+        name: 'A/B Testing Framework',
+        description: 'Built-in A/B testing for features',
+        enabled: true,
+        rolloutPercentage: 70,
+        dependencies: [],
+        requiresAuth: true,
+        environments: ['development', 'staging', 'production'],
+        version: '1.0.0'
+      }
+    ];
+
+    defaultFeatures.forEach(feature => {
+      this.features.set(feature.id, feature);
+    });
+  }
+
+  private loadUserProfile() {
+    try {
+      const profile = storage.get('user_profile');
+      if (profile) {
+        this.userProfile = JSON.parse(profile);
+      }
+    } catch (error) {
+      console.warn('Failed to load user profile:', error);
+    }
+  }
+
+  public setUserProfile(profile: UserProfile) {
+    this.userProfile = profile;
+    storage.set('user_profile', JSON.stringify(profile));
+  }
+
+  public isFeatureEnabled(featureId: string): boolean {
+    const feature = this.features.get(featureId);
+    if (!feature) {
+      console.warn(`Feature ${featureId} not found`);
+      return false;
+    }
+
+    // Check environment
+    if (!feature.environments.includes(this.environment as any)) {
+      return false;
+    }
+
+    // Check if feature is globally disabled
+    if (!feature.enabled) {
+      return false;
+    }
+
+    // Check deprecation
+    if (feature.deprecated) {
+      const deprecationDate = feature.deprecationDate ? new Date(feature.deprecationDate) : null;
+      if (deprecationDate && new Date() > deprecationDate) {
+        return false;
+      }
+    }
+
+    // Check dependencies
+    for (const dependency of feature.dependencies) {
+      if (!this.isFeatureEnabled(dependency)) {
+        return false;
+      }
+    }
+
+    // Check auth requirement
+    if (feature.requiresAuth && !this.userProfile) {
+      return false;
+    }
+
+    // Check rollout percentage
+    if (feature.rolloutPercentage < 100) {
+      const userId = this.userProfile?.id || 'anonymous';
+      const hash = this.hashUserId(userId + featureId);
+      const userPercentile = hash % 100;
+      if (userPercentile >= feature.rolloutPercentage) {
+        return false;
+      }
+    }
+
+    return true;
+  }
+
+  public getEnabledFeatures(): FeatureConfig[] {
+    return Array.from(this.features.values()).filter(feature => 
+      this.isFeatureEnabled(feature.id)
+    );
+  }
+
+  public getFeatureConfig(featureId: string): FeatureConfig | null {
+    return this.features.get(featureId) || null;
+  }
+
+  public updateFeature(featureId: string, updates: Partial<FeatureConfig>): boolean {
+    const feature = this.features.get(featureId);
+    if (!feature) {
+      return false;
+    }
+
+    const updatedFeature = { ...feature, ...updates };
+    this.features.set(featureId, updatedFeature);
+    return true;
+  }
+
+  public enableFeature(featureId: string, rolloutPercentage: number = 100): boolean {
+    return this.updateFeature(featureId, { 
+      enabled: true, 
+      rolloutPercentage: Math.max(0, Math.min(100, rolloutPercentage))
+    });
+  }
+
+  public disableFeature(featureId: string): boolean {
+    return this.updateFeature(featureId, { enabled: false });
+  }
+
+  public getFeatureDependencies(featureId: string): FeatureConfig[] {
+    const feature = this.features.get(featureId);
+    if (!feature) {
+      return [];
+    }
+
+    return feature.dependencies
+      .map(depId => this.features.get(depId))
+      .filter(Boolean) as FeatureConfig[];
+  }
+
+  public getFeatureDependents(featureId: string): FeatureConfig[] {
+    return Array.from(this.features.values()).filter(feature =>
+      feature.dependencies.includes(featureId)
+    );
+  }
+
+  private hashUserId(str: string): number {
+    let hash = 0;
+    for (let i = 0; i < str.length; i++) {
+      const char = str.charCodeAt(i);
+      hash = ((hash << 5) - hash) + char;
+      hash = hash & hash; // Convert to 32-bit integer
+    }
+    return Math.abs(hash);
+  }
+
+  public exportConfiguration(): Record<string, FeatureConfig> {
+    const config: Record<string, FeatureConfig> = {};
+    this.features.forEach((feature, id) => {
+      config[id] = feature;
+    });
+    return config;
+  }
+
+  public importConfiguration(config: Record<string, FeatureConfig>): void {
+    this.features.clear();
+    Object.entries(config).forEach(([id, feature]) => {
+      this.features.set(id, feature);
+    });
+  }
+
+  public getStats() {
+    const features = Array.from(this.features.values());
+    const enabled = features.filter(f => this.isFeatureEnabled(f.id));
+    
+    return {
+      total: features.length,
+      enabled: enabled.length,
+      disabled: features.length - enabled.length,
+      deprecated: features.filter(f => f.deprecated).length,
+      rolloutFeatures: features.filter(f => f.rolloutPercentage < 100).length,
+      environment: this.environment,
+      userProfile: this.userProfile ? {
+        id: this.userProfile.id,
+        roles: this.userProfile.roles,
+        segment: this.userProfile.segment,
+        enrolledFeatures: this.userProfile.enrolledFeatures.length
+      } : null
+    };
+  }
+}
+
+// Singleton instance
+export const featureManager = new FeatureManager();
+
+// React hook for feature flags
+export function useFeature(featureId: string): boolean {
+  // Note: In a real React environment, this would use useState/useEffect
+  // for reactivity. For now, it's a simple wrapper.
+  return featureManager.isFeatureEnabled(featureId);
+}
+
+// Higher-order component for feature gating
+export function withFeature<P extends object>(
+  featureId: string,
+  Component: React.ComponentType<P>,
+  FallbackComponent?: React.ComponentType<P>
+) {
+  return function FeatureGatedComponent(props: P) {
+    const isEnabled = featureManager.isFeatureEnabled(featureId);
+    
+    if (!isEnabled) {
+      return FallbackComponent ? <FallbackComponent {...props} /> : null;
+    }
+    
+    return <Component {...props} />;
+  };
+}

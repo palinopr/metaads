@@ -1,0 +1,118 @@
+import { NextRequest, NextResponse } from 'next/server';
+
+// Simplified middleware to avoid crypto/edge runtime issues
+
+export async function middleware(request: NextRequest) {
+  const { pathname } = request.nextUrl;
+
+  // Skip security checks for static assets
+  if (pathname.startsWith('/_next/') || 
+      pathname.startsWith('/icons/') || 
+      pathname === '/favicon.ico' ||
+      pathname === '/manifest.json' ||
+      pathname === '/sw.js') {
+    return handleStaticAssets(request, pathname);
+  }
+
+  // Basic security headers
+  const response = NextResponse.next();
+  response.headers.set('X-Frame-Options', 'DENY');
+  response.headers.set('X-Content-Type-Options', 'nosniff');
+
+  // Handle API routes that don't exist
+  if (pathname.startsWith('/api/')) {
+    const knownApiRoutes = [
+      '/api/health',
+      '/api/health/detailed',
+      '/api/log-error',
+      '/api/logs/stream',
+      '/api/meta',
+      '/api/meta/day-hour-insights',
+      '/api/meta/day-week-analysis',
+      '/api/meta/demographics',
+      '/api/simple-meta',
+      '/api/test-meta-complete',
+      '/api/test-meta',
+      '/api/ai-analyze',
+      '/api/ai-insights',
+      '/api/realtime',
+      '/api/error-metrics',
+      '/api/security/csp-report',
+      '/api/security/suspicious-activity',
+      '/api/csrf-token'
+    ];
+
+    const isKnownRoute = knownApiRoutes.some(route => {
+      if (pathname === route) return true;
+      if (route.endsWith('/meta') && pathname.startsWith('/api/meta/')) return true;
+      if (route.endsWith('/security') && pathname.startsWith('/api/security/')) return true;
+      return false;
+    });
+
+    if (!isKnownRoute) {
+      console.warn(`API 404: ${pathname}`);
+      
+      const response = NextResponse.json(
+        {
+          error: 'API endpoint not found',
+          message: `The API endpoint ${pathname} does not exist`,
+          availableEndpoints: knownApiRoutes,
+          timestamp: new Date().toISOString()
+        },
+        { 
+          status: 404,
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+      
+      return response;
+    }
+  }
+
+  return response;
+}
+
+function handleStaticAssets(request: NextRequest, pathname: string): NextResponse {
+  const response = NextResponse.next();
+
+  // Handle manifest.json with cache busting
+  if (pathname === '/manifest.json') {
+    response.headers.set('Cache-Control', 'public, max-age=0, must-revalidate');
+    return response;
+  }
+
+  // Handle service worker
+  if (pathname === '/sw.js') {
+    response.headers.set('Cache-Control', 'public, max-age=0, must-revalidate');
+    response.headers.set('Service-Worker-Allowed', '/');
+    return response;
+  }
+
+  // Handle favicon and other static assets
+  if (pathname.startsWith('/icons/') || pathname === '/favicon.ico') {
+    response.headers.set('Cache-Control', 'public, max-age=31536000, immutable');
+    return response;
+  }
+
+  // Handle Next.js static assets
+  if (pathname.startsWith('/_next/')) {
+    response.headers.set('Cache-Control', 'public, max-age=31536000, immutable');
+    return response;
+  }
+
+  return response;
+}
+
+export const config = {
+  matcher: [
+    /*
+     * Match all request paths except for the ones starting with:
+     * - _next/static (static files)
+     * - _next/image (image optimization files)
+     * Note: We handle favicon.ico and other static assets in the middleware
+     */
+    '/((?!_next/static|_next/image).*)',
+  ],
+}
