@@ -2,6 +2,8 @@
 const nextConfig = {
   experimental: {
     optimizeCss: false,
+    workerThreads: false,
+    cpus: 1,
   },
   eslint: {
     ignoreDuringBuilds: true,
@@ -16,6 +18,11 @@ const nextConfig = {
   generateStaticParams: false,
   // Disable static optimization for specific pages
   staticPageGenerationTimeout: 0,
+  // Optimize for Railway deployment
+  swcMinify: true,
+  poweredByHeader: false,
+  compress: true,
+  productionBrowserSourceMaps: false,
 }
 
 module.exports = nextConfig
