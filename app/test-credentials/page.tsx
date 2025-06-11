@@ -12,6 +12,7 @@ export default function TestCredentialsPage() {
   const [adAccountId, setAdAccountId] = useState('')
   const [result, setResult] = useState<any>(null)
   const [loading, setLoading] = useState(false)
+  const [checkingAccount, setCheckingAccount] = useState(false)
 
   const testCredentials = async () => {
     setLoading(true)
@@ -65,6 +66,39 @@ export default function TestCredentialsPage() {
     }
   }
 
+  const checkAccountAccess = async () => {
+    setCheckingAccount(true)
+    setResult(null)
+
+    try {
+      const response = await fetch('/api/check-account', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          accessToken,
+          adAccountId
+        })
+      })
+
+      const data = await response.json()
+      setResult({ 
+        status: response.status, 
+        data,
+        type: 'account-check'
+      })
+    } catch (error: any) {
+      setResult({
+        status: 'error',
+        data: { error: error.message },
+        type: 'account-check'
+      })
+    } finally {
+      setCheckingAccount(false)
+    }
+  }
+
   return (
     <div className="container mx-auto p-4 max-w-2xl">
       <Card>
@@ -101,20 +135,49 @@ export default function TestCredentialsPage() {
             </p>
           </div>
 
-          <Button 
-            onClick={testCredentials}
-            disabled={loading || !accessToken || !adAccountId}
-            className="w-full"
-          >
-            {loading ? 'Testing...' : 'Test Credentials'}
-          </Button>
+          <div className="flex gap-2">
+            <Button 
+              onClick={checkAccountAccess}
+              disabled={checkingAccount || !accessToken || !adAccountId}
+              variant="outline"
+              className="flex-1"
+            >
+              {checkingAccount ? 'Checking...' : 'Check Account Access'}
+            </Button>
+            <Button 
+              onClick={testCredentials}
+              disabled={loading || !accessToken || !adAccountId}
+              className="flex-1"
+            >
+              {loading ? 'Testing...' : 'Test Credentials'}
+            </Button>
+          </div>
 
           {result && (
             <Alert className={result.status === 200 ? 'border-green-500' : 'border-red-500'}>
               <AlertDescription>
-                <pre className="text-xs overflow-auto">
-                  {JSON.stringify(result, null, 2)}
-                </pre>
+                {result.type === 'account-check' && result.data.availableAccounts && (
+                  <div className="space-y-2">
+                    <p className="font-semibold text-red-600">
+                      Account {result.data.requestedAccount} is not accessible with this token.
+                    </p>
+                    <p className="text-sm">
+                      You have access to {result.data.totalAccounts} accounts. Here are some you can use:
+                    </p>
+                    <div className="max-h-40 overflow-y-auto border rounded p-2 text-xs">
+                      {result.data.availableAccounts.slice(0, 10).map((acc: any) => (
+                        <div key={acc.id} className="py-1">
+                          <span className="font-mono">{acc.id}</span> - {acc.name || 'Unnamed'}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {(!result.type || result.type !== 'account-check' || !result.data.availableAccounts) && (
+                  <pre className="text-xs overflow-auto">
+                    {JSON.stringify(result, null, 2)}
+                  </pre>
+                )}
               </AlertDescription>
             </Alert>
           )}
