@@ -3,9 +3,9 @@
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
-import dynamic from 'next/dynamic'
+import dynamicImport from 'next/dynamic'
 
-const PortfolioContent = dynamic(
+const PortfolioContent = dynamicImport(
   () => import('@/components/portfolio-content'),
   { 
     ssr: false,
