@@ -5,7 +5,7 @@ export const dynamic = 'force-dynamic'
 
 import type React from "react"
 import { useState, useEffect, useCallback, type FormEvent, Suspense, lazy } from "react"
-import dynamic from 'next/dynamic'
+import dynamicImport from 'next/dynamic'
 import { safeToFixed } from "@/lib/safe-utils"
 import { CredentialManager, type Credentials } from "@/lib/credential-manager"
 import { optimizedApiManager } from "@/lib/api-manager-optimized"
@@ -40,7 +40,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import Link from "next/link"
 
 // Lazy load heavy components
-const DateRangeSelector = dynamic(() => 
+const DateRangeSelector = dynamicImport(() => 
   import('@/components/date-range-selector').then(mod => ({ default: mod.DateRangeSelector })),
   { 
     loading: () => <Skeleton className="w-40 h-10" />,
@@ -48,7 +48,7 @@ const DateRangeSelector = dynamic(() =>
   }
 )
 
-const CampaignPredictions = dynamic(() => 
+const CampaignPredictions = dynamicImport(() => 
   import('@/components/campaign-predictions').then(mod => ({ default: mod.CampaignPredictions })),
   { 
     loading: () => <div className="h-64 flex items-center justify-center"><Loader2 className="w-6 h-6 animate-spin" /></div>,
@@ -56,7 +56,7 @@ const CampaignPredictions = dynamic(() =>
   }
 )
 
-const DemographicAnalytics = dynamic(() => 
+const DemographicAnalytics = dynamicImport(() => 
   import('@/components/demographic-analytics').then(mod => ({ default: mod.DemographicAnalytics })),
   { 
     loading: () => <div className="h-64 flex items-center justify-center"><Loader2 className="w-6 h-6 animate-spin" /></div>,
@@ -64,7 +64,7 @@ const DemographicAnalytics = dynamic(() =>
   }
 )
 
-const DayWeekPerformance = dynamic(() => 
+const DayWeekPerformance = dynamicImport(() => 
   import('@/components/day-week-performance').then(mod => ({ default: mod.DayWeekPerformance })),
   { 
     loading: () => <div className="h-64 flex items-center justify-center"><Loader2 className="w-6 h-6 animate-spin" /></div>,
@@ -72,7 +72,7 @@ const DayWeekPerformance = dynamic(() =>
   }
 )
 
-const AIAnalysisModal = dynamic(() => 
+const AIAnalysisModal = dynamicImport(() => 
   import('@/components/ai-analysis-modal').then(mod => ({ default: mod.AIAnalysisModal })),
   { 
     loading: () => <Button disabled size="sm" variant="outline"><Loader2 className="w-3 h-3 mr-1 animate-spin" />Loading...</Button>,
@@ -81,58 +81,58 @@ const AIAnalysisModal = dynamic(() =>
 )
 
 // Lazy load charts only when needed
-const LineChart = dynamic(() => 
+const LineChart = dynamicImport(() => 
   import('recharts').then(mod => ({ default: mod.LineChart })),
   { ssr: false }
 )
 
-const Line = dynamic(() => 
+const Line = dynamicImport(() => 
   import('recharts').then(mod => ({ default: mod.Line })),
   { ssr: false }
 )
 
-const AreaChart = dynamic(() => 
+const AreaChart = dynamicImport(() => 
   import('recharts').then(mod => ({ default: mod.AreaChart })),
   { ssr: false }
 )
 
-const Area = dynamic(() => 
+const Area = dynamicImport(() => 
   import('recharts').then(mod => ({ default: mod.Area })),
   { ssr: false }
 )
 
-const XAxis = dynamic(() => 
+const XAxis = dynamicImport(() => 
   import('recharts').then(mod => ({ default: mod.XAxis })),
   { ssr: false }
 )
 
-const YAxis = dynamic(() => 
+const YAxis = dynamicImport(() => 
   import('recharts').then(mod => ({ default: mod.YAxis })),
   { ssr: false }
 )
 
-const CartesianGrid = dynamic(() => 
+const CartesianGrid = dynamicImport(() => 
   import('recharts').then(mod => ({ default: mod.CartesianGrid })),
   { ssr: false }
 )
 
-const Tooltip = dynamic(() => 
+const Tooltip = dynamicImport(() => 
   import('recharts').then(mod => ({ default: mod.Tooltip })),
   { ssr: false }
 )
 
-const Legend = dynamic(() => 
+const Legend = dynamicImport(() => 
   import('recharts').then(mod => ({ default: mod.Legend })),
   { ssr: false }
 )
 
-const ResponsiveContainer = dynamic(() => 
+const ResponsiveContainer = dynamicImport(() => 
   import('recharts').then(mod => ({ default: mod.ResponsiveContainer })),
   { ssr: false }
 )
 
 // Performance monitor - lazy loaded
-const PerformanceMonitor = dynamic(() => 
+const PerformanceMonitor = dynamicImport(() => 
   import('@/components/performance-monitor').then(mod => ({ default: mod.PerformanceMonitor })),
   { 
     loading: () => <Skeleton className="w-full h-96" />,
@@ -698,7 +698,7 @@ export default function DashboardPage() {
       return
     }
     
-    CredentialManager.save(credentialsToValidate, true)
+    await CredentialManager.save(credentialsToValidate, true)
     
     setCredentials(credentialsToValidate)
     setCredentialsSubmitted(true)
@@ -707,8 +707,8 @@ export default function DashboardPage() {
     fetchOverviewData()
   }
 
-  const handleClearCredentials = () => {
-    CredentialManager.clear()
+  const handleClearCredentials = async () => {
+    await CredentialManager.clear()
     setCredentials({ accessToken: "", adAccountId: "" })
     setCredentialsSubmitted(false)
     setCampaigns([])
