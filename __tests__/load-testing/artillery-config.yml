@@ -1,0 +1,263 @@
+# Artillery Load Testing Configuration for Meta Ads Dashboard
+
+config:
+  target: 'http://localhost:3000'
+  phases:
+    # Warm-up phase
+    - duration: 60
+      arrivalRate: 1
+      name: "Warm-up"
+    
+    # Light load
+    - duration: 120
+      arrivalRate: 5
+      rampTo: 10
+      name: "Light Load"
+    
+    # Medium load
+    - duration: 180
+      arrivalRate: 10
+      rampTo: 25
+      name: "Medium Load"
+    
+    # Heavy load
+    - duration: 120
+      arrivalRate: 25
+      rampTo: 50
+      name: "Heavy Load"
+    
+    # Cool-down
+    - duration: 60
+      arrivalRate: 50
+      rampTo: 1
+      name: "Cool-down"
+  
+  defaults:
+    headers:
+      Content-Type: 'application/json'
+      User-Agent: 'Artillery Load Test'
+  
+  # Performance thresholds
+  ensure:
+    # 95% of requests should complete within 5 seconds
+    - p95: 5000
+    # 99% of requests should complete within 10 seconds  
+    - p99: 10000
+    # Error rate should be less than 1%
+    - maxErrorRate: 1
+  
+  # Plugin configurations
+  plugins:
+    expect: {}
+    metrics-by-endpoint: {}
+    apdex:
+      threshold: 2000 # 2 seconds for satisfactory response
+    hdrhistogram: {}
+
+# Test data
+payload:
+  path: './test-data.csv'
+
+scenarios:
+  # Test health endpoint
+  - name: "Health Check"
+    weight: 20
+    flow:
+      - get:
+          url: "/api/health"
+          expect:
+            - statusCode: 200
+            - hasProperty: "status"
+            - hasProperty: "memory"
+            - hasProperty: "uptime"
+          capture:
+            - json: "$.status"
+              as: "healthStatus"
+      
+      # Validate response time
+      - think: 1
+      
+      - log: "Health status: {{ healthStatus }}"
+
+  # Test Meta API connection
+  - name: "Meta API Test Connection"
+    weight: 30
+    flow:
+      - post:
+          url: "/api/meta"
+          json:
+            type: "test_connection"
+            accessToken: "EAABwzLixnjYBAtest123456789012345"
+            adAccountId: "act_123456789"
+          expect:
+            - statusCode: [200, 400, 401]
+          capture:
+            - json: "$.success"
+              as: "connectionSuccess"
+            - json: "$.error"
+              as: "connectionError"
+      
+      - think: 2
+      
+      - log: "Connection success: {{ connectionSuccess }}, Error: {{ connectionError }}"
+
+  # Test Meta API overview request
+  - name: "Meta API Overview"
+    weight: 40
+    flow:
+      - post:
+          url: "/api/meta"
+          json:
+            type: "overview"
+            accessToken: "EAABwzLixnjYBAtest123456789012345"
+            adAccountId: "act_123456789"
+            datePreset: "last_30d"
+          expect:
+            - statusCode: [200, 401, 429, 500]
+          capture:
+            - json: "$.campaigns"
+              as: "campaigns"
+            - json: "$.success"
+              as: "overviewSuccess"
+      
+      - think: 5
+      
+      - log: "Overview success: {{ overviewSuccess }}, Campaigns count: {{ campaigns.length }}"
+
+  # Test campaign details
+  - name: "Campaign Details"
+    weight: 25
+    flow:
+      - post:
+          url: "/api/meta"
+          json:
+            type: "campaign_details"
+            accessToken: "EAABwzLixnjYBAtest123456789012345"
+            adAccountId: "act_123456789"
+            campaignId: "campaign_123456789"
+            datePreset: "last_7d"
+          expect:
+            - statusCode: [200, 400, 401, 500]
+          capture:
+            - json: "$.historicalDailyData"
+              as: "historicalData"
+            - json: "$.todayHourlyData"
+              as: "hourlyData"
+            - json: "$.adSets"
+              as: "adSets"
+      
+      - think: 3
+      
+      - log: "Historical data points: {{ historicalData.length }}, Hourly data points: {{ hourlyData.length }}, AdSets: {{ adSets.length }}"
+
+  # Dashboard page load simulation
+  - name: "Dashboard Load"
+    weight: 35
+    flow:
+      # Load main dashboard page
+      - get:
+          url: "/"
+          expect:
+            - statusCode: 200
+            - contentType: "text/html"
+      
+      - think: 1
+      
+      # Load health check (typically done by frontend)
+      - get:
+          url: "/api/health"
+          expect:
+            - statusCode: 200
+      
+      - think: 2
+      
+      # Load campaign data
+      - post:
+          url: "/api/meta"
+          json:
+            type: "overview"
+            accessToken: "EAABwzLixnjYBAtest123456789012345"
+            adAccountId: "act_123456789"
+            datePreset: "last_30d"
+          expect:
+            - statusCode: [200, 401, 429, 500]
+      
+      - think: 5
+
+  # Stress test scenario
+  - name: "Stress Test"
+    weight: 10
+    flow:
+      # Make multiple rapid requests
+      - loop:
+          count: 5
+          over:
+            - get:
+                url: "/api/health"
+            - think: 0.1
+      
+      - post:
+          url: "/api/meta"
+          json:
+            type: "test_connection"
+            accessToken: "EAABwzLixnjYBAtest123456789012345"
+            adAccountId: "act_123456789"
+          expect:
+            - statusCode: [200, 400, 401, 429]
+      
+      - think: 1
+
+# Error handling scenarios
+  - name: "Error Scenarios"
+    weight: 15
+    flow:
+      # Invalid JSON
+      - post:
+          url: "/api/meta"
+          body: "invalid json"
+          headers:
+            Content-Type: "application/json"
+          expect:
+            - statusCode: 400
+      
+      - think: 1
+      
+      # Missing parameters
+      - post:
+          url: "/api/meta"
+          json: {}
+          expect:
+            - statusCode: 400
+      
+      - think: 1
+      
+      # Invalid access token
+      - post:
+          url: "/api/meta"
+          json:
+            type: "test_connection"
+            accessToken: "invalid"
+            adAccountId: "act_123456789"
+          expect:
+            - statusCode: 400
+      
+      - think: 1
+      
+      # Invalid ad account ID
+      - post:
+          url: "/api/meta"
+          json:
+            type: "test_connection"
+            accessToken: "EAABwzLixnjYBAtest123456789012345"
+            adAccountId: "invalid"
+          expect:
+            - statusCode: 400
+
+# Custom metrics and monitoring
+before:
+  flow:
+    - log: "Starting load test for Meta Ads Dashboard"
+
+after:
+  flow:
+    - log: "Load test completed"

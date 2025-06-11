@@ -1,0 +1,49 @@
+apiVersion: v2
+name: metaads
+description: Meta Ads Dashboard - Enterprise Analytics Platform
+type: application
+version: 1.0.0
+appVersion: "1.0.0"
+
+keywords:
+  - metaads
+  - analytics
+  - dashboard
+  - nextjs
+
+home: https://metaads.com
+sources:
+  - https://github.com/metaads/dashboard
+
+maintainers:
+  - name: DevOps Team
+    email: devops@metaads.com
+
+dependencies:
+  - name: postgresql
+    version: "12.x.x"
+    repository: "https://charts.bitnami.com/bitnami"
+    condition: postgresql.enabled
+  
+  - name: redis
+    version: "18.x.x"
+    repository: "https://charts.bitnami.com/bitnami"
+    condition: redis.enabled
+  
+  - name: nginx-ingress
+    version: "4.x.x"
+    repository: "https://kubernetes.github.io/ingress-nginx"
+    condition: ingress.enabled
+  
+  - name: cert-manager
+    version: "1.x.x"
+    repository: "https://charts.jetstack.io"
+    condition: certManager.enabled
+
+annotations:
+  artifacthub.io/category: web
+  artifacthub.io/license: MIT
+  artifacthub.io/prerelease: "false"
+  artifacthub.io/signKey: |
+    fingerprint: 12345678901234567890123456789012
+    url: https://keybase.io/metaads/pgp_keys.asc

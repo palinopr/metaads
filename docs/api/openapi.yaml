@@ -1,0 +1,1177 @@
+openapi: 3.0.3
+info:
+  title: Meta Ads Dashboard API
+  description: |
+    Comprehensive API for Meta Ads Dashboard - A powerful platform for managing, analyzing, and optimizing Meta advertising campaigns with AI-powered insights.
+    
+    ## Features
+    - Real-time campaign monitoring and analytics
+    - AI-powered performance predictions and insights
+    - Demographic and behavioral targeting analysis
+    - Automated reporting and alert systems
+    - Multi-account management capabilities
+    - WebSocket real-time updates
+    - Error tracking and monitoring
+    
+    ## Authentication
+    All API endpoints require proper authentication. See the authentication section for details.
+    
+    ## Rate Limiting
+    - Validation endpoints: 10 requests per minute
+    - API endpoints: 60 requests per minute  
+    - Login attempts: 5 attempts per 15 minutes
+    
+    ## Error Handling
+    The API uses conventional HTTP response codes to indicate success or failure. Error responses include detailed messages and error codes for troubleshooting.
+  version: 1.0.0
+  contact:
+    name: Meta Ads Dashboard Support
+    email: support@metaads.com
+    url: https://docs.metaads.com
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+  x-logo:
+    url: https://metaads.com/logo.png
+    altText: Meta Ads Dashboard
+
+servers:
+  - url: https://api.metaads.com/v1
+    description: Production server
+  - url: https://staging-api.metaads.com/v1
+    description: Staging server
+  - url: http://localhost:3000/api
+    description: Development server
+
+paths:
+  /health:
+    get:
+      summary: Health Check
+      description: Check the health status of the API and system resources
+      tags:
+        - System
+      responses:
+        '200':
+          description: System is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [healthy, warning, error]
+                  memory:
+                    type: object
+                    properties:
+                      heapUsed:
+                        type: number
+                        description: Used heap memory in MB
+                      heapTotal:
+                        type: number
+                        description: Total heap memory in MB
+                      external:
+                        type: number
+                        description: External memory in MB
+                      rss:
+                        type: number
+                        description: Resident set size in MB
+                  uptime:
+                    type: number
+                    description: Server uptime in seconds
+                  timestamp:
+                    type: string
+                    format: date-time
+              example:
+                status: healthy
+                memory:
+                  heapUsed: 125
+                  heapTotal: 200
+                  external: 15
+                  rss: 180
+                uptime: 3600
+                timestamp: "2023-12-10T10:30:00Z"
+
+  /health/detailed:
+    get:
+      summary: Detailed Health Check
+      description: Get comprehensive system health information including component statuses
+      tags:
+        - System
+      responses:
+        '200':
+          description: Detailed system health information
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                  components:
+                    type: object
+                  metrics:
+                    type: object
+                  timestamp:
+                    type: string
+                    format: date-time
+
+  /meta:
+    post:
+      summary: Meta API Proxy
+      description: |
+        Primary endpoint for Meta API requests. Supports multiple request types:
+        - Campaign overview and insights
+        - Campaign details with historical data
+        - Connection testing
+        - Ad set and ad-level data
+      tags:
+        - Meta API
+      security:
+        - MetaAccessToken: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              oneOf:
+                - $ref: '#/components/schemas/OverviewRequest'
+                - $ref: '#/components/schemas/CampaignDetailsRequest'
+                - $ref: '#/components/schemas/TestConnectionRequest'
+                - $ref: '#/components/schemas/MetaAPIRequest'
+            examples:
+              overview:
+                summary: Get campaign overview
+                value:
+                  type: overview
+                  adAccountId: act_123456789
+                  accessToken: YOUR_ACCESS_TOKEN
+                  datePreset: last_30d
+              campaign_details:
+                summary: Get campaign details
+                value:
+                  type: campaign_details
+                  campaignId: "123456789"
+                  adAccountId: act_123456789
+                  accessToken: YOUR_ACCESS_TOKEN
+                  datePreset: last_7d
+              test_connection:
+                summary: Test Meta API connection
+                value:
+                  type: test_connection
+                  adAccountId: act_123456789
+                  accessToken: YOUR_ACCESS_TOKEN
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/CampaignsResponse'
+                  - $ref: '#/components/schemas/CampaignDetailsResponse'
+                  - $ref: '#/components/schemas/TestConnectionResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /meta/demographics:
+    post:
+      summary: Get Demographic Analytics
+      description: Retrieve demographic breakdown data for a specific campaign including age, gender, region, and device platform insights
+      tags:
+        - Analytics
+      security:
+        - MetaAccessToken: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - campaignId
+                - accessToken
+              properties:
+                campaignId:
+                  type: string
+                  description: Meta campaign ID
+                accessToken:
+                  type: string
+                  description: Meta access token
+                datePreset:
+                  type: string
+                  default: last_30d
+                  enum: [today, yesterday, this_month, last_month, this_quarter, last_quarter, this_year, last_year, last_3d, last_7d, last_14d, last_28d, last_30d, last_90d]
+            example:
+              campaignId: "123456789"
+              accessToken: "YOUR_ACCESS_TOKEN"
+              datePreset: "last_30d"
+      responses:
+        '200':
+          description: Demographic analytics data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DemographicsResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /meta/day-hour-insights:
+    get:
+      summary: Get Day-Hour Performance Insights
+      description: Retrieve performance data broken down by day of week and hour of day
+      tags:
+        - Analytics
+      parameters:
+        - name: campaignId
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: accessToken
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: datePreset
+          in: query
+          schema:
+            type: string
+            default: last_30d
+      responses:
+        '200':
+          description: Day-hour performance data
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  dayOfWeek:
+                    type: array
+                    items:
+                      type: object
+                  hourOfDay:
+                    type: array
+                    items:
+                      type: object
+
+  /ai-insights:
+    post:
+      summary: AI-Powered Insights
+      description: |
+        Generate AI-powered insights and predictions for your campaigns using advanced machine learning algorithms.
+        
+        Supported actions:
+        - predictions: Generate performance predictions
+        - anomalies: Detect performance anomalies
+        - recommendations: Get optimization recommendations
+        - trends: Analyze performance trends
+        - competitor: Competitive analysis
+        - sentiment: Sentiment analysis of ad copy
+        - ab-test: A/B test analysis
+        - performance-prediction: Campaign performance forecasting
+        - insights: General campaign insights
+      tags:
+        - AI & Analytics
+      security:
+        - ClaudeAPI: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - campaigns
+                - action
+              properties:
+                campaigns:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/Campaign'
+                action:
+                  type: string
+                  enum: [predictions, anomalies, recommendations, trends, competitor, sentiment, ab-test, performance-prediction, insights]
+                params:
+                  type: object
+                  description: Action-specific parameters
+                claudeApiKey:
+                  type: string
+                  description: Claude API key for AI processing
+            examples:
+              predictions:
+                summary: Get performance predictions
+                value:
+                  campaigns: []
+                  action: predictions
+                  params:
+                    campaign: 
+                      id: "123456789"
+                      name: "Summer Sale Campaign"
+                    timeframe: "30d"
+                    scenario: "moderate"
+              recommendations:
+                summary: Get optimization recommendations
+                value:
+                  campaigns: []
+                  action: recommendations
+      responses:
+        '200':
+          description: AI insights generated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    description: Action-specific results
+                  action:
+                    type: string
+                  timestamp:
+                    type: string
+                    format: date-time
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /ai-insights?action=health:
+    get:
+      summary: AI Service Health Check
+      description: Check the health and available features of the AI insights service
+      tags:
+        - AI & Analytics
+      responses:
+        '200':
+          description: AI service health information
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [healthy]
+                  service:
+                    type: string
+                  version:
+                    type: string
+                  features:
+                    type: array
+                    items:
+                      type: string
+                  timestamp:
+                    type: string
+                    format: date-time
+
+  /realtime:
+    post:
+      summary: Real-time Data Management
+      description: |
+        Manage real-time data streams and events. Supports various actions:
+        - ingest_metrics: Inject real-time metrics data
+        - campaign_update: Handle campaign-specific updates
+        - budget_alert: Handle budget-related alerts
+        - ab_test_update: Handle A/B test significance updates
+        - collaboration_event: Handle team collaboration events
+        - competitor_update: Handle competitor intelligence updates
+        - system_status: Broadcast system status updates
+        - get_stats: Return real-time system statistics
+        - test_connection: Test real-time connectivity
+      tags:
+        - Real-time
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - action
+              properties:
+                action:
+                  type: string
+                  enum: [ingest_metrics, campaign_update, budget_alert, ab_test_update, collaboration_event, competitor_update, system_status, get_stats, test_connection]
+                data:
+                  type: object
+                  description: Action-specific data payload
+            examples:
+              ingest_metrics:
+                summary: Inject real-time metrics
+                value:
+                  action: ingest_metrics
+                  data:
+                    metrics:
+                      - campaignId: "123456789"
+                        name: "impressions"
+                        value: 1000
+                        timestamp: "2023-12-10T10:30:00Z"
+              get_stats:
+                summary: Get system statistics
+                value:
+                  action: get_stats
+      responses:
+        '200':
+          description: Action processed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  websocket:
+                    type: object
+                    description: WebSocket connection statistics (for get_stats action)
+                  alerts:
+                    type: object
+                    description: Alert system statistics (for get_stats action)
+
+    get:
+      summary: Real-time System Status
+      description: Get real-time system operational status and statistics
+      tags:
+        - Real-time
+      parameters:
+        - name: demo
+          in: query
+          description: Set to 'true' to generate demo real-time data
+          schema:
+            type: string
+            enum: [true, false]
+      responses:
+        '200':
+          description: Real-time system status
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [operational]
+                  uptime:
+                    type: number
+                  timestamp:
+                    type: string
+                    format: date-time
+                  stats:
+                    type: object
+
+  /ws:
+    get:
+      summary: WebSocket Connection Info
+      description: Get WebSocket endpoint information for real-time connections
+      tags:
+        - WebSocket
+      responses:
+        '200':
+          description: WebSocket connection information
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  wsUrl:
+                    type: string
+                    format: uri
+                  status:
+                    type: string
+
+    post:
+      summary: WebSocket Message Handling
+      description: Send messages through WebSocket connections
+      tags:
+        - WebSocket
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - type
+              properties:
+                type:
+                  type: string
+                  enum: [campaign-update, metric-update, alert, broadcast, stats]
+                channel:
+                  type: string
+                  description: Target channel for the message
+                data:
+                  type: object
+                  description: Message payload
+      responses:
+        '200':
+          description: Message sent successfully
+
+  /error-metrics:
+    post:
+      summary: Log Error Metrics
+      description: Submit error metrics for tracking and analysis
+      tags:
+        - Monitoring
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - metrics
+                - timestamp
+                - sessionId
+              properties:
+                metrics:
+                  type: object
+                  properties:
+                    totalErrors:
+                      type: number
+                    errorRate:
+                      type: number
+                    errorsByCategory:
+                      type: object
+                    errorsBySeverity:
+                      type: object
+                timestamp:
+                  type: string
+                  format: date-time
+                sessionId:
+                  type: string
+      responses:
+        '200':
+          description: Metrics logged successfully
+
+    get:
+      summary: Get Error Metrics
+      description: Retrieve aggregated error metrics for analysis
+      tags:
+        - Monitoring
+      parameters:
+        - name: period
+          in: query
+          description: Time period for metrics aggregation
+          schema:
+            type: string
+            enum: [1h, 6h, 24h, 7d, 30d]
+            default: 24h
+        - name: category
+          in: query
+          description: Filter by error category
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Aggregated error metrics
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  totalErrors:
+                    type: number
+                  errorRate:
+                    type: number
+                  errorsByCategory:
+                    type: object
+                  errorsBySeverity:
+                    type: object
+                  sessions:
+                    type: number
+                  timeRange:
+                    type: object
+
+  /logs/stream:
+    get:
+      summary: Real-time Log Stream
+      description: |
+        Server-Sent Events (SSE) endpoint for streaming real-time logs.
+        Supports filtering by source, level, and category.
+      tags:
+        - Monitoring
+      parameters:
+        - name: source
+          in: query
+          description: Filter logs by source
+          schema:
+            type: string
+        - name: level
+          in: query
+          description: Filter logs by level
+          schema:
+            type: string
+            enum: [debug, info, warning, error]
+        - name: category
+          in: query
+          description: Filter logs by category
+          schema:
+            type: string
+            enum: [meta-api, http, database, general]
+      responses:
+        '200':
+          description: Server-Sent Events stream
+          content:
+            text/event-stream:
+              schema:
+                type: string
+                description: Stream of log entries in SSE format
+
+    post:
+      summary: Submit Log Entry
+      description: Submit a log entry for streaming and storage
+      tags:
+        - Monitoring
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - level
+                - message
+              properties:
+                level:
+                  type: string
+                  enum: [debug, info, warning, error]
+                message:
+                  type: string
+                details:
+                  type: object
+                source:
+                  type: string
+      responses:
+        '200':
+          description: Log entry submitted successfully
+
+components:
+  schemas:
+    Campaign:
+      type: object
+      required:
+        - id
+        - name
+        - status
+        - objective
+        - start_time
+        - created_time
+        - updated_time
+        - account_id
+      properties:
+        id:
+          type: string
+          description: Unique campaign identifier
+        name:
+          type: string
+          description: Campaign name
+        status:
+          type: string
+          enum: [ACTIVE, PAUSED, DELETED, ARCHIVED]
+        objective:
+          type: string
+          description: Campaign objective
+        budget_remaining:
+          type: number
+          description: Remaining budget amount
+        daily_budget:
+          type: number
+          description: Daily budget limit
+        lifetime_budget:
+          type: number
+          description: Lifetime budget limit
+        start_time:
+          type: string
+          format: date-time
+        stop_time:
+          type: string
+          format: date-time
+        created_time:
+          type: string
+          format: date-time
+        updated_time:
+          type: string
+          format: date-time
+        insights:
+          $ref: '#/components/schemas/CampaignInsights'
+        adsets:
+          type: array
+          items:
+            $ref: '#/components/schemas/AdSet'
+        account_id:
+          type: string
+
+    AdSet:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        campaign_id:
+          type: string
+        status:
+          type: string
+          enum: [ACTIVE, PAUSED, DELETED, ARCHIVED]
+        daily_budget:
+          type: number
+        lifetime_budget:
+          type: number
+        start_time:
+          type: string
+          format: date-time
+        end_time:
+          type: string
+          format: date-time
+        targeting:
+          $ref: '#/components/schemas/Targeting'
+        insights:
+          $ref: '#/components/schemas/AdSetInsights'
+        ads:
+          type: array
+          items:
+            $ref: '#/components/schemas/Ad'
+
+    Ad:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        adset_id:
+          type: string
+        status:
+          type: string
+          enum: [ACTIVE, PAUSED, DELETED, ARCHIVED]
+        creative:
+          $ref: '#/components/schemas/Creative'
+        insights:
+          $ref: '#/components/schemas/AdInsights'
+
+    Creative:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        title:
+          type: string
+        body:
+          type: string
+        image_url:
+          type: string
+          format: uri
+        video_url:
+          type: string
+          format: uri
+        call_to_action:
+          type: string
+        link_url:
+          type: string
+          format: uri
+
+    Targeting:
+      type: object
+      properties:
+        geo_locations:
+          type: object
+          properties:
+            countries:
+              type: array
+              items:
+                type: string
+            regions:
+              type: array
+              items:
+                type: string
+            cities:
+              type: array
+              items:
+                type: string
+        age_min:
+          type: number
+        age_max:
+          type: number
+        genders:
+          type: array
+          items:
+            type: number
+        interests:
+          type: array
+          items:
+            type: string
+        behaviors:
+          type: array
+          items:
+            type: string
+        custom_audiences:
+          type: array
+          items:
+            type: string
+
+    CampaignInsights:
+      type: object
+      properties:
+        impressions:
+          type: number
+        clicks:
+          type: number
+        spend:
+          type: number
+        reach:
+          type: number
+        frequency:
+          type: number
+        ctr:
+          type: number
+        cpc:
+          type: number
+        cpm:
+          type: number
+        cpp:
+          type: number
+        conversions:
+          type: number
+        conversion_rate:
+          type: number
+        revenue:
+          type: number
+        roas:
+          type: number
+        actions:
+          type: array
+          items:
+            $ref: '#/components/schemas/Action'
+        date_start:
+          type: string
+          format: date
+        date_stop:
+          type: string
+          format: date
+
+    AdSetInsights:
+      allOf:
+        - $ref: '#/components/schemas/CampaignInsights'
+        - type: object
+          properties:
+            adset_id:
+              type: string
+            adset_name:
+              type: string
+
+    AdInsights:
+      allOf:
+        - $ref: '#/components/schemas/CampaignInsights'
+        - type: object
+          properties:
+            ad_id:
+              type: string
+            ad_name:
+              type: string
+
+    Action:
+      type: object
+      properties:
+        action_type:
+          type: string
+        value:
+          type: number
+
+    OverviewRequest:
+      type: object
+      required:
+        - type
+        - adAccountId
+        - accessToken
+      properties:
+        type:
+          type: string
+          enum: [overview]
+        adAccountId:
+          type: string
+        accessToken:
+          type: string
+        datePreset:
+          type: string
+          default: last_30d
+
+    CampaignDetailsRequest:
+      type: object
+      required:
+        - type
+        - campaignId
+        - adAccountId
+        - accessToken
+      properties:
+        type:
+          type: string
+          enum: [campaign_details]
+        campaignId:
+          type: string
+        adAccountId:
+          type: string
+        accessToken:
+          type: string
+        datePreset:
+          type: string
+          default: last_30d
+
+    TestConnectionRequest:
+      type: object
+      required:
+        - type
+        - adAccountId
+        - accessToken
+      properties:
+        type:
+          type: string
+          enum: [test_connection]
+        adAccountId:
+          type: string
+        accessToken:
+          type: string
+
+    MetaAPIRequest:
+      type: object
+      required:
+        - endpoint
+        - accessToken
+      properties:
+        endpoint:
+          type: string
+        accessToken:
+          type: string
+        params:
+          type: object
+
+    CampaignsResponse:
+      type: object
+      properties:
+        campaigns:
+          type: array
+          items:
+            $ref: '#/components/schemas/Campaign'
+        success:
+          type: boolean
+
+    CampaignDetailsResponse:
+      type: object
+      properties:
+        historicalDailyData:
+          type: array
+          items:
+            type: object
+        todayHourlyData:
+          type: array
+          items:
+            type: object
+        adSets:
+          type: array
+          items:
+            $ref: '#/components/schemas/AdSet'
+        success:
+          type: boolean
+
+    TestConnectionResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        accountInfo:
+          type: object
+          properties:
+            id:
+              type: string
+            name:
+              type: string
+            status:
+              type: string
+            currency:
+              type: string
+            timezone:
+              type: string
+
+    DemographicsResponse:
+      type: object
+      properties:
+        age:
+          type: array
+          items:
+            type: object
+            properties:
+              range:
+                type: string
+              conversions:
+                type: number
+              revenue:
+                type: number
+              impressions:
+                type: number
+              spend:
+                type: number
+              percentage:
+                type: number
+        gender:
+          type: array
+          items:
+            type: object
+            properties:
+              type:
+                type: string
+              conversions:
+                type: number
+              revenue:
+                type: number
+              spend:
+                type: number
+              percentage:
+                type: number
+        region:
+          type: array
+          items:
+            type: object
+            properties:
+              city:
+                type: string
+              state:
+                type: string
+              conversions:
+                type: number
+              revenue:
+                type: number
+              spend:
+                type: number
+              roas:
+                type: number
+        device:
+          type: array
+          items:
+            type: object
+            properties:
+              platform:
+                type: string
+              conversions:
+                type: number
+              revenue:
+                type: number
+              spend:
+                type: number
+              percentage:
+                type: number
+
+  responses:
+    BadRequest:
+      description: Bad request - Invalid parameters or missing required fields
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+              details:
+                type: string
+          example:
+            error: "Missing required parameters"
+            details: "endpoint and accessToken are required"
+
+    Unauthorized:
+      description: Unauthorized - Invalid or expired access token
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+              success:
+                type: boolean
+          example:
+            error: "Invalid OAuth access token - Cannot parse access token"
+            success: false
+
+    RateLimited:
+      description: Rate limit exceeded
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              success:
+                type: boolean
+              error:
+                type: string
+              retryAfter:
+                type: number
+          example:
+            success: false
+            error: "API rate limit exceeded. Try again in 45 seconds."
+            retryAfter: 45
+
+    InternalError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+              message:
+                type: string
+              success:
+                type: boolean
+          example:
+            error: "Internal server error"
+            message: "Failed to fetch campaigns"
+            success: false
+
+  securitySchemes:
+    MetaAccessToken:
+      type: apiKey
+      in: header
+      name: Authorization
+      description: Meta API access token. Can be provided as Bearer token or directly.
+    
+    ClaudeAPI:
+      type: apiKey
+      in: header
+      name: X-Claude-API-Key
+      description: Claude API key for AI-powered features
+
+security:
+  - MetaAccessToken: []
+
+tags:
+  - name: System
+    description: System health and status endpoints
+  - name: Meta API
+    description: Meta API proxy and data fetching endpoints
+  - name: Analytics
+    description: Campaign analytics and insights endpoints
+  - name: AI & Analytics
+    description: AI-powered insights and predictions
+  - name: Real-time
+    description: Real-time data streaming and updates
+  - name: WebSocket
+    description: WebSocket connection management
+  - name: Monitoring
+    description: Error tracking and logging endpoints
+
+externalDocs:
+  description: Meta Ads Dashboard Documentation
+  url: https://docs.metaads.com

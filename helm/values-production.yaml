@@ -1,0 +1,383 @@
+# Production environment values for MetaAds Helm chart
+
+# Environment-specific configuration
+global:
+  environment: production
+
+# Application configuration
+app:
+  name: metaads
+  version: "production"
+
+# Image configuration
+image:
+  tag: "latest"
+  pullPolicy: IfNotPresent
+
+# Deployment configuration
+deployment:
+  replicaCount: 5
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 2
+      maxUnavailable: 1
+  
+  # Production resource allocation
+  container:
+    resources:
+      limits:
+        cpu: 2000m
+        memory: 2Gi
+      requests:
+        cpu: 500m
+        memory: 1Gi
+
+# Pod configuration
+pod:
+  annotations:
+    cluster-autoscaler.kubernetes.io/safe-to-evict: "false"
+  
+  # Production-grade affinity rules
+  affinity:
+    podAntiAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        - labelSelector:
+            matchExpressions:
+              - key: app.kubernetes.io/name
+                operator: In
+                values:
+                  - metaads
+          topologyKey: kubernetes.io/hostname
+    nodeAffinity:
+      preferredDuringSchedulingIgnoredDuringExecution:
+        - weight: 100
+          preference:
+            matchExpressions:
+              - key: node.kubernetes.io/instance-type
+                operator: In
+                values:
+                  - t3.large
+                  - t3.xlarge
+                  - m5.large
+                  - m5.xlarge
+
+  # Pod disruption budget for high availability
+  podDisruptionBudget:
+    enabled: true
+    minAvailable: 3
+
+# Service configuration
+service:
+  annotations:
+    service.beta.kubernetes.io/aws-load-balancer-type: "nlb"
+    service.beta.kubernetes.io/aws-load-balancer-cross-zone-load-balancing-enabled: "true"
+    service.beta.kubernetes.io/aws-load-balancer-backend-protocol: "tcp"
+
+# Ingress configuration
+ingress:
+  enabled: true
+  className: "nginx"
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/proxy-body-size: "50m"
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: "60"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "60"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "60"
+    nginx.ingress.kubernetes.io/rate-limit: "100"
+    nginx.ingress.kubernetes.io/rate-limit-burst: "50"
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    nginx.ingress.kubernetes.io/enable-modsecurity: "true"
+    nginx.ingress.kubernetes.io/enable-owasp-core-rules: "true"
+  
+  hosts:
+    - host: metaads.com
+      paths:
+        - path: /
+          pathType: Prefix
+    - host: www.metaads.com
+      paths:
+        - path: /
+          pathType: Prefix
+    - host: app.metaads.com
+      paths:
+        - path: /
+          pathType: Prefix
+  
+  tls:
+    - secretName: metaads-production-tls
+      hosts:
+        - metaads.com
+        - www.metaads.com
+        - app.metaads.com
+
+# Horizontal Pod Autoscaler
+autoscaling:
+  enabled: true
+  minReplicas: 5
+  maxReplicas: 25
+  targetCPUUtilizationPercentage: 70
+  targetMemoryUtilizationPercentage: 80
+  
+  # Advanced scaling behavior
+  behavior:
+    scaleDown:
+      stabilizationWindowSeconds: 300
+      policies:
+        - type: Percent
+          value: 25
+          periodSeconds: 60
+        - type: Pods
+          value: 2
+          periodSeconds: 60
+    scaleUp:
+      stabilizationWindowSeconds: 60
+      policies:
+        - type: Percent
+          value: 50
+          periodSeconds: 15
+        - type: Pods
+          value: 4
+          periodSeconds: 15
+
+# Vertical Pod Autoscaler
+verticalPodAutoscaler:
+  enabled: true
+  updateMode: "Auto"
+
+# Network Policy (strict in production)
+networkPolicy:
+  enabled: true
+  policyTypes:
+    - Ingress
+    - Egress
+  
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              name: ingress-nginx
+      ports:
+        - protocol: TCP
+          port: 3000
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              name: monitoring
+      ports:
+        - protocol: TCP
+          port: 3000
+
+# Environment variables
+configMaps:
+  app:
+    data:
+      NODE_ENV: "production"
+      NEXT_TELEMETRY_DISABLED: "1"
+      PORT: "3000"
+      LOG_LEVEL: "info"
+      ENABLE_DEBUG_FEATURES: "false"
+      REDIS_POOL_SIZE: "20"
+      DB_POOL_SIZE: "20"
+      RATE_LIMIT_ENABLED: "true"
+
+# External secrets for production
+externalSecrets:
+  enabled: true
+  secretStore:
+    name: "aws-secrets-manager-prod"
+    kind: "SecretStore"
+  
+  secrets:
+    - name: "metaads-production-secrets"
+      refreshInterval: "30m"
+      data:
+        - secretKey: "DATABASE_URL"
+          remoteRef:
+            key: "/metaads/production/database-url"
+        - secretKey: "REDIS_URL"
+          remoteRef:
+            key: "/metaads/production/redis-url"
+        - secretKey: "META_APP_SECRET"
+          remoteRef:
+            key: "/metaads/production/meta-app-secret"
+        - secretKey: "CLAUDE_API_KEY"
+          remoteRef:
+            key: "/metaads/production/claude-api-key"
+        - secretKey: "NEXTAUTH_SECRET"
+          remoteRef:
+            key: "/metaads/production/nextauth-secret"
+        - secretKey: "SENTRY_DSN"
+          remoteRef:
+            key: "/metaads/production/sentry-dsn"
+        - secretKey: "NEW_RELIC_LICENSE_KEY"
+          remoteRef:
+            key: "/metaads/production/newrelic-license"
+
+# Monitoring and observability
+monitoring:
+  enabled: true
+  
+  serviceMonitor:
+    enabled: true
+    labels:
+      environment: production
+      team: devops
+    interval: 15s
+    scrapeTimeout: 10s
+  
+  grafanaDashboard:
+    enabled: true
+    labels:
+      environment: production
+
+# Logging
+logging:
+  enabled: true
+  level: "info"
+  format: "json"
+  
+  fluentd:
+    enabled: true
+    configMap: "fluentd-production-config"
+    resources:
+      limits:
+        cpu: 200m
+        memory: 256Mi
+      requests:
+        cpu: 100m
+        memory: 128Mi
+
+# Persistence with larger volumes for production
+persistence:
+  enabled: true
+  storageClass: "gp3"
+  size: 50Gi
+  
+  tmp:
+    enabled: true
+    size: 5Gi
+  
+  cache:
+    enabled: true
+    size: 20Gi
+  
+  logs:
+    enabled: true
+    size: 10Gi
+
+# Init containers
+initContainers:
+  migration:
+    enabled: true
+    image: "metaads/migrations:production"
+    resources:
+      limits:
+        cpu: 1000m
+        memory: 1Gi
+      requests:
+        cpu: 500m
+        memory: 512Mi
+
+# Sidecars for production
+sidecars:
+  nginx:
+    enabled: true
+    image: "nginx:1.25-alpine"
+    port: 8080
+    resources:
+      limits:
+        cpu: 500m
+        memory: 512Mi
+      requests:
+        cpu: 200m
+        memory: 256Mi
+
+# Jobs and CronJobs
+jobs:
+  cleanup:
+    enabled: true
+    schedule: "0 2 * * *"  # 2 AM daily
+    resources:
+      limits:
+        cpu: 1000m
+        memory: 1Gi
+    
+  backup:
+    enabled: true
+    schedule: "0 3 * * *"  # 3 AM daily
+    resources:
+      limits:
+        cpu: 2000m
+        memory: 2Gi
+
+# External dependencies (use external managed services in production)
+postgresql:
+  enabled: false  # Use AWS RDS in production
+
+redis:
+  enabled: false  # Use AWS ElastiCache in production
+
+# Security configuration (strict in production)
+security:
+  podSecurityStandards:
+    enforce: "restricted"
+    audit: "restricted"
+    warn: "restricted"
+  
+  networkPolicies:
+    denyAll: true
+    allowIngress: true
+    allowEgress: true
+
+# Features for production
+features:
+  canaryDeployment: false
+  blueGreenDeployment: true
+  experimentalFeatures: false
+
+# Performance optimizations
+performance:
+  nodeSelector:
+    node.kubernetes.io/instance-type: "t3.large"
+  
+  tolerations:
+    - key: "dedicated"
+      operator: "Equal"
+      value: "app"
+      effect: "NoSchedule"
+
+# Backup configuration
+backup:
+  enabled: true
+  schedule: "0 3 * * *"
+  retention: "30d"
+  storage:
+    class: "gp3"
+    size: "100Gi"
+
+# Disaster recovery
+disasterRecovery:
+  enabled: true
+  replicationRegion: "us-west-2"
+  rpo: "1h"  # Recovery Point Objective
+  rto: "30m"  # Recovery Time Objective
+
+# Compliance and auditing
+compliance:
+  enabled: true
+  auditLog: true
+  accessLogging: true
+  dataEncryption: true
+
+# Rate limiting and DDoS protection
+rateLimiting:
+  enabled: true
+  requestsPerSecond: 100
+  burstSize: 50
+  
+ddosProtection:
+  enabled: true
+  cloudflare: true

@@ -1,0 +1,29 @@
+
+> my-v0-project@0.1.0 dev
+> next dev
+
+ ⚠ Port 3000 is in use, trying 3001 instead.
+  ▲ Next.js 14.2.16
+  - Local:        http://localhost:3001
+
+ ✓ Starting...
+ ✓ Ready in 1275ms
+ ○ Compiling / ...
+ ✓ Compiled / in 4.5s (1912 modules)
+getAllAdSets - Total campaigns: 0 Total ad sets: 0
+getAllAds - Total campaigns: 0 Total ads: 0
+ GET / 200 in 5161ms
+ ✓ Compiled in 665ms (961 modules)
+ ○ Compiling /api/meta ...
+ ✓ Compiled /api/meta in 1625ms (974 modules)
+ POST /api/meta 200 in 4144ms
+ ✓ Compiled /api/meta/day-week-analysis in 191ms (977 modules)
+Day/Week Analysis URL (without token): https://graph.facebook.com/v19.0/120224238698680525/insights?fields=spend,impressions,clicks,ctr,actions,action_values&breakdowns=hourly_stats_aggregated_by_advertiser_time_zone&date_preset=last_30d&time_increment=1&limit=5000
+Time range: { since: '2025-05-08', until: '2025-06-07' }
+Day/Week Analysis URL (without token): https://graph.facebook.com/v19.0/120224238698680525/insights?fields=spend,impressions,clicks,ctr,actions,action_values&breakdowns=hourly_stats_aggregated_by_advertiser_time_zone&date_preset=last_30d&time_increment=1&limit=5000
+Time range: { since: '2025-05-08', until: '2025-06-07' }
+ POST /api/meta/day-week-analysis 200 in 4595ms
+ POST /api/meta/day-week-analysis 200 in 4712ms
+ ✓ Compiled /api/meta/demographics in 159ms (975 modules)
+ POST /api/meta/demographics 200 in 1101ms
+ POST /api/meta/demographics 200 in 1608ms

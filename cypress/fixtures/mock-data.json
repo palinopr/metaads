@@ -1,0 +1,102 @@
+{
+  "campaigns": [
+    {
+      "id": "campaign_123",
+      "name": "Test Campaign 1",
+      "status": "ACTIVE",
+      "objective": "CONVERSIONS",
+      "spend": 1250.75,
+      "impressions": 50000,
+      "clicks": 2500,
+      "conversions": 125,
+      "revenue": 6253.75,
+      "ctr": 5.0,
+      "cpc": 0.50,
+      "roas": 5.0,
+      "cpa": 10.01,
+      "adsets": [
+        {
+          "id": "adset_456",
+          "name": "Test AdSet 1",
+          "status": "ACTIVE",
+          "spend": 625.50,
+          "impressions": 25000,
+          "clicks": 1250
+        }
+      ]
+    },
+    {
+      "id": "campaign_789",
+      "name": "Test Campaign 2",
+      "status": "PAUSED",
+      "objective": "TRAFFIC",
+      "spend": 750.25,
+      "impressions": 30000,
+      "clicks": 1500,
+      "conversions": 75,
+      "revenue": 3751.25,
+      "ctr": 5.0,
+      "cpc": 0.50,
+      "roas": 5.0,
+      "cpa": 10.00,
+      "adsets": []
+    }
+  ],
+  "historicalData": [
+    {
+      "date": "2024-01-01",
+      "spend": 100.50,
+      "revenue": 502.50,
+      "conversions": 10,
+      "impressions": 5000,
+      "clicks": 250,
+      "ctr": 5.0,
+      "cpc": 0.40,
+      "roas": 5.0
+    },
+    {
+      "date": "2024-01-02",
+      "spend": 120.75,
+      "revenue": 603.75,
+      "conversions": 12,
+      "impressions": 6000,
+      "clicks": 300,
+      "ctr": 5.0,
+      "cpc": 0.40,
+      "roas": 5.0
+    }
+  ],
+  "hourlyData": [
+    {
+      "hour": "0:00",
+      "spend": 10.50,
+      "impressions": 500,
+      "clicks": 25
+    },
+    {
+      "hour": "1:00",
+      "spend": 8.25,
+      "impressions": 400,
+      "clicks": 20
+    },
+    {
+      "hour": "2:00",
+      "spend": 5.75,
+      "impressions": 300,
+      "clicks": 15
+    }
+  ],
+  "accountInfo": {
+    "id": "act_123456789",
+    "name": "Test Ad Account",
+    "status": 1,
+    "currency": "USD",
+    "timezone": "America/New_York"
+  },
+  "testCredentials": {
+    "validAccessToken": "EAABwzLixnjYBAtest123456789",
+    "validAdAccountId": "act_123456789",
+    "invalidAccessToken": "invalid_token",
+    "invalidAdAccountId": "123456789"
+  }
+}

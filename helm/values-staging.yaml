@@ -1,0 +1,176 @@
+# Staging environment values for MetaAds Helm chart
+
+# Environment-specific configuration
+global:
+  environment: staging
+
+# Application configuration
+app:
+  name: metaads-staging
+  version: "staging"
+
+# Image configuration
+image:
+  tag: "staging"
+  pullPolicy: Always
+
+# Deployment configuration
+deployment:
+  replicaCount: 2
+  
+  # Resource allocation for staging
+  container:
+    resources:
+      limits:
+        cpu: 500m
+        memory: 512Mi
+      requests:
+        cpu: 200m
+        memory: 256Mi
+
+# Service configuration
+service:
+  annotations:
+    service.beta.kubernetes.io/aws-load-balancer-type: "nlb"
+
+# Ingress configuration
+ingress:
+  enabled: true
+  className: "nginx"
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    cert-manager.io/cluster-issuer: "letsencrypt-staging"
+  
+  hosts:
+    - host: staging.metaads.com
+      paths:
+        - path: /
+          pathType: Prefix
+  
+  tls:
+    - secretName: metaads-staging-tls
+      hosts:
+        - staging.metaads.com
+
+# Autoscaling configuration
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 8
+  targetCPUUtilizationPercentage: 70
+
+# Environment variables
+configMaps:
+  app:
+    data:
+      NODE_ENV: "staging"
+      NEXT_TELEMETRY_DISABLED: "1"
+      PORT: "3000"
+      LOG_LEVEL: "debug"
+      ENABLE_DEBUG_FEATURES: "true"
+
+# External secrets for staging
+externalSecrets:
+  enabled: true
+  secrets:
+    - name: "metaads-staging-secrets"
+      refreshInterval: "1h"
+      data:
+        - secretKey: "DATABASE_URL"
+          remoteRef:
+            key: "/metaads/staging/database-url"
+        - secretKey: "REDIS_URL"
+          remoteRef:
+            key: "/metaads/staging/redis-url"
+        - secretKey: "META_APP_SECRET"
+          remoteRef:
+            key: "/metaads/staging/meta-app-secret"
+        - secretKey: "CLAUDE_API_KEY"
+          remoteRef:
+            key: "/metaads/staging/claude-api-key"
+
+# Monitoring configuration
+monitoring:
+  enabled: true
+  serviceMonitor:
+    enabled: true
+    labels:
+      environment: staging
+
+# Persistence
+persistence:
+  enabled: true
+  size: 5Gi
+  
+  tmp:
+    size: 500Mi
+  
+  cache:
+    size: 2Gi
+  
+  logs:
+    size: 1Gi
+
+# Database dependencies (for staging we might use smaller instances)
+postgresql:
+  enabled: true
+  auth:
+    postgresPassword: "staging-password"
+    username: "metaads_staging"
+    password: "staging-user-password"
+    database: "metaads_staging"
+  primary:
+    persistence:
+      size: 10Gi
+    resources:
+      limits:
+        cpu: 500m
+        memory: 512Mi
+      requests:
+        cpu: 200m
+        memory: 256Mi
+
+redis:
+  enabled: true
+  auth:
+    enabled: true
+    password: "staging-redis-password"
+  master:
+    persistence:
+      size: 5Gi
+    resources:
+      limits:
+        cpu: 300m
+        memory: 256Mi
+      requests:
+        cpu: 100m
+        memory: 128Mi
+
+# Jobs and CronJobs (less frequent in staging)
+jobs:
+  cleanup:
+    enabled: true
+    schedule: "0 4 * * *"  # 4 AM daily
+    
+  backup:
+    enabled: false  # Disable backups in staging
+
+# Features for staging
+features:
+  canaryDeployment: true
+  experimentalFeatures: true
+
+# Relaxed security for staging
+security:
+  podSecurityStandards:
+    enforce: "baseline"
+    audit: "restricted"
+    warn: "restricted"
+
+# Load testing
+loadTesting:
+  enabled: true
+  k6:
+    enabled: true
+    script: "staging-load-test.js"

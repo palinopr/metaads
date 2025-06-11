@@ -1,0 +1,299 @@
+# Prometheus alerting rules for Meta Ads Dashboard
+
+groups:
+  - name: metaads.application
+    rules:
+      # Application Health
+      - alert: MetaAdsApplicationDown
+        expr: up{job="metaads-app"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          team: devops
+          service: metaads
+        annotations:
+          summary: "MetaAds application instance is down"
+          description: "MetaAds application instance {{ $labels.instance }} has been down for more than 1 minute."
+          runbook_url: "https://runbooks.metaads.com/application-down"
+
+      - alert: MetaAdsHighErrorRate
+        expr: rate(http_requests_total{job="metaads-app",status=~"5.."}[5m]) / rate(http_requests_total{job="metaads-app"}[5m]) > 0.05
+        for: 5m
+        labels:
+          severity: warning
+          team: devops
+          service: metaads
+        annotations:
+          summary: "High error rate detected in MetaAds application"
+          description: "Error rate is {{ $value | humanizePercentage }} for instance {{ $labels.instance }}."
+          runbook_url: "https://runbooks.metaads.com/high-error-rate"
+
+      - alert: MetaAdsHighResponseTime
+        expr: histogram_quantile(0.95, rate(http_request_duration_seconds_bucket{job="metaads-app"}[5m])) > 2
+        for: 5m
+        labels:
+          severity: warning
+          team: devops
+          service: metaads
+        annotations:
+          summary: "High response time in MetaAds application"
+          description: "95th percentile response time is {{ $value }}s for instance {{ $labels.instance }}."
+          runbook_url: "https://runbooks.metaads.com/high-response-time"
+
+      # Resource Usage
+      - alert: MetaAdsHighCPUUsage
+        expr: rate(container_cpu_usage_seconds_total{pod=~"metaads-.*"}[5m]) > 0.8
+        for: 10m
+        labels:
+          severity: warning
+          team: devops
+          service: metaads
+        annotations:
+          summary: "High CPU usage in MetaAds pods"
+          description: "CPU usage is {{ $value | humanizePercentage }} for pod {{ $labels.pod }}."
+          runbook_url: "https://runbooks.metaads.com/high-cpu-usage"
+
+      - alert: MetaAdsHighMemoryUsage
+        expr: container_memory_usage_bytes{pod=~"metaads-.*"} / container_spec_memory_limit_bytes{pod=~"metaads-.*"} > 0.85
+        for: 10m
+        labels:
+          severity: warning
+          team: devops
+          service: metaads
+        annotations:
+          summary: "High memory usage in MetaAds pods"
+          description: "Memory usage is {{ $value | humanizePercentage }} for pod {{ $labels.pod }}."
+          runbook_url: "https://runbooks.metaads.com/high-memory-usage"
+
+      - alert: MetaAdsPodRestartingTooMuch
+        expr: rate(kube_pod_container_status_restarts_total{pod=~"metaads-.*"}[1h]) > 0.05
+        for: 5m
+        labels:
+          severity: warning
+          team: devops
+          service: metaads
+        annotations:
+          summary: "MetaAds pod is restarting too frequently"
+          description: "Pod {{ $labels.pod }} has restarted {{ $value }} times in the last hour."
+          runbook_url: "https://runbooks.metaads.com/pod-restarting"
+
+  - name: metaads.database
+    rules:
+      # Database Health
+      - alert: PostgreSQLDown
+        expr: pg_up == 0
+        for: 1m
+        labels:
+          severity: critical
+          team: devops
+          service: postgresql
+        annotations:
+          summary: "PostgreSQL is down"
+          description: "PostgreSQL instance {{ $labels.instance }} is down."
+          runbook_url: "https://runbooks.metaads.com/postgresql-down"
+
+      - alert: PostgreSQLHighConnections
+        expr: pg_stat_database_numbackends / pg_settings_max_connections > 0.8
+        for: 5m
+        labels:
+          severity: warning
+          team: devops
+          service: postgresql
+        annotations:
+          summary: "PostgreSQL connection usage is high"
+          description: "PostgreSQL connection usage is {{ $value | humanizePercentage }} on {{ $labels.instance }}."
+          runbook_url: "https://runbooks.metaads.com/postgresql-high-connections"
+
+      - alert: PostgreSQLSlowQueries
+        expr: rate(pg_stat_database_tup_fetched[5m]) / rate(pg_stat_database_tup_returned[5m]) < 0.1
+        for: 10m
+        labels:
+          severity: warning
+          team: devops
+          service: postgresql
+        annotations:
+          summary: "PostgreSQL has slow queries"
+          description: "PostgreSQL query efficiency is {{ $value | humanizePercentage }} on {{ $labels.instance }}."
+          runbook_url: "https://runbooks.metaads.com/postgresql-slow-queries"
+
+      # Redis Health
+      - alert: RedisDown
+        expr: redis_up == 0
+        for: 1m
+        labels:
+          severity: critical
+          team: devops
+          service: redis
+        annotations:
+          summary: "Redis is down"
+          description: "Redis instance {{ $labels.instance }} is down."
+          runbook_url: "https://runbooks.metaads.com/redis-down"
+
+      - alert: RedisHighMemoryUsage
+        expr: redis_memory_used_bytes / redis_memory_max_bytes > 0.9
+        for: 5m
+        labels:
+          severity: warning
+          team: devops
+          service: redis
+        annotations:
+          summary: "Redis memory usage is high"
+          description: "Redis memory usage is {{ $value | humanizePercentage }} on {{ $labels.instance }}."
+          runbook_url: "https://runbooks.metaads.com/redis-high-memory"
+
+  - name: metaads.infrastructure
+    rules:
+      # Kubernetes Health
+      - alert: KubernetesNodeNotReady
+        expr: kube_node_status_condition{condition="Ready",status="true"} == 0
+        for: 5m
+        labels:
+          severity: warning
+          team: devops
+          service: kubernetes
+        annotations:
+          summary: "Kubernetes node is not ready"
+          description: "Node {{ $labels.node }} is not ready."
+          runbook_url: "https://runbooks.metaads.com/node-not-ready"
+
+      - alert: KubernetesPodCrashLooping
+        expr: rate(kube_pod_container_status_restarts_total[15m]) > 0
+        for: 5m
+        labels:
+          severity: warning
+          team: devops
+          service: kubernetes
+        annotations:
+          summary: "Pod is crash looping"
+          description: "Pod {{ $labels.pod }} in namespace {{ $labels.namespace }} is crash looping."
+          runbook_url: "https://runbooks.metaads.com/pod-crash-looping"
+
+      - alert: KubernetesPersistentVolumeFullInFourHours
+        expr: predict_linear(kubelet_volume_stats_available_bytes[6h], 4 * 60 * 60) < 0
+        for: 5m
+        labels:
+          severity: warning
+          team: devops
+          service: kubernetes
+        annotations:
+          summary: "Persistent volume will be full in 4 hours"
+          description: "PV {{ $labels.persistentvolumeclaim }} will be full in 4 hours based on current usage trend."
+          runbook_url: "https://runbooks.metaads.com/pv-full"
+
+      # Load Balancer Health
+      - alert: LoadBalancerHighLatency
+        expr: histogram_quantile(0.95, rate(nginx_ingress_controller_request_duration_seconds_bucket[5m])) > 1
+        for: 5m
+        labels:
+          severity: warning
+          team: devops
+          service: nginx
+        annotations:
+          summary: "Load balancer high latency"
+          description: "95th percentile latency is {{ $value }}s for ingress {{ $labels.ingress }}."
+          runbook_url: "https://runbooks.metaads.com/lb-high-latency"
+
+  - name: metaads.business
+    rules:
+      # Business Metrics
+      - alert: MetaAdsLowActiveUsers
+        expr: metaads_active_users_total < 100
+        for: 15m
+        labels:
+          severity: warning
+          team: product
+          service: metaads
+        annotations:
+          summary: "Low number of active users"
+          description: "Only {{ $value }} active users in the last 15 minutes."
+          runbook_url: "https://runbooks.metaads.com/low-active-users"
+
+      - alert: MetaAdsHighAPIErrorRate
+        expr: rate(metaads_meta_api_errors_total[5m]) / rate(metaads_meta_api_requests_total[5m]) > 0.1
+        for: 5m
+        labels:
+          severity: critical
+          team: devops
+          service: metaads
+        annotations:
+          summary: "High Meta API error rate"
+          description: "Meta API error rate is {{ $value | humanizePercentage }}."
+          runbook_url: "https://runbooks.metaads.com/meta-api-errors"
+
+      - alert: MetaAdsDataSyncDelayed
+        expr: time() - metaads_last_data_sync_timestamp > 3600
+        for: 5m
+        labels:
+          severity: warning
+          team: devops
+          service: metaads
+        annotations:
+          summary: "Data sync is delayed"
+          description: "Last data sync was {{ $value | humanizeDuration }} ago."
+          runbook_url: "https://runbooks.metaads.com/data-sync-delayed"
+
+  - name: metaads.security
+    rules:
+      # Security Alerts
+      - alert: MetaAdsUnusualTrafficPattern
+        expr: rate(nginx_ingress_controller_requests[5m]) > 1.5 * rate(nginx_ingress_controller_requests[5m] offset 1h)
+        for: 5m
+        labels:
+          severity: warning
+          team: security
+          service: metaads
+        annotations:
+          summary: "Unusual traffic pattern detected"
+          description: "Traffic rate is 50% higher than usual for ingress {{ $labels.ingress }}."
+          runbook_url: "https://runbooks.metaads.com/unusual-traffic"
+
+      - alert: MetaAdsHighFailedLoginAttempts
+        expr: rate(metaads_failed_login_attempts_total[5m]) > 10
+        for: 2m
+        labels:
+          severity: warning
+          team: security
+          service: metaads
+        annotations:
+          summary: "High number of failed login attempts"
+          description: "{{ $value }} failed login attempts per second."
+          runbook_url: "https://runbooks.metaads.com/failed-logins"
+
+      - alert: MetaAdsSuspiciousUserAgent
+        expr: increase(metaads_suspicious_user_agent_total[5m]) > 50
+        for: 1m
+        labels:
+          severity: warning
+          team: security
+          service: metaads
+        annotations:
+          summary: "Suspicious user agent detected"
+          description: "{{ $value }} requests with suspicious user agents in the last 5 minutes."
+          runbook_url: "https://runbooks.metaads.com/suspicious-user-agent"
+
+  - name: metaads.backup
+    rules:
+      # Backup and Recovery
+      - alert: MetaAdsBackupFailed
+        expr: metaads_backup_last_success_timestamp < time() - 86400
+        for: 1m
+        labels:
+          severity: critical
+          team: devops
+          service: backup
+        annotations:
+          summary: "Backup failed or missing"
+          description: "Last successful backup was {{ $value | humanizeDuration }} ago."
+          runbook_url: "https://runbooks.metaads.com/backup-failed"
+
+      - alert: MetaAdsBackupSizeUnusual
+        expr: abs(metaads_backup_size_bytes - metaads_backup_size_bytes offset 24h) / metaads_backup_size_bytes offset 24h > 0.5
+        for: 5m
+        labels:
+          severity: warning
+          team: devops
+          service: backup
+        annotations:
+          summary: "Backup size is unusual"
+          description: "Backup size changed by {{ $value | humanizePercentage }} compared to yesterday."
+          runbook_url: "https://runbooks.metaads.com/backup-size-unusual"

@@ -1,0 +1,496 @@
+# CI/CD Performance Testing Integration for Meta Ads Dashboard
+# This workflow runs performance tests in various CI/CD environments
+
+name: Performance Testing Suite
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+  schedule:
+    # Run performance tests daily at 2 AM UTC
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+    inputs:
+      test_level:
+        description: 'Performance test level'
+        required: true
+        default: 'standard'
+        type: choice
+        options:
+        - quick
+        - standard
+        - extended
+        - stress
+      duration:
+        description: 'Test duration (e.g., 5m, 15m, 30m)'
+        required: false
+        default: '15m'
+      vus:
+        description: 'Number of virtual users'
+        required: false
+        default: '25'
+
+env:
+  NODE_VERSION: '18'
+  K6_VERSION: '0.45.0'
+  PERFORMANCE_THRESHOLD_RESPONSE_TIME_P95: 3000
+  PERFORMANCE_THRESHOLD_ERROR_RATE: 0.05
+  REPORT_RETENTION_DAYS: 30
+
+jobs:
+  # Setup and validation job
+  setup:
+    runs-on: ubuntu-latest
+    outputs:
+      test-level: ${{ steps.config.outputs.test-level }}
+      duration: ${{ steps.config.outputs.duration }}
+      vus: ${{ steps.config.outputs.vus }}
+      should-run-performance: ${{ steps.config.outputs.should-run-performance }}
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Configure test parameters
+        id: config
+        run: |
+          # Determine test level based on trigger
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            echo "test-level=${{ github.event.inputs.test_level }}" >> $GITHUB_OUTPUT
+            echo "duration=${{ github.event.inputs.duration }}" >> $GITHUB_OUTPUT
+            echo "vus=${{ github.event.inputs.vus }}" >> $GITHUB_OUTPUT
+            echo "should-run-performance=true" >> $GITHUB_OUTPUT
+          elif [[ "${{ github.event_name }}" == "schedule" ]]; then
+            echo "test-level=extended" >> $GITHUB_OUTPUT
+            echo "duration=30m" >> $GITHUB_OUTPUT
+            echo "vus=50" >> $GITHUB_OUTPUT
+            echo "should-run-performance=true" >> $GITHUB_OUTPUT
+          elif [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
+            echo "test-level=standard" >> $GITHUB_OUTPUT
+            echo "duration=15m" >> $GITHUB_OUTPUT
+            echo "vus=25" >> $GITHUB_OUTPUT
+            echo "should-run-performance=true" >> $GITHUB_OUTPUT
+          else
+            echo "test-level=quick" >> $GITHUB_OUTPUT
+            echo "duration=5m" >> $GITHUB_OUTPUT
+            echo "vus=10" >> $GITHUB_OUTPUT
+            echo "should-run-performance=true" >> $GITHUB_OUTPUT
+          fi
+          
+      - name: Validate configuration
+        run: |
+          echo "Test Level: ${{ steps.config.outputs.test-level }}"
+          echo "Duration: ${{ steps.config.outputs.duration }}"
+          echo "Virtual Users: ${{ steps.config.outputs.vus }}"
+          echo "Should Run Performance Tests: ${{ steps.config.outputs.should-run-performance }}"
+
+  # Application setup and health check
+  app-setup:
+    runs-on: ubuntu-latest
+    needs: setup
+    if: needs.setup.outputs.should-run-performance == 'true'
+    services:
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          
+      - name: Install dependencies
+        run: |
+          npm ci
+          npm run build
+          
+      - name: Setup environment variables
+        run: |
+          echo "REDIS_URL=redis://localhost:6379" >> $GITHUB_ENV
+          echo "NODE_ENV=test" >> $GITHUB_ENV
+          echo "PERFORMANCE_TEST_MODE=true" >> $GITHUB_ENV
+          
+      - name: Start application
+        run: |
+          npm start &
+          APP_PID=$!
+          echo "APP_PID=$APP_PID" >> $GITHUB_ENV
+          
+          # Wait for application to be ready
+          timeout 60s bash -c 'until curl -f http://localhost:3000/api/health; do sleep 2; done'
+          
+      - name: Health check
+        run: |
+          curl -f http://localhost:3000/api/health
+          curl -f http://localhost:3000/api/health/detailed
+          
+      - name: Save application state
+        run: |
+          echo "Application is ready for performance testing"
+          ps aux | grep node
+
+  # Performance testing job
+  performance-tests:
+    runs-on: ubuntu-latest
+    needs: [setup, app-setup]
+    strategy:
+      matrix:
+        test-suite: [auth, api, websocket, database]
+      fail-fast: false
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          
+      - name: Install K6
+        run: |
+          sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys C5AD17C747E3415A3642D57D77C6C491D6AC1D69
+          echo "deb https://dl.k6.io/deb stable main" | sudo tee /etc/apt/sources.list.d/k6.list
+          sudo apt-get update
+          sudo apt-get install k6=${{ env.K6_VERSION }}
+          
+      - name: Verify K6 installation
+        run: k6 version
+        
+      - name: Install dependencies
+        run: npm ci
+        
+      - name: Setup test environment
+        run: |
+          mkdir -p __tests__/reports
+          echo "PERFORMANCE_TEST_SUITE=${{ matrix.test-suite }}" >> $GITHUB_ENV
+          echo "BASE_URL=http://localhost:3000" >> $GITHUB_ENV
+          
+      - name: Start application for testing
+        run: |
+          npm start &
+          APP_PID=$!
+          echo "APP_PID=$APP_PID" >> $GITHUB_ENV
+          
+          # Wait for application to be ready
+          timeout 60s bash -c 'until curl -f http://localhost:3000/api/health; do sleep 2; done'
+          
+      - name: Run performance tests
+        run: |
+          cd __tests__/load-testing
+          
+          # Run specific test suite
+          case "${{ matrix.test-suite }}" in
+            "auth")
+              k6 run --duration ${{ needs.setup.outputs.duration }} \
+                     --vus ${{ needs.setup.outputs.vus }} \
+                     --out json=../reports/auth-performance-${{ github.run_id }}.json \
+                     auth-load-test.js
+              ;;
+            "api")
+              k6 run --duration ${{ needs.setup.outputs.duration }} \
+                     --vus ${{ needs.setup.outputs.vus }} \
+                     --out json=../reports/api-performance-${{ github.run_id }}.json \
+                     api-comprehensive-load-test.js
+              ;;
+            "websocket")
+              k6 run --duration ${{ needs.setup.outputs.duration }} \
+                     --vus ${{ needs.setup.outputs.vus }} \
+                     --out json=../reports/websocket-performance-${{ github.run_id }}.json \
+                     websocket-load-test.js
+              ;;
+            "database")
+              k6 run --duration ${{ needs.setup.outputs.duration }} \
+                     --vus ${{ needs.setup.outputs.vus }} \
+                     --out json=../reports/database-performance-${{ github.run_id }}.json \
+                     database-cache-performance-test.js
+              ;;
+          esac
+          
+      - name: Stop application
+        if: always()
+        run: |
+          if [ ! -z "$APP_PID" ]; then
+            kill $APP_PID || true
+          fi
+          
+      - name: Upload performance test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: performance-results-${{ matrix.test-suite }}-${{ github.run_id }}
+          path: __tests__/reports/
+          retention-days: ${{ env.REPORT_RETENTION_DAYS }}
+
+  # Browser performance testing (separate job due to different requirements)
+  browser-performance-tests:
+    runs-on: ubuntu-latest
+    needs: [setup, app-setup]
+    if: contains(fromJSON('["standard", "extended", "stress"]'), needs.setup.outputs.test-level)
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          
+      - name: Install Playwright browsers
+        run: |
+          npm ci
+          npx playwright install --with-deps chromium firefox webkit
+          
+      - name: Install K6
+        run: |
+          sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys C5AD17C747E3415A3642D57D77C6C491D6AC1D69
+          echo "deb https://dl.k6.io/deb stable main" | sudo tee /etc/apt/sources.list.d/k6.list
+          sudo apt-get update
+          sudo apt-get install k6=${{ env.K6_VERSION }}
+          
+      - name: Start application
+        run: |
+          npm start &
+          APP_PID=$!
+          echo "APP_PID=$APP_PID" >> $GITHUB_ENV
+          timeout 60s bash -c 'until curl -f http://localhost:3000/api/health; do sleep 2; done'
+          
+      - name: Run browser performance tests
+        run: |
+          cd __tests__/load-testing
+          k6 run --duration ${{ needs.setup.outputs.duration }} \
+                 --vus ${{ needs.setup.outputs.vus }} \
+                 --out json=../reports/browser-performance-${{ github.run_id }}.json \
+                 browser-performance-test.js
+                 
+      - name: Upload browser test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: browser-performance-results-${{ github.run_id }}
+          path: __tests__/reports/
+          retention-days: ${{ env.REPORT_RETENTION_DAYS }}
+
+  # Memory leak testing (long-running)
+  memory-leak-tests:
+    runs-on: ubuntu-latest
+    needs: [setup, app-setup]
+    if: contains(fromJSON('["extended", "stress"]'), needs.setup.outputs.test-level)
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          
+      - name: Install K6
+        run: |
+          sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys C5AD17C747E3415A3642D57D77C6C491D6AC1D69
+          echo "deb https://dl.k6.io/deb stable main" | sudo tee /etc/apt/sources.list.d/k6.list
+          sudo apt-get update
+          sudo apt-get install k6=${{ env.K6_VERSION }}
+          
+      - name: Install dependencies
+        run: npm ci
+        
+      - name: Start application with memory monitoring
+        run: |
+          # Start application with memory flags
+          NODE_OPTIONS="--max-old-space-size=2048 --expose-gc" npm start &
+          APP_PID=$!
+          echo "APP_PID=$APP_PID" >> $GITHUB_ENV
+          timeout 60s bash -c 'until curl -f http://localhost:3000/api/health; do sleep 2; done'
+          
+      - name: Run memory leak tests
+        run: |
+          cd __tests__/load-testing
+          k6 run --duration 45m \
+                 --vus 20 \
+                 --out json=../reports/memory-leak-${{ github.run_id }}.json \
+                 memory-leak-detection-test.js
+                 
+      - name: Upload memory test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: memory-leak-results-${{ github.run_id }}
+          path: __tests__/reports/
+          retention-days: ${{ env.REPORT_RETENTION_DAYS }}
+
+  # Report generation and analysis
+  generate-performance-report:
+    runs-on: ubuntu-latest
+    needs: [setup, performance-tests, browser-performance-tests, memory-leak-tests]
+    if: always() && needs.setup.outputs.should-run-performance == 'true'
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          
+      - name: Install dependencies
+        run: npm ci
+        
+      - name: Download all test results
+        uses: actions/download-artifact@v4
+        with:
+          path: downloaded-reports
+          
+      - name: Consolidate test results
+        run: |
+          mkdir -p __tests__/reports
+          find downloaded-reports -name "*.json" -exec cp {} __tests__/reports/ \;
+          ls -la __tests__/reports/
+          
+      - name: Generate comprehensive report
+        run: |
+          cd __tests__/load-testing
+          node performance-test-orchestrator.js --generate-report-only
+          
+      - name: Analyze performance trends
+        run: |
+          cd __tests__/load-testing
+          node -e "
+          const fs = require('fs');
+          const reports = fs.readdirSync('../reports').filter(f => f.endsWith('.json'));
+          console.log('Generated reports:', reports);
+          
+          // Basic trend analysis
+          const results = {};
+          reports.forEach(file => {
+            try {
+              const data = JSON.parse(fs.readFileSync('../reports/' + file, 'utf8'));
+              console.log('Report:', file, 'Status:', data.summary?.status || 'unknown');
+            } catch(e) {
+              console.log('Failed to parse:', file);
+            }
+          });
+          "
+          
+      - name: Check performance thresholds
+        run: |
+          cd __tests__/load-testing
+          node -e "
+          const fs = require('fs');
+          let hasFailures = false;
+          
+          // Check if any critical thresholds were exceeded
+          const reports = fs.readdirSync('../reports').filter(f => f.endsWith('.json'));
+          
+          reports.forEach(file => {
+            try {
+              const content = fs.readFileSync('../reports/' + file, 'utf8');
+              
+              // Check for performance threshold violations
+              if (content.includes('http_req_duration') && content.includes('p(95)')) {
+                console.log('Performance data found in:', file);
+              }
+              
+              // Simple threshold check (would be more sophisticated in real implementation)
+              if (content.includes('FAILED') || content.includes('threshold')) {
+                console.log('⚠️ Potential threshold violations in:', file);
+                hasFailures = true;
+              }
+            } catch(e) {
+              console.log('Error processing:', file, e.message);
+            }
+          });
+          
+          if (hasFailures) {
+            console.log('❌ Performance threshold violations detected');
+            process.exit(1);
+          } else {
+            console.log('✅ All performance thresholds passed');
+          }
+          "
+          
+      - name: Upload final performance report
+        uses: actions/upload-artifact@v4
+        with:
+          name: performance-report-${{ github.run_id }}
+          path: __tests__/reports/
+          retention-days: ${{ env.REPORT_RETENTION_DAYS }}
+          
+      - name: Comment on PR (if applicable)
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            
+            // Read performance summary
+            let summary = '## 🚀 Performance Test Results\n\n';
+            summary += `- **Test Level**: ${{ needs.setup.outputs.test-level }}\n`;
+            summary += `- **Duration**: ${{ needs.setup.outputs.duration }}\n`;
+            summary += `- **Virtual Users**: ${{ needs.setup.outputs.vus }}\n`;
+            summary += `- **Run ID**: ${{ github.run_id }}\n\n`;
+            
+            // Check for any failures
+            const reportDir = '__tests__/reports';
+            if (fs.existsSync(reportDir)) {
+              const files = fs.readdirSync(reportDir);
+              summary += `### Test Results\n`;
+              summary += `- Generated ${files.length} test reports\n`;
+              summary += `- Reports available in workflow artifacts\n\n`;
+            }
+            
+            summary += '### Next Steps\n';
+            summary += '- Review detailed performance reports in workflow artifacts\n';
+            summary += '- Check for any threshold violations\n';
+            summary += '- Monitor application performance in production\n';
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: summary
+            });
+
+  # Performance monitoring setup
+  setup-monitoring:
+    runs-on: ubuntu-latest
+    needs: [generate-performance-report]
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - name: Setup performance monitoring
+        run: |
+          echo "Setting up performance monitoring for production deployment"
+          echo "This could integrate with monitoring tools like:"
+          echo "- New Relic"
+          echo "- DataDog"
+          echo "- Grafana"
+          echo "- Custom monitoring dashboard"
+          
+      - name: Create performance baseline
+        run: |
+          echo "Creating performance baseline for future comparisons"
+          echo "Baseline metrics would be stored for trend analysis"
+
+# Workflow notifications
+  notify-results:
+    runs-on: ubuntu-latest
+    needs: [generate-performance-report]
+    if: always()
+    steps:
+      - name: Notify team of results
+        run: |
+          echo "Performance test results notification"
+          echo "In a real implementation, this would send notifications to:"
+          echo "- Slack channels"
+          echo "- Email lists"
+          echo "- Dashboard updates"
+          echo "- Performance monitoring tools"

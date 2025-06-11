@@ -1,0 +1,29 @@
+🚀 Starting Meta Ads Dashboard (Ultra-Stable Mode)
+===========================================
+===========================================
+🛡️  Crash protection: ENABLED
+🔄 Auto-restart: ENABLED
+📊 Memory monitoring: ENABLED
+🚨 Error recovery: ENABLED
+===========================================
+
+
+🔧 Starting server (attempt 1)...
+
+> my-v0-project@0.1.0 dev
+> next dev
+
+  ▲ Next.js 14.2.16
+  - Local:        http://localhost:3000
+  - Experiments (use with caution):
+    · cpus
+
+ ✓ Starting...
+ ✓ Ready in 1414ms
+
+✅ Server is ready!
+📊 Dashboard available at http://localhost:3000
+ ○ Compiling / ...
+ ✓ Compiled / in 4.3s (1929 modules)
+ GET / 200 in 4937ms
+ ✓ Compiled in 688ms (973 modules)
