@@ -330,25 +330,25 @@ export default function DashboardPage() {
         
         try {
           const formatValidation = CredentialManager.validateFormat(savedCredentials)
-          console.log('Format validation result:', formatValidation)
+          alert('Format validation result: ' + JSON.stringify(formatValidation))
           
           if (formatValidation.isValid) {
-            console.log('Credentials format validation passed')
+            alert('Credentials format validation passed')
             
             // Skip full API validation, just use the credentials
             setCredentials(savedCredentials)
             setCredentialsSubmitted(true)
             setShowSettings(false)
-            console.log('Successfully loaded and set credentials')
+            alert('Successfully loaded and set credentials')
           } else {
-            console.warn('Invalid stored credentials found:', formatValidation.errors)
+            alert('Invalid stored credentials found: ' + formatValidation.errors.join(', '))
             await CredentialManager.clear()
             setShowSettings(true)
             setFetchError('Stored credentials are invalid: ' + formatValidation.errors.join(', '))
           }
         } catch (validationError: any) {
-          console.error('Error during validation:', validationError)
-          console.log('Bypassing validation error, setting credentials anyway')
+          alert('Error during validation: ' + validationError.message)
+          // Bypass validation error, setting credentials anyway
           setCredentials(savedCredentials)
           setCredentialsSubmitted(true)
           setShowSettings(false)
