@@ -17,8 +17,8 @@ export default function TestDebugPage() {
     setResult(null)
 
     try {
-      // Use your working credentials
-      const accessToken = 'EAATKZBg465ucBO7kjuFywVZACkgu1qeC97kmc00Y6wOeOQCdBye79lADtZBpdrMD6JXwEoDgu1ZCmvGfTOblNBtydgjgYAUwdA836vU1CSM94T3N7qeA6JIhauVfb4ZCJGpoXyRHxID9ZCGasxqoDaePLOgCt7ltUajoud0w6TZAeIShFerufB21ABffGFI8elxkGsTuAKXJDPrze3MwxBZC18oZD'
+      // Use your new working token
+      const accessToken = 'EAATKZBg465ucBO7LlPXw5pZBVFKX4edsRkiVh9Lm68YUJUMkBR2UUvlbYG4rZCwkbf6mrl2BmJroBgkThXsoqhJwfe1tYkvj8t7O550TOJ56r5AnZBJGuqR0ZApBG02aUflSmg34G9rewZBlqEgBw5l8OW7vDLUUHpBYYpgRCbaZBWrTB0SlFlOZCdxZCrZAYJRUmR6CEBMqKMx3ZAfHDPeA0ec1Td6frnuQD1y'
       const adAccountId = 'act_787610255314938'
 
       // Test the actual /api/meta endpoint that the dashboard uses
