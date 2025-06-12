@@ -144,8 +144,10 @@ export class UnifiedStorageManager {
     if (this.initialized) return
 
     try {
-      // Initialize IndexedDB
-      this.indexedDB = await IndexedDBFactory.createMetaAdsDB()
+      // Initialize IndexedDB only in browser environment
+      if (typeof window !== 'undefined' && 'indexedDB' in window) {
+        this.indexedDB = await IndexedDBFactory.createMetaAdsDB()
+      }
 
       // Initialize encryption if enabled
       if (this.config.encryption.enabled && masterPassword) {

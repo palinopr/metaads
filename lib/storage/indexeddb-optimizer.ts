@@ -68,6 +68,11 @@ export class IndexedDBOptimizer {
 
   // Initialize database with optimized configuration
   async initialize(): Promise<void> {
+    // Check if we're in a browser environment
+    if (typeof window === 'undefined' || !('indexedDB' in window)) {
+      throw new Error('IndexedDB not available in this environment')
+    }
+    
     return new Promise((resolve, reject) => {
       const request = indexedDB.open(this.config.databaseName, this.config.version)
 
@@ -500,6 +505,11 @@ export class IndexedDBFactory {
   private static instances = new Map<string, IndexedDBOptimizer>()
 
   static async createMetaAdsDB(): Promise<IndexedDBOptimizer> {
+    // Check if we're in a browser environment
+    if (typeof window === 'undefined' || !('indexedDB' in window)) {
+      throw new Error('IndexedDB not available in this environment')
+    }
+    
     const config: IndexedDBConfig = {
       databaseName: 'meta-ads-dashboard',
       version: 1,
