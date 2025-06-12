@@ -21,6 +21,10 @@ const nextConfig = {
   poweredByHeader: false,
   compress: true,
   productionBrowserSourceMaps: false,
+  // Ensure all pages are included in build
+  generateBuildId: async () => {
+    return 'build-' + Date.now()
+  },
   
   // Add cache headers to prevent stale content
   async headers() {

@@ -49,6 +49,8 @@ export async function POST(request: NextRequest) {
     workingCredentials.accessToken = accessToken
     workingCredentials.adAccountId = adAccountId
     
+    console.log('Credentials saved to server storage')
+    
     return NextResponse.json({
       success: true,
       message: 'Credentials saved successfully'
