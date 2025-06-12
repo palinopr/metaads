@@ -89,22 +89,12 @@ function MetaAdsDashboardContent() {
     }
   }, [])
 
-  const handleSettingsSuccess = async () => {
+  const handleSettingsSuccess = async (newCredentials?: any) => {
     if (!isMounted.current) return
     
-    console.log('Settings saved successfully')
-    // Reload credentials
-    const savedCreds = await CredentialManager.load()
-    if (savedCreds) {
-      setCredentials(savedCreds)
-      setHasValidCredentials(true)
-      setShowSettings(false)
-      setError(null)
-      // Redirect to dashboard through setup complete page
-      setTimeout(() => {
-        window.location.href = '/setup-complete'
-      }, 500)
-    }
+    console.log('Settings saved successfully, redirecting...')
+    // Redirect immediately to dashboard
+    window.location.href = '/dashboard'
   }
 
   const handleOpenSettings = () => {

@@ -121,6 +121,7 @@ export function SettingsForm({ onSuccess, initialToken = "", initialAccountId = 
             
             // Wait a bit to show success
             setTimeout(() => {
+              console.log('Calling onSuccess callback...')
               onSuccess(credentials)
             }, 1500)
           } else {
@@ -151,6 +152,7 @@ export function SettingsForm({ onSuccess, initialToken = "", initialAccountId = 
             setSaveSuccess(true)
             
             setTimeout(() => {
+              console.log('Calling onSuccess callback...')
               onSuccess(credentials)
             }, 1500)
           } else {
