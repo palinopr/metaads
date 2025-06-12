@@ -309,14 +309,14 @@ async function handleMetaAPIRequest(request: NextRequest): Promise<NextResponse>
     const body = await request.json();
     
     // Try to get access token from multiple sources
-    let accessToken = body.accessToken;
-    if (!accessToken) {
+    let finalAccessToken = body.accessToken;
+    if (!finalAccessToken) {
       // Try to get from OAuth cookies
       const cookieStore = cookies()
-      accessToken = cookieStore.get('fb_access_token')?.value
+      finalAccessToken = cookieStore.get('fb_access_token')?.value
     }
     
-    if (!accessToken) {
+    if (!finalAccessToken) {
       return NextResponse.json({
         error: 'Access token required',
         message: 'Please provide an access token or authenticate with Facebook'
@@ -324,7 +324,7 @@ async function handleMetaAPIRequest(request: NextRequest): Promise<NextResponse>
     }
     
     // Add token to body for processing
-    body.accessToken = accessToken;
+    body.accessToken = finalAccessToken;
     
     const { 
       endpoint, 
