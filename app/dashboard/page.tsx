@@ -1069,7 +1069,7 @@ export default function DashboardPage() {
                       LIVE <span className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse"></span>
                     </span>
                   ) : (
-                    `${selectedDateRange.replace(/_/g, " ")}`
+                    "Total spend"
                   )
                 }
                 gradient="from-blue-900/70 to-blue-800/70"
@@ -1093,7 +1093,7 @@ export default function DashboardPage() {
               <MetricCard
                 title={`Conversions (${selectedDateRange.replace(/_/g, " ")})`}
                 value={formatNumberWithCommas(overviewData.totalConversions)}
-                subtitle={`${selectedDateRange.replace(/_/g, " ")}`}
+                subtitle="Total conversions"
                 gradient="from-yellow-900/70 to-yellow-800/70"
                 icon={<Target className="w-4 h-4" />}
               />
@@ -1118,14 +1118,14 @@ export default function DashboardPage() {
               </div>
             </div>
 
-            {/* Summary Stats */}
+            {/* Summary Stats - Additional Metrics */}
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-4 mb-6 text-xs">
               {[
-                { label: "TOTAL SPEND", value: formatCurrency(overviewData.totalSpend) },
-                { label: "TOTAL CONVERSIONS", value: formatNumberWithCommas(overviewData.totalConversions) },
-                { label: "OVERALL ROAS", value: `${safeToFixed(overviewData.overallROAS, 2)}x` },
-                { label: "AVG CTR", value: `${safeToFixed(overviewData.avgCTR, 2)}%` },
-                { label: "AVG CPC", value: formatCurrency(overviewData.avgCPC) },
+                { label: "IMPRESSIONS", value: formatNumberWithCommas(overviewData.totalImpressions) },
+                { label: "CLICKS", value: formatNumberWithCommas(overviewData.totalClicks) },
+                { label: "CTR", value: `${safeToFixed(overviewData.avgCTR, 2)}%` },
+                { label: "CPC", value: formatCurrency(overviewData.avgCPC) },
+                { label: "TOTAL CAMPAIGNS", value: campaigns.length.toString() },
               ].map((stat) => (
                 <Card key={stat.label} className="bg-gray-800/80 border-gray-700">
                   <CardContent className="p-3">
