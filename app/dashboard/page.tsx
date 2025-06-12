@@ -315,26 +315,32 @@ export default function DashboardPage() {
     adAccountId: "",
   })
 
-  // Load credentials on mount - v4 with bypass
+  // Load credentials on mount - v5 with immediate bypass
   useEffect(() => {
     const loadCredentials = async () => {
-      console.log('Loading credentials v4...')
+      // Check for bypass flag
+      const shouldBypass = localStorage.getItem('bypassValidation') === 'true'
+      
+      if (shouldBypass) {
+        console.log('BYPASS FLAG DETECTED - Loading credentials without validation')
+      }
+      
       const savedCredentials = await CredentialManager.load()
 
       if (savedCredentials) {
-        console.log('Loaded credentials v4:', savedCredentials ? 'Found' : 'None')
-        
-        // BYPASS ALL VALIDATION - just use the credentials directly
-        console.log('BYPASSING validation, using credentials directly')
+        // IMMEDIATE BYPASS - no validation at all
         setCredentials(savedCredentials)
         setCredentialsSubmitted(true)
         setShowSettings(false)
-        console.log('Credentials set successfully - v4 bypass')
+        
+        // Clear bypass flag
+        localStorage.removeItem('bypassValidation')
       } else {
-        console.log('No stored credentials found - v4')
         setShowSettings(true)
       }
     }
+    
+    // Execute immediately
     loadCredentials()
   }, [])
 
