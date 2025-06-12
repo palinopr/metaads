@@ -1410,8 +1410,34 @@ export default function DashboardPage() {
                                           </thead>
                                           <tbody className="text-gray-300">
                                             {campaign.expandedData.adSets.map((adSet: any) => {
-                                              const adSetSpend = adSet.spend || 0
-                                              const adSetRevenue = adSet.revenue || 0
+                                              // Extract metrics from insights data
+                                              let adSetSpend = 0
+                                              let adSetRevenue = 0
+                                              let adSetConversions = 0
+                                              
+                                              if (adSet.insights && adSet.insights.data && adSet.insights.data[0]) {
+                                                const insight = adSet.insights.data[0]
+                                                adSetSpend = parseFloat(insight.spend || '0')
+                                                
+                                                // Calculate revenue from action_values
+                                                if (insight.action_values) {
+                                                  insight.action_values.forEach((av: any) => {
+                                                    if (['purchase', 'omni_purchase', 'offsite_conversion.fb_pixel_purchase'].includes(av.action_type)) {
+                                                      adSetRevenue += parseFloat(av.value || '0')
+                                                    }
+                                                  })
+                                                }
+                                                
+                                                // Calculate conversions from actions
+                                                if (insight.actions) {
+                                                  insight.actions.forEach((action: any) => {
+                                                    if (['purchase', 'omni_purchase', 'offsite_conversion.fb_pixel_purchase'].includes(action.action_type)) {
+                                                      adSetConversions += parseInt(action.value || '0')
+                                                    }
+                                                  })
+                                                }
+                                              }
+                                              
                                               const adSetRoas = adSetSpend > 0 ? adSetRevenue / adSetSpend : 0
                                               
                                               return (
@@ -1443,7 +1469,7 @@ export default function DashboardPage() {
                                                     {safeToFixed(adSetRoas, 2)}x
                                                   </td>
                                                   <td className="py-1.5 px-2 text-right">
-                                                    {formatNumberWithCommas(adSet.conversions || 0)}
+                                                    {formatNumberWithCommas(adSetConversions)}
                                                   </td>
                                                 </tr>
                                               )
