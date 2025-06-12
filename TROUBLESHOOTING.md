@@ -1,87 +1,53 @@
-# Troubleshooting Guide for Meta Ads Dashboard
+# Troubleshooting Guide
 
-## Common Issues and Solutions
+## Common Issues
 
-### 1. "Nothing is showing" / Blank Page
+### Token Expired
+**Problem**: "Invalid OAuth access token" error
 
-**Symptoms:**
-- Server says it's running but you see nothing
-- Page loads but shows "No campaigns found"
-- Features aren't visible
+**Solution**: 
+1. Click "Token Manager" button in dashboard header
+2. Follow instructions to extend token
+3. Or visit `/settings/token` directly
 
-**Root Causes:**
-1. No API credentials configured
-2. Invalid API credentials
-3. No active campaigns in account
-4. Server not actually running
+### Dashboard Not Loading
+**Problem**: Stuck at "Validating credentials..."
 
-**Quick Diagnosis Commands:**
+**Solution**:
+1. Clear browser cache and cookies
+2. Visit `/dashboard` directly
+3. Re-enter credentials if needed
+
+### No Data Showing
+**Problem**: Campaigns show $0 or no metrics
+
+**Solution**:
+1. Check date range selector (top right)
+2. Ensure token has proper permissions (ads_read, ads_management)
+3. Verify ad account ID is correct
+
+### Build Errors
+**Problem**: Application won't build
+
+**Solution**:
 ```bash
-# 1. Check if server is running
-ps aux | grep "next dev" | grep -v grep
-
-# 2. Check server response
-curl -I http://localhost:3000
-
-# 3. Check for errors in console
-npm run dev 2>&1 | head -50
-
-# 4. Check TypeScript errors
-npx tsc --noEmit
+# Clear cache and rebuild
+rm -rf .next node_modules
+npm install
+npm run build
 ```
 
-**Solution Steps:**
-1. Open browser at http://localhost:3000
-2. Check browser console (F12) for errors
-3. Click Settings icon and add Meta API credentials
-4. Verify credentials are correct in Meta Business Manager
+### API Rate Limits
+**Problem**: "Too many requests" errors
 
-### 2. Server Crashes on Updates
+**Solution**:
+- Wait 1 minute before retrying
+- Enable auto-refresh with longer intervals
+- Check if token is being validated too frequently
 
-**Symptoms:**
-- Server crashes after code changes
-- Port conflicts (EADDRINUSE)
-- TypeScript errors
+## Getting Help
 
-**Prevention:**
-```bash
-# Before making changes:
-1. Save current state: git add . && git commit -m "checkpoint"
-2. Check TypeScript: npx tsc --noEmit
-3. Kill old processes: pkill -f "next dev"
-```
-
-**Fix:**
-```bash
-# Clean restart procedure
-pkill -f "next dev"
-rm -rf .next
-npm run dev
-```
-
-### 3. Features Not Appearing
-
-**Symptoms:**
-- New features (predictive AI, filters) not visible
-- Components missing
-
-**Diagnosis:**
-```bash
-# Check if files exist
-ls -la components/campaign-predictive-mini.tsx
-ls -la components/date-filter.tsx
-ls -la components/campaign-row-expanded.tsx
-
-# Check imports
-grep -n "CampaignPredictiveMini" app/page.tsx
-grep -n "DateFilter" app/page.tsx
-```
-
-**Common Fixes:**
-1. Hard refresh browser: Cmd+Shift+R (Mac) / Ctrl+Shift+R (Windows)
-2. Clear Next.js cache: `rm -rf .next`
-3. Restart dev server
-
-## Automated Health Check Script
-
-Create this script to diagnose issues automatically:
+1. Check error messages for specific guidance
+2. Look for action buttons in error alerts
+3. Visit `/help/extend-token` for token issues
+4. Check browser console for detailed errors

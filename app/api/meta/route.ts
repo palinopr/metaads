@@ -13,14 +13,233 @@ const metaApiRequestSchema = z.object({
   endpoint: z.string().optional(),
   params: z.record(z.any()).optional(),
   accessToken: secureSchemas.metaAccessToken,
-  type: z.enum(['test_connection', 'campaign_details', 'insights', 'adsets', 'ads']).optional(),
+  type: z.enum([
+    'test_connection', 
+    'campaign_details', 
+    'insights', 
+    'adsets', 
+    'ads',
+    'demographics',
+    'hourly_analysis',
+    'device_breakdown',
+    'placement_analysis',
+    'comprehensive_metrics'
+  ]).optional(),
   datePreset: secureSchemas.dateRange.optional(),
   adAccountId: secureSchemas.metaAdAccountId,
-  campaignId: secureSchemas.campaignId.optional()
+  campaignId: secureSchemas.campaignId.optional(),
+  breakdown: z.string().optional(),
+  fields: z.string().optional(),
+  timeIncrement: z.string().optional()
 });
 
 // Create validation middleware
 const validateMetaRequest = createValidationMiddleware(metaApiRequestSchema);
+
+/**
+ * Enhanced Meta API Route Handler
+ * 
+ * Supports comprehensive metrics requests including:
+ * - Demographic breakdowns (age, gender, region, device)
+ * - Hourly analysis with day-of-week breakdown
+ * - Device performance breakdown
+ * - Placement analysis (publisher platform & position)
+ * - Comprehensive metrics (combines all breakdowns)
+ * 
+ * New request types:
+ * - 'demographics': Returns age, gender, region, and device breakdowns
+ * - 'hourly_analysis': Returns hour-by-hour performance with day-of-week context
+ * - 'device_breakdown': Returns device platform performance
+ * - 'placement_analysis': Returns publisher platform and position breakdown
+ * - 'comprehensive_metrics': Returns all breakdowns in a single request
+ * 
+ * Enhanced parameters:
+ * - breakdown: Specify custom breakdown field(s)
+ * - fields: Specify custom fields to fetch
+ * - timeIncrement: Specify time increment for insights
+ * 
+ * Maintains backward compatibility with existing request types:
+ * - 'test_connection', 'campaign_details', 'insights', 'adsets', 'ads', 'overview'
+ * 
+ * Usage examples:
+ * 
+ * // Get demographics breakdown
+ * POST /api/meta
+ * {
+ *   "type": "demographics",
+ *   "campaignId": "123456789",
+ *   "accessToken": "your_token",
+ *   "datePreset": "last_30d"
+ * }
+ * 
+ * // Get hourly analysis
+ * POST /api/meta
+ * {
+ *   "type": "hourly_analysis",
+ *   "campaignId": "123456789",
+ *   "accessToken": "your_token",
+ *   "datePreset": "last_7d"
+ * }
+ * 
+ * // Get comprehensive metrics
+ * POST /api/meta
+ * {
+ *   "type": "comprehensive_metrics",
+ *   "campaignId": "123456789",
+ *   "accessToken": "your_token",
+ *   "datePreset": "last_30d",
+ *   "fields": "spend,impressions,clicks,actions,action_values"
+ * }
+ * 
+ * // Custom breakdown (backward compatible)
+ * POST /api/meta
+ * {
+ *   "type": "insights",
+ *   "campaignId": "123456789",
+ *   "accessToken": "your_token",
+ *   "breakdown": "age,gender",
+ *   "fields": "spend,impressions,clicks",
+ *   "datePreset": "last_30d"
+ * }
+ */
+
+// Helper functions for processing different types of metrics
+function extractMetricsFromInsight(insight: any): {
+  spend: number;
+  conversions: number;
+  revenue: number;
+  impressions: number;
+  clicks: number;
+  ctr: number;
+  cpc: number;
+  reach: number;
+  frequency: number;
+} {
+  const spend = parseFloat(insight.spend || '0')
+  const impressions = parseInt(insight.impressions || '0')
+  const clicks = parseInt(insight.clicks || '0')
+  const ctr = parseFloat(insight.ctr || '0')
+  const cpc = parseFloat(insight.cpc || '0')
+  const reach = parseInt(insight.reach || '0')
+  const frequency = parseFloat(insight.frequency || '0')
+  
+  let conversions = 0
+  let revenue = 0
+  
+  // Extract conversions from actions
+  if (insight.actions) {
+    insight.actions.forEach((action: any) => {
+      if (['purchase', 'omni_purchase', 'offsite_conversion.fb_pixel_purchase'].includes(action.action_type)) {
+        conversions += parseInt(action.value || '0')
+      }
+    })
+  }
+  
+  // Extract revenue from action_values
+  if (insight.action_values) {
+    insight.action_values.forEach((actionValue: any) => {
+      if (['purchase', 'omni_purchase', 'offsite_conversion.fb_pixel_purchase'].includes(actionValue.action_type)) {
+        revenue += parseFloat(actionValue.value || '0')
+      }
+    })
+  }
+  
+  return {
+    spend,
+    conversions,
+    revenue,
+    impressions,
+    clicks,
+    ctr,
+    cpc,
+    reach,
+    frequency
+  }
+}
+
+function processBreakdownData(apiData: any[], breakdownType: string): any[] {
+  const processedData: { [key: string]: any } = {}
+  
+  apiData.forEach((row: any) => {
+    const metrics = extractMetricsFromInsight(row)
+    const key = row[breakdownType] || 'Unknown'
+    
+    if (!processedData[key]) {
+      processedData[key] = {
+        [breakdownType]: key,
+        spend: 0,
+        revenue: 0,
+        conversions: 0,
+        impressions: 0,
+        clicks: 0,
+        reach: 0,
+        frequency: 0,
+        count: 0
+      }
+    }
+    
+    processedData[key].spend += metrics.spend
+    processedData[key].revenue += metrics.revenue
+    processedData[key].conversions += metrics.conversions
+    processedData[key].impressions += metrics.impressions
+    processedData[key].clicks += metrics.clicks
+    processedData[key].reach += metrics.reach
+    processedData[key].frequency += metrics.frequency
+    processedData[key].count += 1
+  })
+  
+  // Calculate derived metrics
+  return Object.values(processedData).map((item: any) => ({
+    ...item,
+    roas: item.spend > 0 ? item.revenue / item.spend : 0,
+    ctr: item.impressions > 0 ? (item.clicks / item.impressions) * 100 : 0,
+    cpc: item.clicks > 0 ? item.spend / item.clicks : 0,
+    cpa: item.conversions > 0 ? item.spend / item.conversions : 0,
+    avgFrequency: item.count > 0 ? item.frequency / item.count : 0
+  })).sort((a, b) => b.spend - a.spend)
+}
+
+async function fetchBreakdownInsights(
+  campaignId: string,
+  accessToken: string,
+  breakdown: string,
+  datePreset: string,
+  fields?: string
+): Promise<{ data: any[]; error?: any }> {
+  const cleanToken = accessToken.replace(/^Bearer\s+/i, '')
+  const defaultFields = 'spend,impressions,clicks,ctr,cpc,actions,action_values,reach,frequency'
+  const fieldsToUse = fields || defaultFields
+  
+  const url = `${META_API_BASE}/${campaignId}/insights?` +
+    `fields=${fieldsToUse}&` +
+    `breakdowns=${breakdown}&` +
+    `date_preset=${datePreset}&` +
+    `limit=1000&` +
+    `access_token=${cleanToken}`
+  
+  try {
+    const response = await withTimeout(
+      fetch(url, {
+        method: 'GET',
+        headers: { 'Accept': 'application/json' },
+        signal: AbortSignal.timeout(15000)
+      }),
+      15000
+    )
+    
+    const data = await safeJsonParse(response)
+    
+    if (!response.ok || data.error) {
+      console.error(`Meta API breakdown error for ${breakdown}:`, data.error || data)
+      return { data: [], error: data.error || { message: `HTTP ${response.status}` } }
+    }
+    
+    return { data: data.data || [] }
+  } catch (error: any) {
+    console.error(`Network error for breakdown ${breakdown}:`, error)
+    return { data: [], error: { message: error.message || 'Network error' } }
+  }
+}
 
 // Legacy rate limiting storage (now handled by security middleware)
 const rateLimitStore = new Map<string, { count: number; resetAt: number }>()
@@ -88,7 +307,18 @@ async function handleMetaAPIRequest(request: NextRequest): Promise<NextResponse>
     
     const body = await request.json();
     
-    const { endpoint, params = {}, accessToken, type, datePreset, adAccountId } = body
+    const { 
+      endpoint, 
+      params = {}, 
+      accessToken, 
+      type, 
+      datePreset, 
+      adAccountId, 
+      campaignId,
+      breakdown,
+      fields,
+      timeIncrement 
+    } = body
     
     // Debug logging for request analysis
     console.log('Meta API request received:', {
@@ -96,7 +326,11 @@ async function handleMetaAPIRequest(request: NextRequest): Promise<NextResponse>
       endpoint: endpoint || 'undefined',
       hasAccessToken: !!accessToken,
       hasAdAccountId: !!adAccountId,
+      hasCampaignId: !!campaignId,
       datePreset,
+      breakdown,
+      fields,
+      timeIncrement,
       paramsKeys: Object.keys(params || {})
     })
 
@@ -224,6 +458,260 @@ async function handleMetaAPIRequest(request: NextRequest): Promise<NextResponse>
         console.error('Error fetching campaign details:', error)
         return NextResponse.json({
           error: error instanceof Error ? error.message : 'Failed to fetch campaign details',
+          success: false
+        }, { status: 500 })
+      }
+    }
+
+    // Handle demographics breakdown request
+    if (type === 'demographics' && campaignId && accessToken) {
+      try {
+        console.log(`Fetching demographics breakdown for campaign ${campaignId}...`)
+        
+        const breakdowns = ['age', 'gender', 'region', 'device_platform']
+        const results = await Promise.all(
+          breakdowns.map(breakdown => 
+            fetchBreakdownInsights(campaignId, accessToken, breakdown, datePreset || 'last_30d', fields)
+          )
+        )
+        
+        const demographicsData: any = {}
+        
+        breakdowns.forEach((breakdown, index) => {
+          const result = results[index]
+          if (result.error) {
+            console.warn(`Error fetching ${breakdown} data:`, result.error)
+            demographicsData[breakdown] = []
+          } else {
+            demographicsData[breakdown] = processBreakdownData(result.data, breakdown)
+          }
+        })
+        
+        return NextResponse.json({
+          success: true,
+          demographics: demographicsData,
+          breakdown: 'demographics'
+        })
+      } catch (error) {
+        console.error('Error fetching demographics:', error)
+        return NextResponse.json({
+          error: error instanceof Error ? error.message : 'Failed to fetch demographics',
+          success: false
+        }, { status: 500 })
+      }
+    }
+
+    // Handle hourly analysis request
+    if (type === 'hourly_analysis' && campaignId && accessToken) {
+      try {
+        console.log(`Fetching hourly analysis for campaign ${campaignId}...`)
+        
+        const result = await fetchBreakdownInsights(
+          campaignId,
+          accessToken,
+          'hourly_stats_aggregated_by_advertiser_time_zone',
+          datePreset || 'last_7d',
+          fields || 'spend,impressions,clicks,ctr,actions,action_values'
+        )
+        
+        if (result.error) {
+          throw new Error(result.error.message || 'Failed to fetch hourly data')
+        }
+        
+        // Process hourly data with day-of-week analysis
+        const hourlyData = result.data.map((item: any) => {
+          const metrics = extractMetricsFromInsight(item)
+          const date = new Date(item.date_start + 'T00:00:00')
+          const dayOfWeek = date.getDay()
+          const hour = item.hourly_stats_aggregated_by_advertiser_time_zone 
+            ? parseInt(item.hourly_stats_aggregated_by_advertiser_time_zone.split(':')[0])
+            : 0
+          
+          return {
+            date: item.date_start,
+            dayOfWeek,
+            hour,
+            ...metrics,
+            roas: metrics.spend > 0 ? metrics.revenue / metrics.spend : 0
+          }
+        })
+        
+        return NextResponse.json({
+          success: true,
+          hourlyData,
+          breakdown: 'hourly_analysis'
+        })
+      } catch (error) {
+        console.error('Error fetching hourly analysis:', error)
+        return NextResponse.json({
+          error: error instanceof Error ? error.message : 'Failed to fetch hourly analysis',
+          success: false
+        }, { status: 500 })
+      }
+    }
+
+    // Handle device breakdown request
+    if (type === 'device_breakdown' && campaignId && accessToken) {
+      try {
+        console.log(`Fetching device breakdown for campaign ${campaignId}...`)
+        
+        const result = await fetchBreakdownInsights(
+          campaignId,
+          accessToken,
+          'device_platform',
+          datePreset || 'last_30d',
+          fields
+        )
+        
+        if (result.error) {
+          throw new Error(result.error.message || 'Failed to fetch device data')
+        }
+        
+        const deviceData = processBreakdownData(result.data, 'device_platform')
+        
+        return NextResponse.json({
+          success: true,
+          devices: deviceData,
+          breakdown: 'device_breakdown'
+        })
+      } catch (error) {
+        console.error('Error fetching device breakdown:', error)
+        return NextResponse.json({
+          error: error instanceof Error ? error.message : 'Failed to fetch device breakdown',
+          success: false
+        }, { status: 500 })
+      }
+    }
+
+    // Handle placement analysis request
+    if (type === 'placement_analysis' && campaignId && accessToken) {
+      try {
+        console.log(`Fetching placement analysis for campaign ${campaignId}...`)
+        
+        const result = await fetchBreakdownInsights(
+          campaignId,
+          accessToken,
+          'publisher_platform,platform_position',
+          datePreset || 'last_30d',
+          fields
+        )
+        
+        if (result.error) {
+          throw new Error(result.error.message || 'Failed to fetch placement data')
+        }
+        
+        // Process placement data with special handling for combined breakdown
+        const placementData = result.data.map((item: any) => {
+          const metrics = extractMetricsFromInsight(item)
+          return {
+            publisher_platform: item.publisher_platform || 'Unknown',
+            platform_position: item.platform_position || 'Unknown',
+            placement: `${item.publisher_platform || 'Unknown'} - ${item.platform_position || 'Unknown'}`,
+            ...metrics,
+            roas: metrics.spend > 0 ? metrics.revenue / metrics.spend : 0,
+            ctr: metrics.impressions > 0 ? (metrics.clicks / metrics.impressions) * 100 : 0,
+            cpc: metrics.clicks > 0 ? metrics.spend / metrics.clicks : 0,
+            cpa: metrics.conversions > 0 ? metrics.spend / metrics.conversions : 0
+          }
+        }).sort((a, b) => b.spend - a.spend)
+        
+        return NextResponse.json({
+          success: true,
+          placements: placementData,
+          breakdown: 'placement_analysis'
+        })
+      } catch (error) {
+        console.error('Error fetching placement analysis:', error)
+        return NextResponse.json({
+          error: error instanceof Error ? error.message : 'Failed to fetch placement analysis',
+          success: false
+        }, { status: 500 })
+      }
+    }
+
+    // Handle comprehensive metrics request (combines multiple breakdowns)
+    if (type === 'comprehensive_metrics' && campaignId && accessToken) {
+      try {
+        console.log(`Fetching comprehensive metrics for campaign ${campaignId}...`)
+        
+        const datePresetToUse = datePreset || 'last_30d'
+        
+        // Fetch all breakdown types in parallel
+        const [
+          demographicsResults,
+          hourlyResult,
+          deviceResult,
+          placementResult
+        ] = await Promise.all([
+          Promise.all([
+            fetchBreakdownInsights(campaignId, accessToken, 'age', datePresetToUse, fields),
+            fetchBreakdownInsights(campaignId, accessToken, 'gender', datePresetToUse, fields),
+            fetchBreakdownInsights(campaignId, accessToken, 'region', datePresetToUse, fields)
+          ]),
+          fetchBreakdownInsights(campaignId, accessToken, 'hourly_stats_aggregated_by_advertiser_time_zone', datePresetToUse, fields),
+          fetchBreakdownInsights(campaignId, accessToken, 'device_platform', datePresetToUse, fields),
+          fetchBreakdownInsights(campaignId, accessToken, 'publisher_platform,platform_position', datePresetToUse, fields)
+        ])
+        
+        // Process demographics
+        const demographics = {
+          age: demographicsResults[0].error ? [] : processBreakdownData(demographicsResults[0].data, 'age'),
+          gender: demographicsResults[1].error ? [] : processBreakdownData(demographicsResults[1].data, 'gender'),
+          region: demographicsResults[2].error ? [] : processBreakdownData(demographicsResults[2].data, 'region')
+        }
+        
+        // Process hourly data
+        const hourlyData = hourlyResult.error ? [] : hourlyResult.data.map((item: any) => {
+          const metrics = extractMetricsFromInsight(item)
+          const date = new Date(item.date_start + 'T00:00:00')
+          const dayOfWeek = date.getDay()
+          const hour = item.hourly_stats_aggregated_by_advertiser_time_zone 
+            ? parseInt(item.hourly_stats_aggregated_by_advertiser_time_zone.split(':')[0])
+            : 0
+          
+          return {
+            date: item.date_start,
+            dayOfWeek,
+            hour,
+            ...metrics,
+            roas: metrics.spend > 0 ? metrics.revenue / metrics.spend : 0
+          }
+        })
+        
+        // Process device data
+        const devices = deviceResult.error ? [] : processBreakdownData(deviceResult.data, 'device_platform')
+        
+        // Process placement data
+        const placements = placementResult.error ? [] : placementResult.data.map((item: any) => {
+          const metrics = extractMetricsFromInsight(item)
+          return {
+            publisher_platform: item.publisher_platform || 'Unknown',
+            platform_position: item.platform_position || 'Unknown',
+            placement: `${item.publisher_platform || 'Unknown'} - ${item.platform_position || 'Unknown'}`,
+            ...metrics,
+            roas: metrics.spend > 0 ? metrics.revenue / metrics.spend : 0,
+            ctr: metrics.impressions > 0 ? (metrics.clicks / metrics.impressions) * 100 : 0,
+            cpc: metrics.clicks > 0 ? metrics.spend / metrics.clicks : 0,
+            cpa: metrics.conversions > 0 ? metrics.spend / metrics.conversions : 0
+          }
+        }).sort((a, b) => b.spend - a.spend)
+        
+        return NextResponse.json({
+          success: true,
+          comprehensive: {
+            demographics,
+            hourlyData,
+            devices,
+            placements,
+            datePreset: datePresetToUse,
+            generatedAt: new Date().toISOString()
+          },
+          breakdown: 'comprehensive_metrics'
+        })
+      } catch (error) {
+        console.error('Error fetching comprehensive metrics:', error)
+        return NextResponse.json({
+          error: error instanceof Error ? error.message : 'Failed to fetch comprehensive metrics',
           success: false
         }, { status: 500 })
       }
@@ -508,6 +996,57 @@ async function handleMetaAPIRequest(request: NextRequest): Promise<NextResponse>
       }
     }
 
+    // Handle custom breakdown requests (for backward compatibility and flexibility)
+    if (type === 'insights' && campaignId && accessToken && breakdown) {
+      try {
+        console.log(`Fetching custom breakdown insights for campaign ${campaignId} with breakdown: ${breakdown}`)
+        
+        const result = await fetchBreakdownInsights(
+          campaignId,
+          accessToken,
+          breakdown,
+          datePreset || 'last_30d',
+          fields
+        )
+        
+        if (result.error) {
+          throw new Error(result.error.message || 'Failed to fetch breakdown data')
+        }
+        
+        let processedData
+        if (breakdown.includes(',')) {
+          // Multiple breakdowns - return raw processed data
+          processedData = result.data.map((item: any) => {
+            const metrics = extractMetricsFromInsight(item)
+            return {
+              ...item,
+              ...metrics,
+              roas: metrics.spend > 0 ? metrics.revenue / metrics.spend : 0,
+              ctr: metrics.impressions > 0 ? (metrics.clicks / metrics.impressions) * 100 : 0,
+              cpc: metrics.clicks > 0 ? metrics.spend / metrics.clicks : 0,
+              cpa: metrics.conversions > 0 ? metrics.spend / metrics.conversions : 0
+            }
+          }).sort((a, b) => b.spend - a.spend)
+        } else {
+          // Single breakdown - use standard processing
+          processedData = processBreakdownData(result.data, breakdown)
+        }
+        
+        return NextResponse.json({
+          success: true,
+          data: processedData,
+          breakdown,
+          datePreset: datePreset || 'last_30d'
+        })
+      } catch (error) {
+        console.error('Error fetching custom breakdown insights:', error)
+        return NextResponse.json({
+          error: error instanceof Error ? error.message : 'Failed to fetch breakdown insights',
+          success: false
+        }, { status: 500 })
+      }
+    }
+
     // Original endpoint-based logic
     if (!endpoint || !accessToken) {
       return NextResponse.json(
@@ -551,6 +1090,17 @@ async function handleMetaAPIRequest(request: NextRequest): Promise<NextResponse>
         url.searchParams.append(key, String(value))
       }
     })
+    
+    // Add enhanced field requests if provided
+    if (breakdown) {
+      url.searchParams.append('breakdowns', breakdown)
+    }
+    if (fields) {
+      url.searchParams.set('fields', fields) // Use set to override existing fields
+    }
+    if (timeIncrement) {
+      url.searchParams.append('time_increment', timeIncrement)
+    }
 
     console.log('Proxying Meta API request to:', url.toString().replace(cleanToken, '***'))
 
