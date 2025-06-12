@@ -301,7 +301,7 @@ export default function DashboardPage() {
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
   const [autoRefresh, setAutoRefresh] = useState(true)
   const [refreshInterval, setRefreshInterval] = useState(300000) // 5 minutes
-  const [selectedDateRange, setSelectedDateRange] = useState("last_30d")
+  const [selectedDateRange, setSelectedDateRange] = useState("today")
   const [expandedCampaigns, setExpandedCampaigns] = useState<string[]>([])
   const [activeTabs, setActiveTabs] = useState<{ [campaignId: string]: string }>({})
 
@@ -407,10 +407,8 @@ export default function DashboardPage() {
           totals.totalImpressions += insights.impressions
           totals.totalClicks += insights.clicks
 
-          if (campaign.todayData) {
-            totals.todaySpend += campaign.todayData.spend || 0
-            totals.todayConversions += campaign.todayData.conversions || 0
-          }
+          // Note: todayData would need to be fetched separately with date_preset=today
+          // For now, we're showing data for the selected date range
 
           return { ...campaign, processedInsights: insights }
         })
@@ -1063,16 +1061,20 @@ export default function DashboardPage() {
             {/* Metrics Grid */}
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
               <MetricCard
-                title="Today's Spend"
-                value={formatCurrency(overviewData.todaySpend)}
+                title={`Spend (${selectedDateRange.replace(/_/g, " ")})`}
+                value={formatCurrency(overviewData.totalSpend)}
                 subtitle={
-                  <span className="flex items-center gap-1 text-xs">
-                    LIVE <span className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse"></span>
-                  </span>
+                  selectedDateRange === "today" ? (
+                    <span className="flex items-center gap-1 text-xs">
+                      LIVE <span className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse"></span>
+                    </span>
+                  ) : (
+                    `${selectedDateRange.replace(/_/g, " ")}`
+                  )
                 }
                 gradient="from-blue-900/70 to-blue-800/70"
                 icon={<DollarSign className="w-4 h-4" />}
-                pulse={isRefreshing && overviewData.todaySpend === 0}
+                pulse={isRefreshing && overviewData.totalSpend === 0}
               />
               <MetricCard
                 title={`Revenue (${selectedDateRange.replace(/_/g, " ")})`}
@@ -1091,7 +1093,7 @@ export default function DashboardPage() {
               <MetricCard
                 title={`Conversions (${selectedDateRange.replace(/_/g, " ")})`}
                 value={formatNumberWithCommas(overviewData.totalConversions)}
-                subtitle={`${formatNumberWithCommas(overviewData.todayConversions)} today`}
+                subtitle={`${selectedDateRange.replace(/_/g, " ")}`}
                 gradient="from-yellow-900/70 to-yellow-800/70"
                 icon={<Target className="w-4 h-4" />}
               />
