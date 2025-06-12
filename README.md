@@ -66,4 +66,4 @@ A modern, responsive dashboard for managing and analyzing Meta (Facebook) ad cam
 
 ## License
 
-MIT
+MIT 
