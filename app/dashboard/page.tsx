@@ -312,49 +312,23 @@ export default function DashboardPage() {
     adAccountId: "",
   })
 
-  // Load credentials on mount
+  // Load credentials on mount - v4 with bypass
   useEffect(() => {
     const loadCredentials = async () => {
-      console.log('Loading credentials...')
+      console.log('Loading credentials v4...')
       const savedCredentials = await CredentialManager.load()
 
       if (savedCredentials) {
-        console.log('Loaded credentials:', savedCredentials ? 'Found' : 'None')
-        console.log('Validating saved credentials...')
-        console.log('Credentials object:', {
-          hasAccessToken: !!savedCredentials.accessToken,
-          tokenLength: savedCredentials.accessToken?.length,
-          hasAdAccountId: !!savedCredentials.adAccountId,
-          adAccountId: savedCredentials.adAccountId
-        })
+        console.log('Loaded credentials v4:', savedCredentials ? 'Found' : 'None')
         
-        try {
-          const formatValidation = CredentialManager.validateFormat(savedCredentials)
-          alert('Format validation result: ' + JSON.stringify(formatValidation))
-          
-          if (formatValidation.isValid) {
-            alert('Credentials format validation passed')
-            
-            // Skip full API validation, just use the credentials
-            setCredentials(savedCredentials)
-            setCredentialsSubmitted(true)
-            setShowSettings(false)
-            alert('Successfully loaded and set credentials')
-          } else {
-            alert('Invalid stored credentials found: ' + formatValidation.errors.join(', '))
-            await CredentialManager.clear()
-            setShowSettings(true)
-            setFetchError('Stored credentials are invalid: ' + formatValidation.errors.join(', '))
-          }
-        } catch (validationError: any) {
-          alert('Error during validation: ' + validationError.message)
-          // Bypass validation error, setting credentials anyway
-          setCredentials(savedCredentials)
-          setCredentialsSubmitted(true)
-          setShowSettings(false)
-        }
+        // BYPASS ALL VALIDATION - just use the credentials directly
+        console.log('BYPASSING validation, using credentials directly')
+        setCredentials(savedCredentials)
+        setCredentialsSubmitted(true)
+        setShowSettings(false)
+        console.log('Credentials set successfully - v4 bypass')
       } else {
-        console.log('No stored credentials found - v3')
+        console.log('No stored credentials found - v4')
         setShowSettings(true)
       }
     }
