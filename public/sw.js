@@ -37,6 +37,10 @@ self.addEventListener('fetch', (event) => {
           const responseClone = response.clone()
           caches.open(CACHE_NAME)
             .then(cache => cache.put(event.request, responseClone))
+            .catch(error => {
+              // Silently ignore storage errors in service worker
+              console.debug('[SW] Cache storage failed:', error.message)
+            })
         }
         return response
       })
