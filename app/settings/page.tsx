@@ -76,11 +76,19 @@ export default function SettingsPage() {
                   <p className="text-muted-foreground mb-4">
                     Use the settings button in the main dashboard to configure your Meta API credentials.
                   </p>
-                  <Link href="/">
-                    <Button>
-                      Go to Dashboard Settings
-                    </Button>
-                  </Link>
+                  <div className="space-y-3">
+                    <Link href="/">
+                      <Button className="w-full">
+                        Go to Dashboard Settings
+                      </Button>
+                    </Link>
+                    <Link href="/settings/token">
+                      <Button variant="outline" className="w-full">
+                        <Shield className="w-4 h-4 mr-2" />
+                        Manage Access Tokens
+                      </Button>
+                    </Link>
+                  </div>
                 </div>
               </CardContent>
             </Card>

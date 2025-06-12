@@ -27,6 +27,7 @@ import {
   ExternalLink,
   Info,
   Loader2,
+  Key,
 } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -980,14 +981,26 @@ export default function DashboardPage() {
                 )}
               </CardContent>
               <CardContent className="flex flex-col sm:flex-row justify-between items-center gap-3 pt-4">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  onClick={handleClearCredentials}
-                  className="text-sm text-gray-400 hover:text-white w-full sm:w-auto"
-                >
-                  Clear & Disconnect
-                </Button>
+                <div className="flex gap-2 w-full sm:w-auto">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    onClick={handleClearCredentials}
+                    className="text-sm text-gray-400 hover:text-white"
+                  >
+                    Clear & Disconnect
+                  </Button>
+                  <Link href="/settings/token">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="text-sm"
+                    >
+                      <Key className="w-4 h-4 mr-1" />
+                      Extend Token
+                    </Button>
+                  </Link>
+                </div>
                 <Button 
                   type="submit" 
                   className="bg-blue-600 hover:bg-blue-700 w-full sm:w-auto"
