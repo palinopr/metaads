@@ -40,7 +40,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
 import { Skeleton } from "@/components/ui/skeleton"
 import Link from "next/link"
-import { CacheClearButton } from "@/components/cache-clear-button"
 
 // Lazy load heavy components
 const DateRangeSelector = dynamicImport(() => 
@@ -919,7 +918,6 @@ export default function DashboardPage() {
               >
                 <Settings className="w-4 h-4 md:w-5 md:h-5" />
               </Button>
-              <CacheClearButton />
             </div>
           </div>
         </div>
