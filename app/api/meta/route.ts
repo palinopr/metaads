@@ -138,53 +138,11 @@ async function handleMetaAPIRequest(request: NextRequest): Promise<NextResponse>
         const adSetsResponse = await fetch(`${adSetsUrl}?${adSetsParams}`)
         const adSetsData = await adSetsResponse.json()
         
-        // Process historical daily data
-        const processedHistoricalData = historicalDailyData.map((day: any) => {
-          const spend = parseFloat(day.spend || '0')
-          let revenue = 0
-          let conversions = 0
-          
-          if (day.action_values) {
-            day.action_values.forEach((actionValue: any) => {
-              if (['purchase', 'omni_purchase', 'offsite_conversion.fb_pixel_purchase'].includes(actionValue.action_type)) {
-                revenue += parseFloat(actionValue.value || '0')
-              }
-            })
-          }
-          
-          if (day.actions) {
-            day.actions.forEach((action: any) => {
-              if (['purchase', 'omni_purchase', 'offsite_conversion.fb_pixel_purchase'].includes(action.action_type)) {
-                conversions += parseInt(action.value || '0')
-              }
-            })
-          }
-          
-          return {
-            date: day.date_start || day.date,
-            spend,
-            revenue,
-            conversions,
-            impressions: parseInt(day.impressions || '0'),
-            clicks: parseInt(day.clicks || '0'),
-            ctr: parseFloat(day.ctr || '0'),
-            cpc: parseFloat(day.cpc || '0'),
-            roas: spend > 0 ? revenue / spend : 0
-          }
-        })
+        // Process historical daily data (using insights data)
+        // const processedHistoricalData = [] // Removed - using processedInsights instead
         
-        // Process hourly data
-        const processedHourlyData = todayHourlyData.map((hour: any) => {
-          const hourTime = hour.hourly_stats_aggregated_by_advertiser_time_zone || hour.date_start || ''
-          const hourNumber = hourTime ? new Date(hourTime).getHours() : 0
-          
-          return {
-            hour: `${hourNumber}:00`,
-            spend: parseFloat(hour.spend || '0'),
-            impressions: parseInt(hour.impressions || '0'),
-            clicks: parseInt(hour.clicks || '0')
-          }
-        })
+        // Process hourly data (empty for now)
+        const processedHourlyData: any[] = []
         
         // Process insights data
         const processedInsights = insightsData.data ? insightsData.data.map((insight: any) => {
@@ -245,7 +203,7 @@ async function handleMetaAPIRequest(request: NextRequest): Promise<NextResponse>
         return NextResponse.json({
           success: true,
           historicalDailyData: processedInsights,
-          todayHourlyData: [],
+          todayHourlyData: processedHourlyData,
           adSets: adSetsData.data || [],
           // Add summary metrics that the frontend expects
           summary: {
