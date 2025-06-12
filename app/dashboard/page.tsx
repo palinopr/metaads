@@ -315,16 +315,23 @@ export default function DashboardPage() {
   // Load credentials on mount
   useEffect(() => {
     const loadCredentials = async () => {
+      console.log('Loading credentials...')
       const savedCredentials = await CredentialManager.load()
 
       if (savedCredentials) {
+        console.log('Loaded credentials:', savedCredentials ? 'Found' : 'None')
+        console.log('Validating saved credentials...')
+        
         const formatValidation = CredentialManager.validateFormat(savedCredentials)
         
         if (formatValidation.isValid) {
+          console.log('Credentials format validation passed')
+          
+          // Skip full API validation, just use the credentials
           setCredentials(savedCredentials)
           setCredentialsSubmitted(true)
           setShowSettings(false)
-          console.log('Loaded valid credentials from storage')
+          console.log('Successfully loaded and set credentials')
         } else {
           console.warn('Invalid stored credentials found:', formatValidation.errors)
           await CredentialManager.clear()
@@ -332,7 +339,7 @@ export default function DashboardPage() {
           setFetchError('Stored credentials are invalid: ' + formatValidation.errors.join(', '))
         }
       } else {
-        console.log('No stored credentials found - v2')
+        console.log('No stored credentials found - v3')
         setShowSettings(true)
       }
     }
@@ -362,7 +369,7 @@ export default function DashboardPage() {
       try {
         // Use optimized API manager
         const data = await optimizedApiManager.request<any>(
-          "/api/meta-test",
+          "/api/meta",
           {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -575,7 +582,14 @@ export default function DashboardPage() {
 
   // Auto-refresh effect
   useEffect(() => {
+    console.log('Auto-refresh effect triggered:', {
+      credentialsSubmitted,
+      hasAccessToken: !!credentials.accessToken,
+      hasAdAccountId: !!credentials.adAccountId
+    })
+    
     if (credentialsSubmitted && credentials.accessToken && credentials.adAccountId) {
+      console.log('Calling fetchOverviewData from auto-refresh effect')
       fetchOverviewData()
     }
   }, [credentialsSubmitted, selectedDateRange, credentials.accessToken, credentials.adAccountId])
