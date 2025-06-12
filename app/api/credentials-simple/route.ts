@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 
-// Simple in-memory storage - will need to be updated with new token
+// Simple in-memory storage - credentials will be stored when user saves them
 let workingCredentials = {
   accessToken: '',
-  adAccountId: 'act_787610255314938'
+  adAccountId: ''
 }
 
 export async function GET(request: NextRequest) {

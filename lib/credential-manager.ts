@@ -93,6 +93,9 @@ export class CredentialManager {
                 adAccountId: data.credentials.adAccountId
               }
             }
+          } else if (response.status === 404) {
+            // No credentials on server yet, this is normal
+            console.log('No server credentials yet, checking localStorage')
           }
         } catch (error) {
           console.warn('Failed to load from server, falling back to localStorage:', error)

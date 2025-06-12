@@ -100,8 +100,10 @@ function MetaAdsDashboardContent() {
       setHasValidCredentials(true)
       setShowSettings(false)
       setError(null)
-      // Force a page refresh to reinitialize everything
-      window.location.reload()
+      // Redirect to dashboard through setup complete page
+      setTimeout(() => {
+        window.location.href = '/setup-complete'
+      }, 500)
     }
   }
 
