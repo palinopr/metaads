@@ -4,6 +4,7 @@ import { MetaAPIClient } from '@/lib/meta-api-client'
 import { AdSetAndAdAPI } from '@/lib/meta-api-adsets'
 import { withSecurity } from '@/lib/security/security-middleware'
 import { createValidationMiddleware, secureSchemas } from '@/lib/security/input-validation'
+import { cookies } from 'next/headers'
 import { z } from 'zod'
 
 const META_API_BASE = 'https://graph.facebook.com/v19.0'
@@ -306,6 +307,24 @@ async function handleMetaAPIRequest(request: NextRequest): Promise<NextResponse>
     // }
     
     const body = await request.json();
+    
+    // Try to get access token from multiple sources
+    let accessToken = body.accessToken;
+    if (!accessToken) {
+      // Try to get from OAuth cookies
+      const cookieStore = cookies()
+      accessToken = cookieStore.get('fb_access_token')?.value
+    }
+    
+    if (!accessToken) {
+      return NextResponse.json({
+        error: 'Access token required',
+        message: 'Please provide an access token or authenticate with Facebook'
+      }, { status: 401 })
+    }
+    
+    // Add token to body for processing
+    body.accessToken = accessToken;
     
     const { 
       endpoint, 
