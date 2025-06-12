@@ -1,5 +1,5 @@
 // Optimized Service Worker for Meta Ads Dashboard
-const SW_VERSION = '2025-06-12T15-22-00Z'
+const SW_VERSION = '3.0.0-force-update'
 const CACHE_NAME = `meta-ads-v${SW_VERSION}`
 const API_CACHE = `meta-ads-api-v${SW_VERSION}`
 const IMAGE_CACHE = `meta-ads-img-v${SW_VERSION}`

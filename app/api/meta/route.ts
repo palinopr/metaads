@@ -613,3 +613,7 @@ export async function GET(request: NextRequest) {
     { status: 405 }
   )
 }
+
+export async function HEAD(request: NextRequest) {
+  return new NextResponse(null, { status: 200 })
+}

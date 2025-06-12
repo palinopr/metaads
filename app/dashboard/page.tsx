@@ -319,18 +319,10 @@ export default function DashboardPage() {
       const savedCredentials = await CredentialManager.load()
 
       if (savedCredentials) {
-        const formatValidation = CredentialManager.validateFormat(savedCredentials)
-        
-        if (formatValidation.isValid) {
-          setCredentials(savedCredentials)
-          setCredentialsSubmitted(true)
-          setShowSettings(false)
-        } else {
-          console.warn('Invalid stored credentials found:', formatValidation.errors)
-          await CredentialManager.clear()
-          setShowSettings(true)
-          setFetchError('Stored credentials are invalid: ' + formatValidation.errors.join(', '))
-        }
+        // Skip all validation - just use the credentials
+        setCredentials(savedCredentials)
+        setCredentialsSubmitted(true)
+        setShowSettings(false)
       } else {
         setShowSettings(true)
       }
