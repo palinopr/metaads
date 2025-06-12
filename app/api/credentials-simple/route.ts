@@ -1,33 +1,25 @@
 import { NextRequest, NextResponse } from 'next/server'
 
-// Simple in-memory storage
-const credentialStore = new Map<string, any>()
+// Simple in-memory storage with your working credentials
+const workingCredentials = {
+  accessToken: 'EAATKZBg465ucBO7LlPXw5pZBVFKX4edsRkiVh9Lm68YUJUMkBR2UUvlbYG4rZCwkbf6mrl2BmJroBgkThXsoqhJwfe1tYkvj8t7O550TOJ56r5AnZBJGuqR0ZApBG02aUflSmg34G9rewZBlqEgBw5l8OW7vDLUUHpBYYpgRCbaZBWrTB0SlFlOZCdxZCrZAYJRUmR6CEBMqKMx3ZAfHDPeA0ec1Td6frnuQD1y',
+  adAccountId: 'act_787610255314938'
+}
 
 export async function GET(request: NextRequest) {
   try {
-    // Check environment variables first
-    const envToken = process.env.META_ACCESS_TOKEN
-    const envAccountId = process.env.META_AD_ACCOUNT_ID
-    
-    if (envToken && envAccountId) {
-      return NextResponse.json({
-        success: true,
-        credentials: {
-          accessToken: envToken,
-          adAccountId: envAccountId,
-          source: 'environment'
-        }
-      })
-    }
-    
-    // Return empty credentials
+    // Always return the working credentials
     return NextResponse.json({
-      success: false,
-      message: 'No credentials found'
+      success: true,
+      credentials: {
+        accessToken: workingCredentials.accessToken,
+        adAccountId: workingCredentials.adAccountId,
+        source: 'server'
+      }
     })
   } catch (error) {
     return NextResponse.json(
-      { error: 'Failed to load credentials', details: String(error) },
+      { success: false, error: 'Failed to load credentials' },
       { status: 500 }
     )
   }
@@ -45,12 +37,9 @@ export async function POST(request: NextRequest) {
       )
     }
     
-    // Store in memory (will be lost on restart)
-    credentialStore.set('default', {
-      accessToken,
-      adAccountId,
-      createdAt: new Date().toISOString()
-    })
+    // Update the working credentials
+    workingCredentials.accessToken = accessToken
+    workingCredentials.adAccountId = adAccountId
     
     return NextResponse.json({
       success: true,
@@ -65,7 +54,10 @@ export async function POST(request: NextRequest) {
 }
 
 export async function DELETE(request: NextRequest) {
-  credentialStore.clear()
+  // Clear credentials
+  workingCredentials.accessToken = ''
+  workingCredentials.adAccountId = ''
+  
   return NextResponse.json({
     success: true,
     message: 'Credentials cleared'
