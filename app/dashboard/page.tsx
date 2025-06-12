@@ -40,6 +40,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
 import { Skeleton } from "@/components/ui/skeleton"
 import Link from "next/link"
+import { CacheClearButton } from "@/components/cache-clear-button"
 
 // Lazy load heavy components
 const DateRangeSelector = dynamicImport(() => 
@@ -275,9 +276,6 @@ const MetricCard = React.memo(function MetricCard({ title, value, subtitle, grad
 
 // Main Dashboard Component (optimized)
 export default function DashboardPage() {
-  // Build timestamp: 2025-06-12T14:50:00Z
-  console.log('Dashboard loaded at:', new Date().toISOString())
-  
   const [campaigns, setCampaigns] = useState<Campaign[]>([])
   const [overviewData, setOverviewData] = useState<OverviewData>({
     todaySpend: 0,
@@ -316,32 +314,28 @@ export default function DashboardPage() {
     adAccountId: "",
   })
 
-  // Load credentials on mount - v5 with immediate bypass
+  // Load credentials on mount
   useEffect(() => {
     const loadCredentials = async () => {
-      // Check for bypass flag
-      const shouldBypass = localStorage.getItem('bypassValidation') === 'true'
-      
-      if (shouldBypass) {
-        console.log('BYPASS FLAG DETECTED - Loading credentials without validation')
-      }
-      
       const savedCredentials = await CredentialManager.load()
 
       if (savedCredentials) {
-        // IMMEDIATE BYPASS - no validation at all
-        setCredentials(savedCredentials)
-        setCredentialsSubmitted(true)
-        setShowSettings(false)
+        const formatValidation = CredentialManager.validateFormat(savedCredentials)
         
-        // Clear bypass flag
-        localStorage.removeItem('bypassValidation')
+        if (formatValidation.isValid) {
+          setCredentials(savedCredentials)
+          setCredentialsSubmitted(true)
+          setShowSettings(false)
+        } else {
+          console.warn('Invalid stored credentials found:', formatValidation.errors)
+          await CredentialManager.clear()
+          setShowSettings(true)
+          setFetchError('Stored credentials are invalid: ' + formatValidation.errors.join(', '))
+        }
       } else {
         setShowSettings(true)
       }
     }
-    
-    // Execute immediately
     loadCredentials()
   }, [])
 
@@ -581,14 +575,7 @@ export default function DashboardPage() {
 
   // Auto-refresh effect
   useEffect(() => {
-    console.log('Auto-refresh effect triggered:', {
-      credentialsSubmitted,
-      hasAccessToken: !!credentials.accessToken,
-      hasAdAccountId: !!credentials.adAccountId
-    })
-    
     if (credentialsSubmitted && credentials.accessToken && credentials.adAccountId) {
-      console.log('Calling fetchOverviewData from auto-refresh effect')
       fetchOverviewData()
     }
   }, [credentialsSubmitted, selectedDateRange, credentials.accessToken, credentials.adAccountId])
@@ -932,6 +919,7 @@ export default function DashboardPage() {
               >
                 <Settings className="w-4 h-4 md:w-5 md:h-5" />
               </Button>
+              <CacheClearButton />
             </div>
           </div>
         </div>

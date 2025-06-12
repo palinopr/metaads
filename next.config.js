@@ -21,6 +21,50 @@ const nextConfig = {
   poweredByHeader: false,
   compress: true,
   productionBrowserSourceMaps: false,
+  
+  // Add cache headers to prevent stale content
+  async headers() {
+    return [
+      {
+        // For Next.js static assets - short cache with revalidation
+        source: '/_next/static/(.*)',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'public, max-age=3600, must-revalidate', // 1 hour cache
+          },
+        ],
+      },
+      {
+        // For HTML pages - no cache
+        source: '/(.*)',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'no-cache, no-store, must-revalidate',
+          },
+          {
+            key: 'Pragma',
+            value: 'no-cache',
+          },
+          {
+            key: 'Expires',
+            value: '0',
+          },
+        ],
+      },
+      {
+        // For images - longer cache
+        source: '/images/(.*)',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'public, max-age=2592000, immutable', // 30 days
+          },
+        ],
+      },
+    ];
+  },
 }
 
 module.exports = nextConfig

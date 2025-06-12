@@ -1,5 +1,5 @@
 // Optimized Service Worker for Meta Ads Dashboard
-const SW_VERSION = '2.0.0'
+const SW_VERSION = '2.0.1'
 const CACHE_NAME = `meta-ads-v${SW_VERSION}`
 const API_CACHE = `meta-ads-api-v${SW_VERSION}`
 const IMAGE_CACHE = `meta-ads-img-v${SW_VERSION}`
@@ -17,7 +17,8 @@ const CACHE_CONFIG = {
       account: 60 * 60 * 1000,        // 1 hour
       default: 5 * 60 * 1000          // 5 minutes
     },
-    static: 7 * 24 * 60 * 60 * 1000, // 7 days
+    static: 1 * 60 * 60 * 1000, // 1 hour instead of 7 days
+    javascript: 5 * 60 * 1000,   // 5 minutes for JS files
     images: 30 * 24 * 60 * 60 * 1000 // 30 days
   },
   // Max cache sizes
@@ -29,9 +30,10 @@ const CACHE_CONFIG = {
   // Strategies
   strategies: {
     api: 'network-first',
-    static: 'cache-first',
+    static: 'network-first', // Changed from 'cache-first' to prevent stale JS
     images: 'cache-first',
-    navigation: 'network-first'
+    navigation: 'network-first',
+    javascript: 'network-first' // Explicit strategy for JS files
   }
 }
 
@@ -63,6 +65,7 @@ const getCacheTTL = (url) => {
   if (url.includes('/api/meta/historical')) return CACHE_CONFIG.ttl.api.historical
   if (url.includes('/api/meta/account')) return CACHE_CONFIG.ttl.api.account
   if (url.includes('/api/')) return CACHE_CONFIG.ttl.api.default
+  if (url.includes('/_next/static/chunks/') || url.endsWith('.js')) return CACHE_CONFIG.ttl.javascript
   if (url.match(/\.(jpg|jpeg|png|gif|webp|svg|ico)$/i)) return CACHE_CONFIG.ttl.images
   return CACHE_CONFIG.ttl.static
 }
@@ -380,9 +383,18 @@ self.addEventListener('fetch', (event) => {
       strategies.networkFirst(request, STATIC_CACHE, CACHE_CONFIG.ttl.static)
     )
   } else {
-    event.respondWith(
-      strategies.cacheFirst(request, STATIC_CACHE, getCacheTTL(request.url))
-    )
+    // Use network-first for JavaScript files, cache-first for other static assets
+    const isJavaScript = request.url.includes('/_next/static/chunks/') || request.url.endsWith('.js')
+    
+    if (isJavaScript) {
+      event.respondWith(
+        strategies.networkFirst(request, STATIC_CACHE, getCacheTTL(request.url))
+      )
+    } else {
+      event.respondWith(
+        strategies.cacheFirst(request, STATIC_CACHE, getCacheTTL(request.url))
+      )
+    }
   }
 })
 
