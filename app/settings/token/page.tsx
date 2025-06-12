@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -69,8 +69,8 @@ export default function TokenManagementPage() {
     
     try {
       // First, save app secret to localStorage (encrypted would be better in production)
-      if (savedAppSecret) {
-        localStorage.setItem('fb_app_secret', btoa(appSecret))
+      if (savedAppSecret && typeof window !== 'undefined') {
+        localStorage.setItem('fb_app_secret', window.btoa(appSecret))
       }
 
       // Exchange for long-lived token
@@ -131,13 +131,15 @@ export default function TokenManagementPage() {
   }
 
   // Load saved app secret
-  useState(() => {
-    const saved = localStorage.getItem('fb_app_secret')
-    if (saved) {
-      setAppSecret(atob(saved))
-      setSavedAppSecret(true)
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('fb_app_secret')
+      if (saved) {
+        setAppSecret(window.atob(saved))
+        setSavedAppSecret(true)
+      }
     }
-  })
+  }, [])
 
   // Copy token to clipboard
   const copyToClipboard = (text: string) => {
