@@ -321,22 +321,37 @@ export default function DashboardPage() {
       if (savedCredentials) {
         console.log('Loaded credentials:', savedCredentials ? 'Found' : 'None')
         console.log('Validating saved credentials...')
+        console.log('Credentials object:', {
+          hasAccessToken: !!savedCredentials.accessToken,
+          tokenLength: savedCredentials.accessToken?.length,
+          hasAdAccountId: !!savedCredentials.adAccountId,
+          adAccountId: savedCredentials.adAccountId
+        })
         
-        const formatValidation = CredentialManager.validateFormat(savedCredentials)
-        
-        if (formatValidation.isValid) {
-          console.log('Credentials format validation passed')
+        try {
+          const formatValidation = CredentialManager.validateFormat(savedCredentials)
+          console.log('Format validation result:', formatValidation)
           
-          // Skip full API validation, just use the credentials
+          if (formatValidation.isValid) {
+            console.log('Credentials format validation passed')
+            
+            // Skip full API validation, just use the credentials
+            setCredentials(savedCredentials)
+            setCredentialsSubmitted(true)
+            setShowSettings(false)
+            console.log('Successfully loaded and set credentials')
+          } else {
+            console.warn('Invalid stored credentials found:', formatValidation.errors)
+            await CredentialManager.clear()
+            setShowSettings(true)
+            setFetchError('Stored credentials are invalid: ' + formatValidation.errors.join(', '))
+          }
+        } catch (validationError: any) {
+          console.error('Error during validation:', validationError)
+          console.log('Bypassing validation error, setting credentials anyway')
           setCredentials(savedCredentials)
           setCredentialsSubmitted(true)
           setShowSettings(false)
-          console.log('Successfully loaded and set credentials')
-        } else {
-          console.warn('Invalid stored credentials found:', formatValidation.errors)
-          await CredentialManager.clear()
-          setShowSettings(true)
-          setFetchError('Stored credentials are invalid: ' + formatValidation.errors.join(', '))
         }
       } else {
         console.log('No stored credentials found - v3')
