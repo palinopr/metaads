@@ -274,6 +274,9 @@ const MetricCard = React.memo(function MetricCard({ title, value, subtitle, grad
 
 // Main Dashboard Component (optimized)
 export default function DashboardPage() {
+  // Build timestamp: 2025-06-12T14:50:00Z
+  console.log('Dashboard loaded at:', new Date().toISOString())
+  
   const [campaigns, setCampaigns] = useState<Campaign[]>([])
   const [overviewData, setOverviewData] = useState<OverviewData>({
     todaySpend: 0,
