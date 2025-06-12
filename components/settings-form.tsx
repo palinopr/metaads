@@ -6,7 +6,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { CheckCircle, AlertCircle, Loader2, Eye, EyeOff, TestTube, Wifi } from "lucide-react"
+import { CheckCircle, AlertCircle, Loader2, Eye, EyeOff, TestTube, Wifi, Facebook } from "lucide-react"
+import Link from "next/link"
 import { CredentialManager } from "@/lib/credential-manager"
 import { SecureCredentialManager } from "@/lib/auth/secure-credential-manager"
 import { TokenManager } from "@/lib/auth/token-manager"
@@ -220,7 +221,32 @@ export function SettingsForm({ onSuccess, initialToken = "", initialAccountId = 
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-4">
+        {/* OAuth Alternative */}
+        <div className="mb-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="font-medium text-blue-900 mb-1">Easier Setup with Facebook OAuth</h3>
+              <p className="text-sm text-blue-700">Connect with one click instead of copying tokens manually</p>
+            </div>
+            <Link href="/oauth-setup">
+              <Button variant="outline" className="bg-blue-600 text-white hover:bg-blue-700 border-blue-600">
+                <Facebook className="h-4 w-4 mr-2" />
+                Connect with Facebook
+              </Button>
+            </Link>
+          </div>
+        </div>
+
+        <div className="relative">
+          <div className="absolute inset-0 flex items-center">
+            <span className="w-full border-t" />
+          </div>
+          <div className="relative flex justify-center text-xs uppercase">
+            <span className="bg-background px-2 text-muted-foreground">Or enter token manually</span>
+          </div>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-4 mt-6">
           <div className="space-y-2">
             <Label htmlFor="token">Access Token</Label>
             <div className="relative">
