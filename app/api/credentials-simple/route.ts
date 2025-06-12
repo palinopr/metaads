@@ -1,14 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server'
 
-// Simple in-memory storage with your working credentials
-const workingCredentials = {
-  accessToken: 'EAATKZBg465ucBO7LlPXw5pZBVFKX4edsRkiVh9Lm68YUJUMkBR2UUvlbYG4rZCwkbf6mrl2BmJroBgkThXsoqhJwfe1tYkvj8t7O550TOJ56r5AnZBJGuqR0ZApBG02aUflSmg34G9rewZBlqEgBw5l8OW7vDLUUHpBYYpgRCbaZBWrTB0SlFlOZCdxZCrZAYJRUmR6CEBMqKMx3ZAfHDPeA0ec1Td6frnuQD1y',
+// Simple in-memory storage - will need to be updated with new token
+let workingCredentials = {
+  accessToken: '',
   adAccountId: 'act_787610255314938'
 }
 
 export async function GET(request: NextRequest) {
   try {
-    // Always return the working credentials
+    // Check if we have valid credentials
+    if (!workingCredentials.accessToken) {
+      return NextResponse.json({
+        success: false,
+        error: 'No credentials stored on server',
+        needsSetup: true
+      }, { status: 404 })
+    }
+    
     return NextResponse.json({
       success: true,
       credentials: {

@@ -578,6 +578,22 @@ async function handleMetaAPIRequest(request: NextRequest): Promise<NextResponse>
     console.error('API route error:', error)
     console.error('Error stack:', error.stack)
     
+    // Check for token expiration
+    if (error.message && (
+      error.message.includes('expired') ||
+      error.message.includes('OAuthException') ||
+      error.message.includes('Session has expired') ||
+      error.message.includes('Error validating access token') ||
+      error.message.includes('Invalid OAuth access token')
+    )) {
+      console.log('Token expired detected!')
+      return NextResponse.json({
+        error: 'Invalid OAuth access token - Cannot parse access token',
+        details: { code: 190, type: 'OAuthException' },
+        timestamp: new Date().toISOString()
+      }, { status: 401 })
+    }
+    
     // Check if it's a timeout error
     if (error.message?.includes('timeout')) {
       return NextResponse.json(

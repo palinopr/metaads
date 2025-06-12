@@ -307,6 +307,7 @@ export default function DashboardPage() {
 
   const [campaignStatusFilter, setCampaignStatusFilter] = useState("all")
   const [sortBy, setSortBy] = useState("created_desc")
+  const [tokenExpiredWarning, setTokenExpiredWarning] = useState(false)
 
   const [credentials, setCredentials] = useState({
     accessToken: "",
@@ -445,13 +446,15 @@ export default function DashboardPage() {
         if (err.message && (
           err.message.toLowerCase().includes("oauth") || 
           err.message.toLowerCase().includes("access token") || 
-          err.message.toLowerCase().includes("invalid token")
+          err.message.toLowerCase().includes("invalid token") ||
+          err.message.toLowerCase().includes("expired")
         )) {
+          setTokenExpiredWarning(true)
           CredentialManager.clear()
           setCredentials({ accessToken: "", adAccountId: "" })
           setCredentialsSubmitted(false)
           setShowSettings(true)
-          setFetchError("Invalid or expired access token. Please re-enter your credentials.")
+          setFetchError("Invalid or expired access token. Please re-enter your credentials or extend your token.")
         } else {
           setFetchError(err.message)
         }
@@ -860,6 +863,12 @@ export default function DashboardPage() {
                   disabled={isLoading || isRefreshing}
                 />
               </Suspense>
+              <Link href="/settings/token" passHref>
+                <Button variant="outline" className="flex items-center gap-2 text-xs border-gray-700 hover:bg-gray-800">
+                  <Key className="w-3 h-3 md:w-4 md:h-4" />
+                  Token Manager
+                </Button>
+              </Link>
               <Link href="/pattern-analysis" passHref>
                 <Button variant="outline" className="flex items-center gap-2 text-xs border-gray-700 hover:bg-gray-800">
                   <Brain className="w-3 h-3 md:w-4 md:h-4" />
@@ -913,6 +922,30 @@ export default function DashboardPage() {
             </div>
           </div>
         </div>
+
+        {/* Token Expiration Warning */}
+        {tokenExpiredWarning && (
+          <Alert className="mb-6 bg-yellow-900/20 border-yellow-700 text-yellow-300">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>Token Expired or About to Expire</AlertTitle>
+            <AlertDescription className="flex items-center justify-between">
+              <span>Your Facebook access token has expired or is about to expire. Extend it to continue using the dashboard.</span>
+              <div className="flex gap-2">
+                <Link href="/settings/token">
+                  <Button variant="outline" size="sm" className="bg-yellow-600 hover:bg-yellow-700 text-white border-yellow-600">
+                    <Key className="w-3 h-3 mr-1" />
+                    Extend Token Now
+                  </Button>
+                </Link>
+                <Link href="/help/extend-token">
+                  <Button variant="ghost" size="sm" className="text-yellow-300 hover:text-yellow-100">
+                    Need Help?
+                  </Button>
+                </Link>
+              </div>
+            </AlertDescription>
+          </Alert>
+        )}
 
         {/* Performance Monitor */}
         {showPerformanceMonitor && (
@@ -1003,8 +1036,16 @@ export default function DashboardPage() {
           <Alert variant="destructive" className="mb-6 bg-red-900/20 border-red-700 text-red-300">
             <AlertCircle className="h-4 w-4" />
             <AlertTitle>Connection Error</AlertTitle>
-            <AlertDescription>
-              {fetchError}. Please check your API credentials in Settings or network connection.
+            <AlertDescription className="flex items-center justify-between">
+              <span>{fetchError}. Please check your API credentials in Settings or network connection.</span>
+              {fetchError.toLowerCase().includes('token') && (
+                <Link href="/settings/token">
+                  <Button variant="outline" size="sm" className="ml-4">
+                    <Key className="w-3 h-3 mr-1" />
+                    Extend Token
+                  </Button>
+                </Link>
+              )}
             </AlertDescription>
           </Alert>
         )}
