@@ -45,9 +45,20 @@ interface CampaignPredictionsProps {
 
 export function CampaignPredictions({ campaignName, historicalData, currentMetrics }: CampaignPredictionsProps) {
   const calculatePredictions = (): PredictionDataPoint[] => {
-    if (!historicalData || historicalData.length < 7) return []
+    if (!historicalData || !Array.isArray(historicalData) || historicalData.length < 7) return []
 
-    const recentData = historicalData.slice(-Math.min(30, historicalData.length))
+    // Ensure all data points are valid
+    const validHistoricalData = historicalData.filter(point => 
+      point && 
+      typeof point.spend !== 'undefined' && 
+      typeof point.revenue !== 'undefined' &&
+      !isNaN(Number(point.spend)) &&
+      !isNaN(Number(point.revenue))
+    )
+
+    if (validHistoricalData.length < 7) return []
+
+    const recentData = validHistoricalData.slice(-Math.min(30, validHistoricalData.length))
     if (recentData.length < 2) return []
 
     let totalSpendGrowth = 0
@@ -106,7 +117,22 @@ export function CampaignPredictions({ campaignName, historicalData, currentMetri
   }
 
   const predictions = calculatePredictions()
-  const chartData = [...historicalData.slice(-14).map((d) => ({ ...d, type: "historical" as const })), ...predictions]
+  
+  // Ensure historical data is valid before using it
+  const validHistoricalData = (historicalData || []).filter(point => 
+    point && 
+    typeof point.spend !== 'undefined' && 
+    typeof point.revenue !== 'undefined'
+  ).map(point => ({
+    ...point,
+    spend: Number(point.spend) || 0,
+    revenue: Number(point.revenue) || 0,
+    roas: Number(point.roas) || 0,
+    conversions: Number(point.conversions) || 0,
+    type: "historical" as const
+  }))
+  
+  const chartData = [...validHistoricalData.slice(-14), ...predictions]
 
   const totalPredictedSpend = predictions.reduce((sum, p) => sum + p.spend, 0)
   const totalPredictedRevenue = predictions.reduce((sum, p) => sum + p.revenue, 0)
@@ -121,7 +147,7 @@ export function CampaignPredictions({ campaignName, historicalData, currentMetri
       ? predictions.findIndex((p) => p.roas === Math.max(...predictions.map((pr) => pr.roas))) + 1
       : 0
 
-  if (historicalData.length < 7) {
+  if (!historicalData || !Array.isArray(historicalData) || validHistoricalData.length < 7) {
     return (
       <Card className="bg-gray-800/70 border-gray-700/80">
         <CardContent className="py-10 text-center text-gray-400">

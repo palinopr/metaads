@@ -36,3 +36,10 @@ export const formatPercentage = (value: number | string | undefined, multiplyBy1
   }
   return `${num.toFixed(2)}%`
 }
+
+export const safeToFixed = (value: number | string | undefined, decimals = 2): string => {
+  if (value === undefined || value === null || value === "") return "0"
+  const num = Number(value)
+  if (isNaN(num)) return "0"
+  return num.toFixed(decimals)
+}
