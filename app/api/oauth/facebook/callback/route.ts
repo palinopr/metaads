@@ -42,11 +42,27 @@ export async function GET(request: NextRequest) {
       return NextResponse.redirect(new URL('/?error=token_exchange_failed', appUrl))
     }
 
-    // Get user's ad accounts
-    const adAccountsResponse = await fetch(
-      `https://graph.facebook.com/v19.0/me/adaccounts?fields=id,name,account_status&access_token=${tokenData.access_token}`
-    )
-    const adAccountsData = await adAccountsResponse.json()
+    // Get user's ad accounts with pagination
+    let allAccounts = []
+    let nextPage = `https://graph.facebook.com/v19.0/me/adaccounts?fields=id,name,account_status&limit=100&access_token=${tokenData.access_token}`
+    
+    // Fetch all pages of ad accounts
+    while (nextPage) {
+      const adAccountsResponse = await fetch(nextPage)
+      const adAccountsData = await adAccountsResponse.json()
+      
+      if (adAccountsData.data) {
+        allAccounts = [...allAccounts, ...adAccountsData.data]
+      }
+      
+      // Check for next page
+      nextPage = adAccountsData.paging?.next || null
+      
+      // Safety limit to prevent infinite loops
+      if (allAccounts.length > 500) break
+    }
+    
+    console.log(`Fetched ${allAccounts.length} ad accounts`)
 
     // Store token and account info in session/cookie
     // Use the correct app URL for redirect
@@ -61,8 +77,8 @@ export async function GET(request: NextRequest) {
       maxAge: 60 * 60 * 24 * 60, // 60 days
     })
 
-    if (adAccountsData.data && adAccountsData.data.length > 0) {
-      response.cookies.set('fb_ad_accounts', JSON.stringify(adAccountsData.data), {
+    if (allAccounts.length > 0) {
+      response.cookies.set('fb_ad_accounts', JSON.stringify(allAccounts), {
         httpOnly: true,
         secure: true,
         sameSite: 'lax',
