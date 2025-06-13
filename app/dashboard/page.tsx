@@ -501,8 +501,9 @@ export default function DashboardPage() {
             }),
           },
           {
-            forceRefresh: isRefreshOp || true, // Always force refresh to bypass cache
-            priority: isRefreshOp ? 2 : 1
+            forceRefresh: true, // Always force refresh to bypass cache
+            priority: isRefreshOp ? 2 : 1,
+            ttl: 0 // Don't cache at all
           }
         )
 
@@ -554,6 +555,15 @@ export default function DashboardPage() {
         const avgCPA = totals.totalConversions > 0 ? totals.totalSpend / totals.totalConversions : 0
 
         setCampaigns(processedCampaignsList)
+        
+        // Debug logging
+        console.log('Dashboard totals:', {
+          totalSpend: totals.totalSpend,
+          campaignCount: processedCampaignsList.length,
+          datePreset: selectedDateRange,
+          timestamp: new Date().toISOString()
+        })
+        
         setOverviewData({
           ...totals,
           overallROAS,
