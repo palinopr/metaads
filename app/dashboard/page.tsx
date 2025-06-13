@@ -414,11 +414,21 @@ export default function DashboardPage() {
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
   const [autoRefresh, setAutoRefresh] = useState(true)
   const [refreshInterval, setRefreshInterval] = useState(300000) // 5 minutes
-  const [selectedDateRange, setSelectedDateRange] = useState("today")
+  const [selectedDateRange, setSelectedDateRange] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('metaads_dateRange') || "today"
+    }
+    return "today"
+  })
   const [expandedCampaigns, setExpandedCampaigns] = useState<string[]>([])
   const [activeTabs, setActiveTabs] = useState<{ [campaignId: string]: string }>({})
 
-  const [campaignStatusFilter, setCampaignStatusFilter] = useState("all")
+  const [campaignStatusFilter, setCampaignStatusFilter] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('metaads_statusFilter') || "all"
+    }
+    return "all"
+  })
   const [sortBy, setSortBy] = useState("created_desc")
   const [tokenExpiredWarning, setTokenExpiredWarning] = useState(false)
 
@@ -463,6 +473,20 @@ export default function DashboardPage() {
     }
     loadCredentials()
   }, [])
+
+  // Persist date range selection
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('metaads_dateRange', selectedDateRange)
+    }
+  }, [selectedDateRange])
+
+  // Persist status filter selection
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('metaads_statusFilter', campaignStatusFilter)
+    }
+  }, [campaignStatusFilter])
 
   // Optimized fetch function using the new API manager
   const fetchOverviewData = useCallback(
