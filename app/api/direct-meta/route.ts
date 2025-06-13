@@ -210,7 +210,8 @@ export async function POST(request: NextRequest) {
       totalCampaigns: campaigns.length,
       totalSpend,
       campaignsWithSpend: campaigns.filter(c => c.spend > 0).length,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      warning: 'Using campaign-level spend, not account-level amount_spent'
     })
     
     return NextResponse.json({
