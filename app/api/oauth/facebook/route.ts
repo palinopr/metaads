@@ -1,14 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { getOAuthConfig } from '@/lib/oauth-config'
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url)
   const action = searchParams.get('action')
 
-  // Access environment variables at runtime
-  const FACEBOOK_APP_ID = process.env.FACEBOOK_APP_ID
-  const FACEBOOK_APP_SECRET = process.env.FACEBOOK_APP_SECRET
-  const APP_URL = process.env.NEXT_PUBLIC_APP_URL || `https://${request.headers.get('host')}`
-  const REDIRECT_URI = `${APP_URL}/api/oauth/facebook/callback`
+  // Get OAuth configuration
+  const config = getOAuthConfig()
+  const { FACEBOOK_APP_ID, APP_URL, REDIRECT_URI } = config
 
   console.log('OAuth Debug:', {
     FACEBOOK_APP_ID: FACEBOOK_APP_ID ? 'Set' : 'Missing',
@@ -19,7 +18,7 @@ export async function GET(request: NextRequest) {
   if (action === 'login') {
     if (!FACEBOOK_APP_ID) {
       return NextResponse.json({ 
-        error: 'Facebook App ID not configured. Please set FACEBOOK_APP_ID environment variable.' 
+        error: 'Facebook App ID not configured.' 
       }, { status: 500 })
     }
 
