@@ -8,6 +8,7 @@ import {
   Area,
   BarChart,
   Bar,
+  ComposedChart,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -93,6 +94,15 @@ export function EnhancedPerformanceCharts({ data, campaignName }: EnhancedPerfor
     current.roas > best.roas ? current : best, processedData[0])
   const worstROASDay = processedData.reduce((worst, current) => 
     current.roas < worst.roas ? current : worst, processedData[0])
+
+  // Debug log to see what data we have
+  console.log('Enhanced Charts - Sample data points:', {
+    totalDataPoints: processedData.length,
+    sampleData: processedData.slice(0, 3),
+    avgROAS,
+    bestROASDay: { date: bestROASDay?.date, roas: bestROASDay?.roas },
+    dataFields: Object.keys(processedData[0] || {})
+  })
 
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
@@ -278,17 +288,30 @@ export function EnhancedPerformanceCharts({ data, campaignName }: EnhancedPerfor
                       day: "numeric",
                     })}
                   />
-                  <YAxis yAxisId="left" stroke="#3B82F6" fontSize={10} />
-                  <YAxis yAxisId="right" orientation="right" stroke="#F59E0B" fontSize={10} />
+                  <YAxis 
+                    yAxisId="left" 
+                    stroke="#3B82F6" 
+                    fontSize={10}
+                    label={{ value: 'CTR (%)', angle: -90, position: 'insideLeft' }}
+                  />
+                  <YAxis 
+                    yAxisId="right" 
+                    orientation="right" 
+                    stroke="#F59E0B" 
+                    fontSize={10}
+                    label={{ value: 'CPC ($)', angle: 90, position: 'insideRight' }}
+                  />
                   <Tooltip content={<CustomTooltip />} />
+                  <Legend />
                   <Line
                     yAxisId="left"
                     type="monotone"
                     dataKey="ctr"
                     stroke="#3B82F6"
                     name="CTR (%)"
-                    strokeWidth={2}
-                    dot={{ r: 3 }}
+                    strokeWidth={3}
+                    dot={{ r: 4, fill: '#3B82F6' }}
+                    connectNulls={false}
                   />
                   <Line
                     yAxisId="right"
@@ -296,8 +319,9 @@ export function EnhancedPerformanceCharts({ data, campaignName }: EnhancedPerfor
                     dataKey="cpc"
                     stroke="#F59E0B"
                     name="CPC ($)"
-                    strokeWidth={2}
-                    dot={{ r: 3 }}
+                    strokeWidth={3}
+                    dot={{ r: 4, fill: '#F59E0B' }}
+                    connectNulls={false}
                   />
                 </LineChart>
               </ResponsiveContainer>
@@ -319,7 +343,7 @@ export function EnhancedPerformanceCharts({ data, campaignName }: EnhancedPerfor
             </CardHeader>
             <CardContent className="h-[300px]">
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={processedData}>
+                <ComposedChart data={processedData}>
                   <CartesianGrid strokeDasharray="3 3" stroke="rgba(107, 114, 128, 0.2)" />
                   <XAxis
                     dataKey="date"
@@ -330,9 +354,21 @@ export function EnhancedPerformanceCharts({ data, campaignName }: EnhancedPerfor
                       day: "numeric",
                     })}
                   />
-                  <YAxis yAxisId="left" stroke="#8B5CF6" fontSize={10} />
-                  <YAxis yAxisId="right" orientation="right" stroke="#06B6D4" fontSize={10} />
+                  <YAxis 
+                    yAxisId="left" 
+                    stroke="#8B5CF6" 
+                    fontSize={10}
+                    label={{ value: 'Conversions', angle: -90, position: 'insideLeft' }}
+                  />
+                  <YAxis 
+                    yAxisId="right" 
+                    orientation="right" 
+                    stroke="#06B6D4" 
+                    fontSize={10}
+                    label={{ value: 'Clicks', angle: 90, position: 'insideRight' }}
+                  />
                   <Tooltip content={<CustomTooltip />} />
+                  <Legend />
                   <Bar
                     yAxisId="left"
                     dataKey="conversions"
@@ -346,9 +382,11 @@ export function EnhancedPerformanceCharts({ data, campaignName }: EnhancedPerfor
                     dataKey="clicks"
                     stroke="#06B6D4"
                     name="Clicks"
-                    strokeWidth={2}
+                    strokeWidth={3}
+                    dot={{ r: 4, fill: '#06B6D4' }}
+                    connectNulls={false}
                   />
-                </BarChart>
+                </ComposedChart>
               </ResponsiveContainer>
             </CardContent>
           </Card>
