@@ -45,6 +45,8 @@ export function CampaignComprehensiveAnalysis({
   const [error, setError] = useState<string | null>(null)
   const [selectedAdset, setSelectedAdset] = useState<string | null>(null)
   const [sortBy, setSortBy] = useState<'spend' | 'roas' | 'conversions'>('spend')
+  const [debuggingAd, setDebuggingAd] = useState<string | null>(null)
+  const [debugData, setDebugData] = useState<any>(null)
 
   useEffect(() => {
     fetchHierarchyData()
@@ -77,6 +79,31 @@ export function CampaignComprehensiveAnalysis({
       setError(err.message || "Failed to load campaign analysis")
     } finally {
       setLoading(false)
+    }
+  }
+
+  const debugAdCreative = async (adId: string) => {
+    setDebuggingAd(adId)
+    setDebugData(null)
+    
+    try {
+      const response = await optimizedApiManager.request<any>(
+        "/api/debug-creative",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            adId,
+            accessToken
+          })
+        },
+        { priority: 3 }
+      )
+      
+      setDebugData(response)
+    } catch (err: any) {
+      console.error("Debug creative error:", err)
+      setDebugData({ error: err.message })
     }
   }
 
@@ -356,6 +383,29 @@ export function CampaignComprehensiveAnalysis({
         </CardContent>
       </Card>
 
+      {/* Caption availability notice */}
+      {data.adsets?.some((adset: any) => 
+        adset.ads?.some((ad: any) => !ad.caption)
+      ) && (
+        <Card className="bg-blue-900/20 border-blue-700/50">
+          <CardContent className="py-4">
+            <div className="flex items-start gap-2">
+              <AlertCircle className="w-4 h-4 text-blue-400 mt-0.5" />
+              <div className="text-xs text-blue-300">
+                <p className="font-medium mb-1">Why are some ad captions not showing?</p>
+                <ul className="space-y-1 text-blue-300/80">
+                  <li>• Dynamic creative ads assemble text at delivery time</li>
+                  <li>• Catalog ads pull product descriptions dynamically</li>
+                  <li>• Some ad formats store text in proprietary fields</li>
+                  <li>• API permissions may limit creative data access</li>
+                </ul>
+                <p className="mt-2">Use the "Debug Creative" button to fetch additional data for specific ads.</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Ad Sets Comparison */}
       <Card className="bg-gray-800/70 border-gray-700">
         <CardHeader>
@@ -439,10 +489,53 @@ export function CampaignComprehensiveAnalysis({
                               </Badge>
                             </div>
                             <div className="mt-2 p-2 bg-gray-800/50 rounded">
-                              <p className="text-xs font-medium text-gray-300 mb-1">Ad Copy:</p>
+                              <div className="flex items-start justify-between mb-1">
+                                <p className="text-xs font-medium text-gray-300">Ad Copy:</p>
+                                {!ad.caption && (
+                                  <button
+                                    onClick={() => debugAdCreative(ad.id)}
+                                    className="text-xs text-blue-400 hover:text-blue-300 flex items-center gap-1"
+                                    disabled={debuggingAd === ad.id}
+                                  >
+                                    {debuggingAd === ad.id ? (
+                                      <>
+                                        <RefreshCw className="w-3 h-3 animate-spin" />
+                                        Checking...
+                                      </>
+                                    ) : (
+                                      <>
+                                        <Eye className="w-3 h-3" />
+                                        Debug Creative
+                                      </>
+                                    )}
+                                  </button>
+                                )}
+                              </div>
                               <p className="text-xs text-gray-400 whitespace-pre-wrap line-clamp-3">
                                 {ad.caption || <span className="italic text-gray-500">No caption available - check ad creative in Meta Ads Manager</span>}
                               </p>
+                              {debuggingAd === ad.id && debugData && (
+                                <div className="mt-2 p-2 bg-gray-900/50 rounded text-xs">
+                                  {debugData.error ? (
+                                    <p className="text-red-400">Error: {debugData.error}</p>
+                                  ) : (
+                                    <>
+                                      {debugData.creativeInfo?.caption && (
+                                        <div className="mb-2">
+                                          <p className="text-green-400 font-medium">Found caption:</p>
+                                          <p className="text-gray-300 mt-1">{debugData.creativeInfo.caption}</p>
+                                        </div>
+                                      )}
+                                      <details className="cursor-pointer">
+                                        <summary className="text-gray-400 hover:text-gray-300">View debug info</summary>
+                                        <pre className="mt-1 text-gray-500 overflow-auto text-xs">
+                                          {JSON.stringify(debugData.creativeInfo?.debug || {}, null, 2)}
+                                        </pre>
+                                      </details>
+                                    </>
+                                  )}
+                                </div>
+                              )}
                             </div>
                           </div>
                           {ad.mediaUrl && (
