@@ -33,10 +33,39 @@ export class OAuthCredentialBridge {
     }
   }
   
+  static async syncToOAuth(credentials: Credentials): Promise<boolean> {
+    try {
+      // Sync credentials from localStorage to OAuth cookies
+      const response = await fetch('/api/oauth/fix-credentials', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          accessToken: credentials.accessToken,
+          adAccountId: credentials.adAccountId
+        })
+      })
+      
+      const data = await response.json()
+      if (data.success) {
+        console.log('Credentials synced to OAuth cookies')
+        return true
+      }
+      
+      return false
+    } catch (error) {
+      console.error('Failed to sync to OAuth:', error)
+      return false
+    }
+  }
+  
   static async checkAndSync(): Promise<Credentials | null> {
     // First try to load from CredentialManager
     const existing = await CredentialManager.load()
     if (existing) {
+      // Also sync to OAuth cookies to ensure consistency
+      await this.syncToOAuth(existing)
       return existing
     }
     
