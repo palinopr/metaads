@@ -142,10 +142,17 @@ export async function POST(request: Request) {
           // Try to get creative data from various sources
           const creative = ad.creative || (ad.adcreatives && ad.adcreatives.data?.[0]) || {}
           
-          // Get caption/text
-          caption = creative.body || creative.title || 
+          // Get caption/text from multiple possible locations
+          caption = creative.body || 
+                   creative.title || 
                    ad.adcreatives?.data?.[0]?.body || 
-                   ad.adcreatives?.data?.[0]?.title || ''
+                   ad.adcreatives?.data?.[0]?.title || 
+                   creative.object_story_spec?.link_data?.message ||
+                   creative.object_story_spec?.link_data?.name ||
+                   creative.object_story_spec?.link_data?.description ||
+                   creative.object_story_spec?.video_data?.message ||
+                   creative.object_story_spec?.video_data?.title ||
+                   ''
           
           // Determine creative type and media URL
           if (creative.video_id || ad.adcreatives?.data?.[0]?.video_id) {
@@ -173,6 +180,17 @@ export async function POST(request: Request) {
             // Default to image if we have spend but can't determine type
             creativeType = 'image'
             wasAssumed = true
+          }
+          
+          // Log caption extraction for debugging
+          if (!caption && adMetrics.spend > 0) {
+            console.log('No caption found for ad:', ad.id, 'name:', ad.name)
+            console.log('Creative structure:', JSON.stringify({
+              hasCreative: !!ad.creative,
+              hasAdcreatives: !!ad.adcreatives,
+              creativeKeys: Object.keys(creative),
+              objectStorySpec: creative.object_story_spec ? Object.keys(creative.object_story_spec) : null
+            }, null, 2))
           }
 
           return {

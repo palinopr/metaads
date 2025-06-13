@@ -20,7 +20,9 @@ import {
   AlertCircle,
   ChevronRight,
   Filter,
-  ArrowUpDown
+  ArrowUpDown,
+  RefreshCw,
+  FileText
 } from "lucide-react"
 import { formatCurrency, formatNumberWithCommas, formatPercentage } from "@/lib/utils"
 import { optimizedApiManager } from "@/lib/api-manager-optimized"
@@ -180,6 +182,39 @@ export function CampaignComprehensiveAnalysis({
         </CardContent>
       </Card>
 
+      {/* Best Performing Ad Copy */}
+      {data.creativeAnalysis?.topPerformingAds?.length > 0 && 
+       data.creativeAnalysis.topPerformingAds[0].caption && (
+        <Card className="bg-gradient-to-r from-green-900/20 to-green-800/20 border-green-700/50">
+          <CardHeader>
+            <CardTitle className="text-lg flex items-center gap-2">
+              <FileText className="w-5 h-5 text-green-400" />
+              Best Converting Ad Copy
+            </CardTitle>
+            <CardDescription>
+              From "{data.creativeAnalysis.topPerformingAds[0].name}" - {data.creativeAnalysis.topPerformingAds[0].roas.toFixed(2)}x ROAS
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="p-4 bg-gray-800/50 rounded-lg border border-green-700/30">
+              <p className="text-sm text-gray-200 whitespace-pre-wrap leading-relaxed">
+                {data.creativeAnalysis.topPerformingAds[0].caption}
+              </p>
+            </div>
+            <div className="mt-3 flex items-center gap-4 text-xs">
+              <span className="text-gray-400">
+                <Target className="w-3 h-3 inline mr-1" />
+                {data.creativeAnalysis.topPerformingAds[0].conversions} conversions
+              </span>
+              <span className="text-gray-400">
+                <DollarSign className="w-3 h-3 inline mr-1" />
+                {formatCurrency(data.creativeAnalysis.topPerformingAds[0].revenue)} revenue
+              </span>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Creative Performance */}
       <Card className="bg-gray-800/70 border-gray-700">
         <CardHeader>
@@ -285,18 +320,33 @@ export function CampaignComprehensiveAnalysis({
               <h4 className="text-sm font-medium mb-3 text-gray-300">Top Performing Ads</h4>
               <div className="space-y-2">
                 {data.creativeAnalysis.topPerformingAds.slice(0, 3).map((ad: any, idx: number) => (
-                  <div key={ad.id} className="flex items-center gap-3 p-3 bg-gray-700/30 rounded-lg">
-                    <span className="text-lg font-bold text-gray-500">#{idx + 1}</span>
-                    <div className="flex-1">
-                      <p className="font-medium text-sm">{ad.name}</p>
-                      <p className="text-xs text-gray-400 truncate">{ad.caption}</p>
-                      <p className="text-xs text-gray-500">in {ad.adsetName}</p>
-                    </div>
-                    <div className="text-right">
-                      <p className={`font-bold ${getPerformanceColor(ad.roas, 'roas')}`}>
-                        {ad.roas.toFixed(2)}x
-                      </p>
-                      <p className="text-xs text-gray-400">{formatCurrency(ad.revenue)}</p>
+                  <div key={ad.id} className="p-3 bg-gray-700/30 rounded-lg">
+                    <div className="flex items-start gap-3">
+                      <span className="text-lg font-bold text-gray-500">#{idx + 1}</span>
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                          <p className="font-medium text-sm">{ad.name}</p>
+                          {ad.creativeType === 'video' ? (
+                            <Video className="w-3 h-3 text-purple-400" />
+                          ) : (
+                            <ImageIcon className="w-3 h-3 text-blue-400" />
+                          )}
+                        </div>
+                        <div className="bg-gray-800/50 p-2 rounded mb-2">
+                          <p className="text-xs font-medium text-gray-300 mb-1">Ad Copy:</p>
+                          <p className="text-xs text-gray-400 whitespace-pre-wrap">
+                            {ad.caption || <span className="italic text-gray-500">No caption available</span>}
+                          </p>
+                        </div>
+                        <p className="text-xs text-gray-500">in {ad.adsetName}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className={`font-bold ${getPerformanceColor(ad.roas, 'roas')}`}>
+                          {ad.roas.toFixed(2)}x
+                        </p>
+                        <p className="text-xs text-gray-400">{formatCurrency(ad.revenue)}</p>
+                        <p className="text-xs text-gray-500">{ad.conversions} conv.</p>
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -388,11 +438,12 @@ export function CampaignComprehensiveAnalysis({
                                 {ad.status}
                               </Badge>
                             </div>
-                            {ad.caption && (
-                              <p className="text-xs text-gray-400 line-clamp-2 mt-1">
-                                "{ad.caption}"
+                            <div className="mt-2 p-2 bg-gray-800/50 rounded">
+                              <p className="text-xs font-medium text-gray-300 mb-1">Ad Copy:</p>
+                              <p className="text-xs text-gray-400 whitespace-pre-wrap line-clamp-3">
+                                {ad.caption || <span className="italic text-gray-500">No caption available - check ad creative in Meta Ads Manager</span>}
                               </p>
-                            )}
+                            </div>
                           </div>
                           {ad.mediaUrl && (
                             <img 
