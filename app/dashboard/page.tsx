@@ -1764,6 +1764,7 @@ export default function DashboardPage() {
                                     campaignId={campaign.id}
                                     campaignName={campaign.name}
                                     accessToken={credentials.accessToken}
+                                    accountId={credentials.adAccountId}
                                     datePreset={selectedDateRange}
                                   />
                                 </Suspense>

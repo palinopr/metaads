@@ -144,7 +144,7 @@ export async function POST(request: Request) {
 
     // Calculate campaign scores based on their adsets and ads
     const scoredCampaigns = Array.from(campaignMap.values()).map(campaign => {
-      const campaignAdsets = scoredAdsets.filter(adset => adset.id.includes(campaign.id))
+      const campaignAdsets = scoredAdsets.filter(adset => adset.campaignId === campaign.id)
       const campaignAds = scoredAds.filter(ad => ad.campaignId === campaign.id)
       
       // Campaign score is the weighted average of its adsets and ads

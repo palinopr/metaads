@@ -6,6 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Progress } from "@/components/ui/progress"
 import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { 
   BarChart3, 
   TrendingUp, 
@@ -31,6 +32,7 @@ interface CampaignAnalysisProps {
   campaignId: string
   campaignName: string
   accessToken: string
+  accountId: string
   datePreset: string
 }
 
@@ -38,6 +40,7 @@ export function CampaignComprehensiveAnalysis({
   campaignId,
   campaignName,
   accessToken,
+  accountId,
   datePreset
 }: CampaignAnalysisProps) {
   const [data, setData] = useState<any>(null)
@@ -47,9 +50,12 @@ export function CampaignComprehensiveAnalysis({
   const [sortBy, setSortBy] = useState<'spend' | 'roas' | 'conversions'>('spend')
   const [debuggingAd, setDebuggingAd] = useState<string | null>(null)
   const [debugData, setDebugData] = useState<any>(null)
+  const [scoreData, setScoreData] = useState<any>(null)
+  const [loadingScore, setLoadingScore] = useState(false)
 
   useEffect(() => {
     fetchHierarchyData()
+    fetchScoreData()
   }, [campaignId, datePreset])
 
   const fetchHierarchyData = async () => {
@@ -79,6 +85,32 @@ export function CampaignComprehensiveAnalysis({
       setError(err.message || "Failed to load campaign analysis")
     } finally {
       setLoading(false)
+    }
+  }
+
+  const fetchScoreData = async () => {
+    setLoadingScore(true)
+    
+    try {
+      const response = await optimizedApiManager.request<any>(
+        "/api/management-score",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            accessToken,
+            accountId,
+            datePreset
+          })
+        },
+        { priority: 3 }
+      )
+      
+      setScoreData(response)
+    } catch (err: any) {
+      console.error("Failed to fetch score data:", err)
+    } finally {
+      setLoadingScore(false)
     }
   }
 
@@ -163,18 +195,79 @@ export function CampaignComprehensiveAnalysis({
     }
   }
 
+  // Helper functions for scoring
+  const getScoreColor = (score: number) => {
+    if (score >= 80) return "text-green-400"
+    if (score >= 60) return "text-blue-400"
+    if (score >= 40) return "text-yellow-400"
+    return "text-red-400"
+  }
+
+  const getScoreBadge = (score: number) => {
+    if (score >= 80) return { text: "Excellent", color: "bg-green-500/20 text-green-300 border-green-500/30" }
+    if (score >= 60) return { text: "Good", color: "bg-blue-500/20 text-blue-300 border-blue-500/30" }
+    if (score >= 40) return { text: "Fair", color: "bg-yellow-500/20 text-yellow-300 border-yellow-500/30" }
+    return { text: "Poor", color: "bg-red-500/20 text-red-300 border-red-500/30" }
+  }
+
+  // Get current campaign score data
+  const currentCampaignScore = scoreData?.campaigns?.find((c: any) => c.id === campaignId)
+  const campaignRank = currentCampaignScore && scoreData?.campaigns ? 
+    scoreData.campaigns.filter((c: any) => c.score > currentCampaignScore.score).length + 1 : null
+
   return (
     <div className="space-y-6">
-      {/* Campaign Overview */}
+      {/* Campaign Score Alert if Underperforming */}
+      {currentCampaignScore && currentCampaignScore.score < 40 && (
+        <Alert className="bg-red-900/20 border-red-700">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Low Performance Score: {currentCampaignScore.score}/100</AlertTitle>
+          <AlertDescription>
+            <div className="mt-2">
+              <p className="mb-2">This campaign ranks #{campaignRank} out of {scoreData.campaigns.length} campaigns and needs immediate attention.</p>
+              {currentCampaignScore.recommendations && currentCampaignScore.recommendations.length > 0 && (
+                <ul className="list-disc list-inside space-y-1">
+                  {currentCampaignScore.recommendations.map((rec: string, idx: number) => (
+                    <li key={idx} className="text-sm">{rec}</li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {/* Campaign Overview with Score */}
       <Card className="bg-gray-800/70 border-gray-700">
         <CardHeader>
-          <CardTitle className="text-lg flex items-center gap-2">
-            <BarChart3 className="w-5 h-5" />
-            Campaign Overview
-          </CardTitle>
-          <CardDescription>
-            Performance across {data.campaign?.adsets || 0} ad sets and {data.campaign?.ads || 0} ads
-          </CardDescription>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="text-lg flex items-center gap-2">
+                <BarChart3 className="w-5 h-5" />
+                Campaign Overview
+              </CardTitle>
+              <CardDescription>
+                Performance across {data.campaign?.adsets || 0} ad sets and {data.campaign?.ads || 0} ads
+              </CardDescription>
+            </div>
+            {currentCampaignScore && (
+              <div className="text-right">
+                <div className="flex items-center gap-2">
+                  <div className={`text-3xl font-bold ${getScoreColor(currentCampaignScore.score)}`}>
+                    {currentCampaignScore.score}
+                  </div>
+                  <div>
+                    <Badge className={`${getScoreBadge(currentCampaignScore.score).color} border`}>
+                      {getScoreBadge(currentCampaignScore.score).text}
+                    </Badge>
+                    <p className="text-xs text-gray-400 mt-1">
+                      Rank #{campaignRank} of {scoreData.campaigns.length}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -406,7 +499,7 @@ export function CampaignComprehensiveAnalysis({
         </CardContent>
       </Card>
 
-      {/* Engagement Analysis by Copy */}
+      {/* Engagement Analysis by Copy with Scores */}
       {(() => {
         // Group ads by caption
         const adsByCopy = new Map()
@@ -417,7 +510,14 @@ export function CampaignComprehensiveAnalysis({
               if (!adsByCopy.has(key)) {
                 adsByCopy.set(key, { caption: ad.caption, ads: [] })
               }
-              adsByCopy.get(key).ads.push({ ...ad, adsetName: adset.name })
+              const adScore = scoreData?.ads?.find((a: any) => a.id === ad.id)
+              adsByCopy.get(key).ads.push({ 
+                ...ad, 
+                adsetName: adset.name,
+                score: adScore?.score || 0,
+                percentileRank: adScore?.percentileRank || 0,
+                comparisonToAverage: adScore?.comparisonToAverage || {}
+              })
             }
           })
         })
@@ -431,10 +531,10 @@ export function CampaignComprehensiveAnalysis({
               <CardHeader>
                 <CardTitle className="text-lg flex items-center gap-2">
                   <MousePointer className="w-5 h-5" />
-                  Engagement Analysis by Copy
+                  Engagement & Score Analysis by Copy
                 </CardTitle>
                 <CardDescription>
-                  Compare how the same copy performs across different creative formats
+                  Compare how the same copy performs across different creative formats with management scores
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -447,7 +547,7 @@ export function CampaignComprehensiveAnalysis({
                         <p className="text-sm text-gray-300 line-clamp-2">{group.caption}</p>
                       </div>
                       <div className="space-y-2">
-                        {group.ads.sort((a: any, b: any) => b.ctr - a.ctr).map((ad: any) => (
+                        {group.ads.sort((a: any, b: any) => b.score - a.score).map((ad: any) => (
                           <div key={ad.id} className="flex items-center justify-between p-2 bg-gray-700/20 rounded">
                             <div className="flex items-center gap-3">
                               {ad.creativeType === 'video' ? (
@@ -458,6 +558,16 @@ export function CampaignComprehensiveAnalysis({
                               <div>
                                 <p className="text-sm font-medium">{ad.name}</p>
                                 <p className="text-xs text-gray-500">in {ad.adsetName}</p>
+                                {ad.score > 0 && (
+                                  <div className="flex items-center gap-2 mt-1">
+                                    <span className={`text-xs font-bold ${getScoreColor(ad.score)}`}>
+                                      Score: {ad.score}
+                                    </span>
+                                    <span className="text-xs text-gray-400">
+                                      Top {ad.percentileRank}%
+                                    </span>
+                                  </div>
+                                )}
                               </div>
                             </div>
                             <div className="grid grid-cols-5 gap-4 text-xs text-right">
@@ -543,21 +653,34 @@ export function CampaignComprehensiveAnalysis({
         <CardContent>
           <Tabs value={selectedAdset || ''} onValueChange={setSelectedAdset}>
             <TabsList className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 h-auto p-1 bg-gray-700/50">
-              {sortedAdsets.map((adset: any) => (
-                <TabsTrigger 
-                  key={adset.id} 
-                  value={adset.id}
-                  className="flex flex-col items-start p-3 h-auto data-[state=active]:bg-gray-600"
-                >
-                  <span className="text-xs font-medium truncate w-full">{adset.name}</span>
-                  <div className="flex items-center gap-2 mt-1">
-                    <span className="text-xs text-gray-400">{formatCurrency(adset.spend)}</span>
-                    <span className={`text-xs ${getPerformanceColor(adset.roas, 'roas')}`}>
-                      {adset.roas.toFixed(1)}x
-                    </span>
-                  </div>
-                </TabsTrigger>
-              ))}
+              {sortedAdsets.map((adset: any) => {
+                const adsetScore = scoreData?.adsets?.find((a: any) => a.id === adset.id)
+                return (
+                  <TabsTrigger 
+                    key={adset.id} 
+                    value={adset.id}
+                    className="flex flex-col items-start p-3 h-auto data-[state=active]:bg-gray-600 relative"
+                  >
+                    {adsetScore && (
+                      <div className={`absolute top-1 right-1 text-xs font-bold ${getScoreColor(adsetScore.score)}`}>
+                        {adsetScore.score}
+                      </div>
+                    )}
+                    <span className="text-xs font-medium truncate w-full pr-6">{adset.name}</span>
+                    <div className="flex items-center gap-2 mt-1">
+                      <span className="text-xs text-gray-400">{formatCurrency(adset.spend)}</span>
+                      <span className={`text-xs ${getPerformanceColor(adset.roas, 'roas')}`}>
+                        {adset.roas.toFixed(1)}x
+                      </span>
+                    </div>
+                    {adsetScore && adsetScore.percentileRank && (
+                      <div className="text-xs text-gray-500 mt-0.5">
+                        Top {adsetScore.percentileRank}%
+                      </div>
+                    )}
+                  </TabsTrigger>
+                )
+              })}
             </TabsList>
 
             {selectedAdsetData && (
@@ -588,9 +711,11 @@ export function CampaignComprehensiveAnalysis({
                 <div>
                   <h4 className="text-sm font-medium mb-3">Ads Performance ({selectedAdsetData.ads?.length || 0} ads)</h4>
                   <div className="space-y-2">
-                    {(selectedAdsetData.ads || []).map((ad: any) => (
-                      <div key={ad.id} className="p-3 bg-gray-700/30 rounded-lg">
-                        <div className="flex items-start justify-between mb-2">
+                    {(selectedAdsetData.ads || []).map((ad: any) => {
+                      const adScore = scoreData?.ads?.find((a: any) => a.id === ad.id)
+                      return (
+                        <div key={ad.id} className="p-3 bg-gray-700/30 rounded-lg">
+                          <div className="flex items-start justify-between mb-2">
                           <div className="flex-1">
                             <div className="flex items-center gap-2 mb-1">
                               {ad.creativeType === 'video' ? (
@@ -605,6 +730,16 @@ export function CampaignComprehensiveAnalysis({
                               >
                                 {ad.status}
                               </Badge>
+                              {adScore && (
+                                <>
+                                  <div className={`text-lg font-bold ${getScoreColor(adScore.score)}`}>
+                                    {adScore.score}
+                                  </div>
+                                  <span className="text-xs text-gray-400">
+                                    #{scoreData.ads.filter((a: any) => a.score > adScore.score).length + 1} of {scoreData.ads.length} ads
+                                  </span>
+                                </>
+                              )}
                             </div>
                             <div className="mt-2 p-2 bg-gray-800/50 rounded">
                               <div className="flex items-start justify-between mb-1">
