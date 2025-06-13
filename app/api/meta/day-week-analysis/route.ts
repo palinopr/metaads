@@ -63,6 +63,10 @@ export async function POST(request: Request) {
       case "last_90d":
         startDate.setDate(endDate.getDate() - 90)
         break
+      case "lifetime":
+        // For lifetime, use a large date range
+        startDate.setFullYear(2014, 0, 1) // Facebook Ads started around 2014
+        break
       case "this_month":
         startDate.setDate(1)
         startDate.setHours(0, 0, 0, 0)
@@ -100,13 +104,32 @@ export async function POST(request: Request) {
         `&time_increment=1` +
         `&limit=1000` +
         `&access_token=${cleanToken}`
-    } else {
-      // For multi-day ranges, use daily data with hourly breakdown
+    } else if (datePreset === 'lifetime') {
+      // For lifetime, use time_range instead of date_preset
       insightsUrl =
         `https://graph.facebook.com/v19.0/${campaignId}/insights?` +
         `fields=spend,impressions,clicks,ctr,actions,action_values` +
         `&breakdowns=hourly_stats_aggregated_by_advertiser_time_zone` +
-        `&date_preset=${datePreset}` +
+        `&time_range=${JSON.stringify(timeRange)}` +
+        `&time_increment=1` +
+        `&limit=5000` +
+        `&access_token=${cleanToken}`
+    } else {
+      // For multi-day ranges, use date_preset with proper mapping
+      const datePresetMap: { [key: string]: string } = {
+        'last_14d': 'last_14_d',
+        'last_28d': 'last_28_d',
+        'last_30d': 'last_30_d',
+        'last_90d': 'last_90_d',
+        'last_7d': 'last_7_d'
+      }
+      const metaDatePreset = datePresetMap[datePreset] || datePreset
+      
+      insightsUrl =
+        `https://graph.facebook.com/v19.0/${campaignId}/insights?` +
+        `fields=spend,impressions,clicks,ctr,actions,action_values` +
+        `&breakdowns=hourly_stats_aggregated_by_advertiser_time_zone` +
+        `&date_preset=${metaDatePreset}` +
         `&time_increment=1` +
         `&limit=5000` +
         `&access_token=${cleanToken}`

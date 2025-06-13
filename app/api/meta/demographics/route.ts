@@ -13,10 +13,7 @@ const extractMetricsFromRow = (row: any) => {
 
   if (row.actions) {
     const purchaseAction = row.actions.find(
-      (a: any) =>
-        a.action_type === "purchase" ||
-        a.action_type === "omni_purchase" ||
-        a.action_type === "offsite_conversion.fb_pixel_purchase",
+      (a: any) => a.action_type === "offsite_conversion.fb_pixel_purchase"
     )
     if (purchaseAction) {
       conversions += Number.parseInt(purchaseAction.value || "0")
@@ -25,10 +22,7 @@ const extractMetricsFromRow = (row: any) => {
 
   if (row.action_values) {
     const purchaseValue = row.action_values.find(
-      (av: any) =>
-        av.action_type === "purchase" ||
-        av.action_type === "omni_purchase" ||
-        av.action_type === "offsite_conversion.fb_pixel_purchase",
+      (av: any) => av.action_type === "offsite_conversion.fb_pixel_purchase"
     )
     if (purchaseValue) {
       revenue += Number.parseFloat(purchaseValue.value || "0")
@@ -52,13 +46,30 @@ async function fetchBreakdownData(
   // Clean the access token to remove Bearer prefix
   const cleanToken = accessToken.replace(/^Bearer\s+/i, '')
   
-  const url =
-    `https://graph.facebook.com/${META_API_VERSION}/${campaignId}/insights?` +
-    `fields=${fields}` +
-    `&breakdowns=${breakdown}` +
-    `&date_preset=${datePreset}` +
-    `&limit=500` + // Increased limit slightly
-    `&access_token=${cleanToken}`
+  // Handle lifetime data - use time_range instead of date_preset
+  let urlParams = `fields=${fields}&breakdowns=${breakdown}&limit=500&access_token=${cleanToken}`
+  
+  if (datePreset === 'lifetime') {
+    // For lifetime, use a very large date range
+    const timeRange = JSON.stringify({
+      since: '2014-01-01',
+      until: new Date().toISOString().split('T')[0]
+    })
+    urlParams += `&time_range=${timeRange}`
+  } else {
+    // Map date presets to Meta API format
+    const datePresetMap: { [key: string]: string } = {
+      'last_14d': 'last_14_d',
+      'last_28d': 'last_28_d',
+      'last_30d': 'last_30_d',
+      'last_90d': 'last_90_d',
+      'last_7d': 'last_7_d'
+    }
+    const metaDatePreset = datePresetMap[datePreset] || datePreset
+    urlParams += `&date_preset=${metaDatePreset}`
+  }
+  
+  const url = `https://graph.facebook.com/${META_API_VERSION}/${campaignId}/insights?${urlParams}`
 
   try {
     const response = await fetch(url)
@@ -91,16 +102,30 @@ export async function POST(request: NextRequest) {
     // 1. Fetch total campaign conversions for accurate percentage calculation
     let totalConversionsAll = 0
     try {
-      const totalStatsUrl = `https://graph.facebook.com/${META_API_VERSION}/${campaignId}/insights?fields=actions&date_preset=${datePreset}&access_token=${cleanToken}`
+      let totalStatsUrl = `https://graph.facebook.com/${META_API_VERSION}/${campaignId}/insights?fields=actions&access_token=${cleanToken}`
+      
+      if (datePreset === 'lifetime') {
+        const timeRange = JSON.stringify({
+          since: '2014-01-01',
+          until: new Date().toISOString().split('T')[0]
+        })
+        totalStatsUrl += `&time_range=${timeRange}`
+      } else {
+        const datePresetMap: { [key: string]: string } = {
+          'last_14d': 'last_14_d',
+          'last_28d': 'last_28_d',
+          'last_30d': 'last_30_d',
+          'last_90d': 'last_90_d',
+          'last_7d': 'last_7_d'
+        }
+        const metaDatePreset = datePresetMap[datePreset] || datePreset
+        totalStatsUrl += `&date_preset=${metaDatePreset}`
+      }
       const totalStatsRes = await fetch(totalStatsUrl)
       const totalStatsData = await totalStatsRes.json()
       if (totalStatsData.data && totalStatsData.data[0] && totalStatsData.data[0].actions) {
         totalStatsData.data[0].actions.forEach((action: any) => {
-          if (
-            action.action_type === "purchase" ||
-            action.action_type === "omni_purchase" ||
-            action.action_type === "offsite_conversion.fb_pixel_purchase"
-          ) {
+          if (action.action_type === "offsite_conversion.fb_pixel_purchase") {
             totalConversionsAll += Number.parseInt(action.value || "0")
           }
         })
