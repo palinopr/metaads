@@ -48,9 +48,10 @@ export async function POST(request: Request) {
     // Process adsets and fetch ads for each
     const processedAdsets = await Promise.all(
       (adsetsData.data || []).map(async (adset: any) => {
-        // Fetch ads for this adset
+        // Fetch ads for this adset with expanded creative fields
         const adsUrl = `https://graph.facebook.com/v19.0/${adset.id}/ads?` +
-          `fields=id,name,status,creative{id,title,body,image_url,video_id,thumbnail_url,object_story_spec},` +
+          `fields=id,name,status,creative{id,title,body,image_url,video_id,thumbnail_url,` +
+          `object_story_spec,asset_feed_spec,effective_object_story_id},adcreatives{id,image_url,video_id,body,title},` +
           `insights.date_preset(${metaDatePreset}){spend,impressions,clicks,ctr,cpc,actions,action_values}` +
           `&limit=100&access_token=${cleanToken}`
         
@@ -133,20 +134,43 @@ export async function POST(request: Request) {
             adMetrics.roas = adMetrics.spend > 0 ? adMetrics.revenue / adMetrics.spend : 0
           }
 
-          // Extract creative info
+          // Extract creative info - check multiple sources
           let creativeType = 'unknown'
           let caption = ''
           let mediaUrl = ''
           
-          if (ad.creative) {
-            caption = ad.creative.body || ad.creative.title || ''
-            if (ad.creative.video_id) {
+          // Try to get creative data from various sources
+          const creative = ad.creative || (ad.adcreatives && ad.adcreatives.data?.[0]) || {}
+          
+          // Get caption/text
+          caption = creative.body || creative.title || 
+                   ad.adcreatives?.data?.[0]?.body || 
+                   ad.adcreatives?.data?.[0]?.title || ''
+          
+          // Determine creative type and media URL
+          if (creative.video_id || ad.adcreatives?.data?.[0]?.video_id) {
+            creativeType = 'video'
+            mediaUrl = creative.thumbnail_url || ad.adcreatives?.data?.[0]?.thumbnail_url || ''
+          } else if (creative.image_url || ad.adcreatives?.data?.[0]?.image_url) {
+            creativeType = 'image'
+            mediaUrl = creative.image_url || ad.adcreatives?.data?.[0]?.image_url || ''
+          } else if (creative.object_story_spec) {
+            // Check object_story_spec for media
+            const storySpec = creative.object_story_spec
+            if (storySpec.video_data) {
               creativeType = 'video'
-              mediaUrl = ad.creative.thumbnail_url || ''
-            } else if (ad.creative.image_url) {
+              mediaUrl = storySpec.video_data.image_url || ''
+            } else if (storySpec.link_data?.image_hash || storySpec.link_data?.picture) {
               creativeType = 'image'
-              mediaUrl = ad.creative.image_url
+              mediaUrl = storySpec.link_data.picture || ''
             }
+          }
+          
+          // Log for debugging and fallback
+          if (creativeType === 'unknown' && adMetrics.spend > 0) {
+            console.log('Unknown creative type for ad:', ad.id, 'creative data:', creative)
+            // Default to image if we have spend but can't determine type
+            creativeType = 'image'
           }
 
           return {
@@ -214,14 +238,21 @@ export async function POST(request: Request) {
       topPerformingAds: [] as any[]
     }
 
+    let totalAdsProcessed = 0
     processedAdsets.forEach(adset => {
       adset.ads.forEach(ad => {
+        totalAdsProcessed++
         const type = ad.creativeType as 'image' | 'video' | 'unknown'
         creativeAnalysis.byType[type].count++
         creativeAnalysis.byType[type].spend += ad.spend
         creativeAnalysis.byType[type].conversions += ad.conversions
         creativeAnalysis.byType[type].revenue += ad.revenue
       })
+    })
+    
+    console.log('Creative analysis summary:', {
+      totalAds: totalAdsProcessed,
+      byType: creativeAnalysis.byType
     })
 
     // Get top performing ads
