@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { safeToFixed } from "@/lib/safe-utils"
 import { formatAccessToken } from "@/lib/meta-api-client"
+import { railwayFetch } from "@/lib/railway-fetch-fix"
 
 interface HourlyInsight {
   spend?: string
@@ -44,7 +45,7 @@ export async function POST(request: Request) {
     if (datePreset === 'lifetime') {
       try {
         const campaignUrl = `https://graph.facebook.com/v19.0/${campaignId}?fields=created_time&access_token=${cleanToken}`
-        const campaignRes = await fetch(campaignUrl)
+        const campaignRes = await railwayFetch(campaignUrl)
         const campaignData = await campaignRes.json()
         if (campaignData.created_time) {
           campaignStartDate = new Date(campaignData.created_time)
@@ -174,7 +175,7 @@ export async function POST(request: Request) {
     console.log('Day/Week Analysis URL (without token):', insightsUrl.split('&access_token=')[0])
     console.log('Time range:', timeRange)
     
-    const response = await fetch(insightsUrl)
+    const response = await railwayFetch(insightsUrl)
     const apiResponseData = await response.json()
 
     if (apiResponseData.error) {

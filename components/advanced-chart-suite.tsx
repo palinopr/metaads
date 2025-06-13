@@ -35,7 +35,7 @@ import {
   Settings, 
   TrendingUp, 
   BarChart3, 
-  Scatter3D, 
+  Scatter, 
   PieChart,
   Filter,
   Maximize2,
@@ -116,30 +116,24 @@ const formatTooltipValue = (value: any, name: string) => {
   return [value, name];
 };
 
-const downloadChart = (chartRef: React.RefObject<HTMLDivElement>, filename: string, format: string) => {
+const downloadChart = async (chartRef: React.RefObject<HTMLDivElement>, filename: string, format: string) => {
   if (!chartRef.current) return;
 
-  if (format === 'png' || format === 'jpg') {
-    import('html2canvas').then((html2canvas) => {
-      html2canvas.default(chartRef.current!).then((canvas) => {
-        const link = document.createElement('a');
-        link.download = `${filename}.${format}`;
-        link.href = canvas.toDataURL(`image/${format}`);
-        link.click();
-      });
+  try {
+    // Use the chart export utility to handle exports safely
+    const { exportChart } = await import('@/lib/chart-export-utils');
+    const success = await exportChart(chartRef.current, {
+      format: format as 'png' | 'jpg' | 'svg',
+      filename,
+      quality: 0.9
     });
-  } else if (format === 'svg') {
-    const svgElement = chartRef.current.querySelector('svg');
-    if (svgElement) {
-      const svgData = new XMLSerializer().serializeToString(svgElement);
-      const blob = new Blob([svgData], { type: 'image/svg+xml' });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.download = `${filename}.svg`;
-      link.href = url;
-      link.click();
-      URL.revokeObjectURL(url);
+    
+    if (!success) {
+      alert('Failed to export chart. Please try a different format.');
     }
+  } catch (error) {
+    console.error('Export failed:', error);
+    alert('Export functionality is currently unavailable.');
   }
 };
 
@@ -424,7 +418,7 @@ export const AdvancedChartSuite: React.FC<AdvancedChartSuiteProps> = ({
       case 'stacked-bar':
         return <BarChart3 className="h-4 w-4" />;
       case 'scatter':
-        return <Scatter3D className="h-4 w-4" />;
+        return <Scatter className="h-4 w-4" />;
       case 'funnel':
       case 'heatmap':
         return <PieChart className="h-4 w-4" />;
