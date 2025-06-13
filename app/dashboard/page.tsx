@@ -50,6 +50,7 @@ import { EnhancedPerformanceCharts } from "@/components/enhanced-performance-cha
 import { CampaignComprehensiveAnalysis } from "@/components/campaign-comprehensive-analysis"
 import { AccountManagementScore } from "@/components/account-management-score"
 import { CampaignComparisonTool } from "@/components/campaign-comparison-tool"
+import { AIPDFExport } from "@/components/ai-pdf-export"
 
 // Lazy load heavy components
 const DateRangeSelector = dynamicImport(() => 
@@ -1228,6 +1229,12 @@ export default function DashboardPage() {
                   Token Manager
                 </Button>
               </Link>
+              <Link href="/settings/ai" passHref>
+                <Button variant="outline" className="flex items-center gap-2 text-xs border-gray-700 hover:bg-gray-800">
+                  <Sparkles className="w-3 h-3 md:w-4 md:h-4" />
+                  AI Settings
+                </Button>
+              </Link>
               <Link href="/pattern-analysis" passHref>
                 <Button variant="outline" className="flex items-center gap-2 text-xs border-gray-700 hover:bg-gray-800">
                   <Brain className="w-3 h-3 md:w-4 md:h-4" />
@@ -1250,6 +1257,28 @@ export default function DashboardPage() {
                 <Filter className="w-3 h-3 md:w-4 md:h-4" />
                 Compare Campaigns
               </Button>
+              {credentialsSubmitted && campaigns.length > 0 && (
+                <AIPDFExport
+                  campaigns={campaigns.map(campaign => ({
+                    id: campaign.id,
+                    name: campaign.name,
+                    status: campaign.status,
+                    spend: campaign.spend || 0,
+                    revenue: campaign.revenue || 0,
+                    roas: campaign.roas || 0,
+                    conversions: campaign.conversions || 0,
+                    impressions: campaign.impressions || 0,
+                    clicks: campaign.clicks || 0,
+                    ctr: campaign.ctr || 0,
+                    cpc: campaign.cpc || 0,
+                    cpa: campaign.cpa || 0
+                  }))}
+                  accessToken={credentials.accessToken}
+                  adAccountId={credentials.adAccountId}
+                  datePreset={selectedDateRange}
+                  overviewData={overviewData}
+                />
+              )}
               <Button
                 variant={showComprehensiveView ? "default" : "outline"}
                 className="flex items-center gap-2 text-xs border-gray-700 hover:bg-gray-800"
