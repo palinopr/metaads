@@ -10,9 +10,14 @@ export class OAuthCredentialBridge {
       
       if (data.authenticated && data.token && data.selectedAccount) {
         // Save OAuth credentials to CredentialManager format
+        // Ensure account ID has proper format
+        const accountId = data.selectedAccount.startsWith('act_') 
+          ? data.selectedAccount 
+          : `act_${data.selectedAccount}`
+          
         const credentials: Credentials = {
           accessToken: data.token,
-          adAccountId: data.selectedAccount
+          adAccountId: accountId
         }
         
         // Save to CredentialManager (which the dashboard uses)

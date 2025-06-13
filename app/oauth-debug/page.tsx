@@ -86,6 +86,26 @@ export default function OAuthDebugPage() {
     }
   }
 
+  const testMetaAPI = async () => {
+    setLoading(true)
+    try {
+      // Test with OAuth credentials
+      const response = await fetch('/api/oauth/test-meta', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ useOAuth: true })
+      })
+      
+      const data = await response.json()
+      alert(JSON.stringify(data, null, 2))
+    } catch (error: any) {
+      alert('Test failed: ' + error.message)
+    }
+    setLoading(false)
+  }
+
   return (
     <div className="min-h-screen bg-gray-900 p-4">
       <div className="max-w-4xl mx-auto space-y-6">
@@ -122,6 +142,9 @@ export default function OAuthDebugPage() {
                 </Button>
                 <Button onClick={clearAllData} variant="destructive">
                   Clear All Data
+                </Button>
+                <Button onClick={testMetaAPI} disabled={loading} variant="secondary">
+                  Test Meta API
                 </Button>
               </div>
             </CardContent>
