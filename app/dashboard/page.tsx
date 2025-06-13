@@ -52,7 +52,7 @@ import { AccountManagementScore } from "@/components/account-management-score"
 import { CampaignComparisonTool } from "@/components/campaign-comparison-tool"
 import { AIPDFExport } from "@/components/ai-pdf-export"
 import { CampaignOptimizer } from "@/components/campaign-optimizer"
-import { SingleCampaignOptimizer } from "@/components/single-campaign-optimizer"
+import { DailyBudgetOptimizer } from "@/components/daily-budget-optimizer"
 
 // Lazy load heavy components
 const DateRangeSelector = dynamicImport(() => 
@@ -2107,14 +2107,19 @@ export default function DashboardPage() {
                                 </Card>
                               </TabsContent>
                               <TabsContent value="optimizer">
-                                <SingleCampaignOptimizer
+                                <DailyBudgetOptimizer
                                   campaign={{
                                     ...campaign,
-                                    frequency: campaign.processedInsights?.frequency || 0
+                                    frequency: campaign.processedInsights?.frequency || 0,
+                                    todaySpend: campaign.expandedData?.todayPerformance?.spend || campaign.spend * 0.04, // Estimate if no today data
+                                    todayRevenue: campaign.expandedData?.todayPerformance?.revenue || campaign.revenue * 0.04,
+                                    todayROAS: campaign.expandedData?.todayPerformance?.roas || campaign.roas,
+                                    todayConversions: campaign.expandedData?.todayPerformance?.conversions || campaign.conversions * 0.04,
+                                    todayImpressions: campaign.expandedData?.todayPerformance?.impressions || campaign.impressions * 0.04,
+                                    todayCTR: campaign.expandedData?.todayPerformance?.ctr || campaign.ctr
                                   }}
                                   accountAvgROAS={overviewData.overallROAS}
-                                  accountAvgCPA={overviewData.totalSpend / (overviewData.totalConversions || 1)}
-                                  totalAccountBudget={campaigns.reduce((sum, c) => sum + (c.daily_budget || c.lifetime_budget || 0), 0)}
+                                  currentHour={new Date().getHours()}
                                 />
                               </TabsContent>
                             </Tabs>
