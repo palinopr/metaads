@@ -501,7 +501,7 @@ export default function DashboardPage() {
             }),
           },
           {
-            forceRefresh: isRefreshOp,
+            forceRefresh: isRefreshOp || true, // Always force refresh to bypass cache
             priority: isRefreshOp ? 2 : 1
           }
         )

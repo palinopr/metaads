@@ -6,6 +6,12 @@ const META_API_BASE = 'https://graph.facebook.com/v19.0'
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
+    const { datePreset = 'last_7d' } = body
+    
+    console.log('Direct Meta API Request:', {
+      datePreset,
+      body: { ...body, accessToken: body.accessToken ? '***' : undefined }
+    })
     
     // Get credentials from body or cookies
     let accessToken = body.accessToken
@@ -28,11 +34,17 @@ export async function POST(request: NextRequest) {
     const campaignsUrl = `${META_API_BASE}/${adAccountId}/campaigns`
     const params = new URLSearchParams({
       access_token: accessToken,
-      fields: 'id,name,status,effective_status,objective,created_time,updated_time,daily_budget,lifetime_budget,insights.date_preset(last_7d){spend,impressions,clicks,ctr,cpc,actions,action_values,conversions,cost_per_conversion,frequency,reach}',
+      fields: `id,name,status,effective_status,objective,created_time,updated_time,daily_budget,lifetime_budget,insights.date_preset(${datePreset}){spend,impressions,clicks,ctr,cpc,actions,action_values,conversions,cost_per_conversion,frequency,reach}`,
       limit: '100'
     })
     
-    console.log('Direct Meta API call to:', campaignsUrl)
+    console.log('Direct Meta API call:', {
+      url: campaignsUrl,
+      datePreset,
+      fieldsPreset: `insights.date_preset(${datePreset})`,
+      adAccountId,
+      timestamp: new Date().toISOString()
+    })
     
     const response = await fetch(`${campaignsUrl}?${params}`)
     const data = await response.json()
@@ -45,6 +57,17 @@ export async function POST(request: NextRequest) {
         success: false
       }, { status: response.status })
     }
+    
+    // Log the response for debugging
+    console.log('Meta API response:', {
+      datePreset,
+      campaignCount: data.data?.length || 0,
+      firstCampaign: data.data?.[0] ? {
+        name: data.data[0].name,
+        hasInsights: !!data.data[0].insights,
+        insightData: data.data[0].insights?.data?.[0]
+      } : null
+    })
     
     // Process campaigns
     const campaigns = (data.data || []).map((campaign: any) => {
@@ -92,12 +115,25 @@ export async function POST(request: NextRequest) {
       }
     })
     
+    // Calculate total spend for debugging
+    const totalSpend = campaigns.reduce((sum, c) => sum + c.spend, 0)
+    
+    console.log('Direct Meta API summary:', {
+      datePreset,
+      totalCampaigns: campaigns.length,
+      totalSpend,
+      campaignsWithSpend: campaigns.filter(c => c.spend > 0).length,
+      timestamp: new Date().toISOString()
+    })
+    
     return NextResponse.json({
       campaigns,
       success: true,
       debug: {
         campaignCount: campaigns.length,
-        rawDataLength: data.data?.length || 0
+        rawDataLength: data.data?.length || 0,
+        datePreset,
+        totalSpend
       }
     })
     
