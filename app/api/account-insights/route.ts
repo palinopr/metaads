@@ -88,19 +88,11 @@ export async function POST(request: NextRequest) {
           hasActionValues: !!insight.action_values
         })
         
-        // Calculate conversions and revenue - include ALL purchase types
+        // Calculate conversions and revenue - match Meta UI by using primary conversion
         if (insight.actions) {
           insight.actions.forEach((action: any) => {
-            // Include all purchase-related actions
-            if ([
-              'purchase',
-              'omni_purchase', 
-              'offsite_conversion.fb_pixel_purchase',
-              'web_in_store_purchase',
-              'onsite_web_purchase',
-              'onsite_web_app_purchase',
-              'web_app_in_store_purchase'
-            ].includes(action.action_type)) {
+            // Meta UI typically shows only the primary pixel purchase conversion
+            if (action.action_type === 'offsite_conversion.fb_pixel_purchase') {
               conversions += parseInt(action.value || '0')
             }
           })
@@ -108,16 +100,8 @@ export async function POST(request: NextRequest) {
         
         if (insight.action_values) {
           insight.action_values.forEach((actionValue: any) => {
-            // Include all purchase-related action values
-            if ([
-              'purchase',
-              'omni_purchase',
-              'offsite_conversion.fb_pixel_purchase',
-              'web_in_store_purchase',
-              'onsite_web_purchase',
-              'onsite_web_app_purchase',
-              'web_app_in_store_purchase'
-            ].includes(actionValue.action_type)) {
+            // Match Meta UI - only count primary pixel purchase revenue
+            if (actionValue.action_type === 'offsite_conversion.fb_pixel_purchase') {
               revenue += parseFloat(actionValue.value || '0')
             }
           })
@@ -160,7 +144,7 @@ export async function POST(request: NextRequest) {
             
             if (insight.actions) {
               insight.actions.forEach((action: any) => {
-                if (['purchase', 'omni_purchase', 'offsite_conversion.fb_pixel_purchase'].includes(action.action_type)) {
+                if (action.action_type === 'offsite_conversion.fb_pixel_purchase') {
                   conversions += parseInt(action.value || '0')
                 }
               })
@@ -168,7 +152,7 @@ export async function POST(request: NextRequest) {
             
             if (insight.action_values) {
               insight.action_values.forEach((actionValue: any) => {
-                if (['purchase', 'omni_purchase', 'offsite_conversion.fb_pixel_purchase'].includes(actionValue.action_type)) {
+                if (actionValue.action_type === 'offsite_conversion.fb_pixel_purchase') {
                   revenue += parseFloat(actionValue.value || '0')
                 }
               })
@@ -210,18 +194,10 @@ export async function POST(request: NextRequest) {
                     impressions += parseInt(insight.impressions || '0')
                     clicks += parseInt(insight.clicks || '0')
                     
-                    // Calculate conversions and revenue - include ALL purchase types
+                    // Calculate conversions and revenue - match Meta UI
                     if (insight.actions) {
                       insight.actions.forEach((action: any) => {
-                        if ([
-                          'purchase',
-                          'omni_purchase', 
-                          'offsite_conversion.fb_pixel_purchase',
-                          'web_in_store_purchase',
-                          'onsite_web_purchase',
-                          'onsite_web_app_purchase',
-                          'web_app_in_store_purchase'
-                        ].includes(action.action_type)) {
+                        if (action.action_type === 'offsite_conversion.fb_pixel_purchase') {
                           conversions += parseInt(action.value || '0')
                         }
                       })
@@ -229,15 +205,7 @@ export async function POST(request: NextRequest) {
                     
                     if (insight.action_values) {
                       insight.action_values.forEach((actionValue: any) => {
-                        if ([
-                          'purchase',
-                          'omni_purchase',
-                          'offsite_conversion.fb_pixel_purchase',
-                          'web_in_store_purchase',
-                          'onsite_web_purchase',
-                          'onsite_web_app_purchase',
-                          'web_app_in_store_purchase'
-                        ].includes(actionValue.action_type)) {
+                        if (actionValue.action_type === 'offsite_conversion.fb_pixel_purchase') {
                           revenue += parseFloat(actionValue.value || '0')
                         }
                       })
@@ -324,19 +292,11 @@ export async function POST(request: NextRequest) {
         impressions = parseInt(insight.impressions || '0')
         clicks = parseInt(insight.clicks || '0')
         
-        // Calculate conversions and revenue - include ALL purchase types
+        // Calculate conversions and revenue - match Meta UI by using primary conversion
         if (insight.actions) {
           insight.actions.forEach((action: any) => {
-            // Include all purchase-related actions
-            if ([
-              'purchase',
-              'omni_purchase', 
-              'offsite_conversion.fb_pixel_purchase',
-              'web_in_store_purchase',
-              'onsite_web_purchase',
-              'onsite_web_app_purchase',
-              'web_app_in_store_purchase'
-            ].includes(action.action_type)) {
+            // Meta UI typically shows only the primary pixel purchase conversion
+            if (action.action_type === 'offsite_conversion.fb_pixel_purchase') {
               conversions += parseInt(action.value || '0')
             }
           })
@@ -344,16 +304,8 @@ export async function POST(request: NextRequest) {
         
         if (insight.action_values) {
           insight.action_values.forEach((actionValue: any) => {
-            // Include all purchase-related action values
-            if ([
-              'purchase',
-              'omni_purchase',
-              'offsite_conversion.fb_pixel_purchase',
-              'web_in_store_purchase',
-              'onsite_web_purchase',
-              'onsite_web_app_purchase',
-              'web_app_in_store_purchase'
-            ].includes(actionValue.action_type)) {
+            // Match Meta UI - only count primary pixel purchase revenue
+            if (actionValue.action_type === 'offsite_conversion.fb_pixel_purchase') {
               revenue += parseFloat(actionValue.value || '0')
             }
           })
