@@ -485,75 +485,49 @@ export default function DashboardPage() {
       setFetchError(null)
 
       try {
-        // For lifetime, use account-level data; for other ranges use campaign data
-        const useAccountLevel = selectedDateRange === 'lifetime'
-        
-        let data
-        if (useAccountLevel) {
-          // Get account-level insights for lifetime
-          const accountData = await optimizedApiManager.request<any>(
-            "/api/account-insights",
-            {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                datePreset: selectedDateRange,
-                accessToken: credentials.accessToken,
-                adAccountId: credentials.adAccountId,
-              }),
-            },
-            {
-              forceRefresh: true,
-              priority: isRefreshOp ? 2 : 1,
-              ttl: 0
-            }
-          )
-          
-          // Also get campaigns for display
-          const campaignData = await optimizedApiManager.request<any>(
-            "/api/direct-meta",
-            {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                type: "overview",
-                datePreset: selectedDateRange,
-                accessToken: credentials.accessToken,
-                adAccountId: credentials.adAccountId,
-              }),
-            },
-            {
-              forceRefresh: true,
-              priority: isRefreshOp ? 2 : 1,
-              ttl: 0
-            }
-          )
-          
-          data = campaignData
-          // Override totals with account-level data
-          if (accountData.success && accountData.metrics) {
-            data.accountMetrics = accountData.metrics
+        // Always get account-level insights for accurate metrics (matches Meta UI)
+        const accountData = await optimizedApiManager.request<any>(
+          "/api/account-insights",
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              datePreset: selectedDateRange,
+              accessToken: credentials.accessToken,
+              adAccountId: credentials.adAccountId,
+            }),
+          },
+          {
+            forceRefresh: true,
+            priority: isRefreshOp ? 2 : 1,
+            ttl: 0
           }
-        } else {
-          // Use campaign-level data for other date ranges
-          data = await optimizedApiManager.request<any>(
-            "/api/direct-meta",
-            {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                type: "overview",
-                datePreset: selectedDateRange,
-                accessToken: credentials.accessToken,
-                adAccountId: credentials.adAccountId,
-              }),
-            },
-            {
-              forceRefresh: true,
-              priority: isRefreshOp ? 2 : 1,
-              ttl: 0
-            }
-          )
+        )
+        
+        // Also get campaigns for display
+        const campaignData = await optimizedApiManager.request<any>(
+          "/api/direct-meta",
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              type: "overview",
+              datePreset: selectedDateRange,
+              accessToken: credentials.accessToken,
+              adAccountId: credentials.adAccountId,
+            }),
+          },
+          {
+            forceRefresh: true,
+            priority: isRefreshOp ? 2 : 1,
+            ttl: 0
+          }
+        )
+        
+        let data = campaignData
+        // Override totals with account-level data for accurate metrics
+        if (accountData.success && accountData.metrics) {
+          data.accountMetrics = accountData.metrics
         }
 
         const fetchedCampaigns: Campaign[] = data.campaigns || []
@@ -598,8 +572,8 @@ export default function DashboardPage() {
           return { ...campaign, processedInsights: insights }
         })
 
-        // Use account-level metrics for lifetime if available
-        if (data.accountMetrics && selectedDateRange === 'lifetime') {
+        // Always use account-level metrics if available for accurate totals
+        if (data.accountMetrics) {
           const accountMetrics = data.accountMetrics
           console.log('Account metrics received:', accountMetrics)
           console.log('Before override - totals:', { ...totals })
@@ -611,7 +585,7 @@ export default function DashboardPage() {
           totals.totalClicks = accountMetrics.clicks
           
           console.log('After override - totals:', { ...totals })
-          console.log('Using account-level metrics for lifetime:', accountMetrics)
+          console.log('Using account-level metrics for', selectedDateRange, ':', accountMetrics)
         }
         
         const overallROAS = totals.totalSpend > 0 ? totals.totalRevenue / totals.totalSpend : 0
