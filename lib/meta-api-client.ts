@@ -120,7 +120,9 @@ export class MetaAPIClient {
         // Use our proxy API route
         // Use main API endpoint (security middleware disabled)
         const apiUrl = typeof window === 'undefined' 
-          ? `http://localhost:${process.env.PORT || 3000}/api/meta`
+          ? (process.env.RAILWAY_ENVIRONMENT 
+              ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN || 'metaads-production.up.railway.app'}/api/meta`
+              : `http://localhost:${process.env.PORT || 3000}/api/meta`)
           : '/api/meta'
           
         const response = await railwayFetch(apiUrl, {
