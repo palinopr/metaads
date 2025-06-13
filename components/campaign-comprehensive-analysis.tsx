@@ -375,6 +375,29 @@ export function CampaignComprehensiveAnalysis({
                         <p className="text-xs text-gray-500">{ad.conversions} conv.</p>
                       </div>
                     </div>
+                    {/* Engagement stats for top ads */}
+                    <div className="mt-2 pt-2 border-t border-gray-700/50 grid grid-cols-4 gap-2 text-xs">
+                      <div>
+                        <span className="text-gray-500">Impressions</span>
+                        <p className="text-gray-300">{formatNumberWithCommas(ad.impressions || 0)}</p>
+                      </div>
+                      <div>
+                        <span className="text-gray-500">Clicks</span>
+                        <p className="text-gray-300">{formatNumberWithCommas(ad.clicks || 0)}</p>
+                      </div>
+                      <div>
+                        <span className="text-gray-500">CTR</span>
+                        <p className={`${getPerformanceColor(ad.ctr || 0, 'ctr')}`}>
+                          {(ad.ctr || 0).toFixed(2)}%
+                        </p>
+                      </div>
+                      <div>
+                        <span className="text-gray-500">CPC</span>
+                        <p className={`${getPerformanceColor(ad.cpc || 0, 'cpc')}`}>
+                          {formatCurrency(ad.cpc || 0)}
+                        </p>
+                      </div>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -382,6 +405,101 @@ export function CampaignComprehensiveAnalysis({
           )}
         </CardContent>
       </Card>
+
+      {/* Engagement Analysis by Copy */}
+      {(() => {
+        // Group ads by caption
+        const adsByCopy = new Map()
+        data.adsets?.forEach((adset: any) => {
+          adset.ads?.forEach((ad: any) => {
+            if (ad.caption) {
+              const key = ad.caption.substring(0, 50) // Use first 50 chars as key
+              if (!adsByCopy.has(key)) {
+                adsByCopy.set(key, { caption: ad.caption, ads: [] })
+              }
+              adsByCopy.get(key).ads.push({ ...ad, adsetName: adset.name })
+            }
+          })
+        })
+
+        // Only show if there are ads with the same copy
+        const hasMultipleAdsPerCopy = Array.from(adsByCopy.values()).some(group => group.ads.length > 1)
+        
+        if (hasMultipleAdsPerCopy) {
+          return (
+            <Card className="bg-gray-800/70 border-gray-700">
+              <CardHeader>
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <MousePointer className="w-5 h-5" />
+                  Engagement Analysis by Copy
+                </CardTitle>
+                <CardDescription>
+                  Compare how the same copy performs across different creative formats
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {Array.from(adsByCopy.entries()).map(([key, group]) => {
+                  if (group.ads.length <= 1) return null
+                  
+                  return (
+                    <div key={key} className="mb-6 last:mb-0">
+                      <div className="mb-3 p-3 bg-gray-700/30 rounded">
+                        <p className="text-sm text-gray-300 line-clamp-2">{group.caption}</p>
+                      </div>
+                      <div className="space-y-2">
+                        {group.ads.sort((a: any, b: any) => b.ctr - a.ctr).map((ad: any) => (
+                          <div key={ad.id} className="flex items-center justify-between p-2 bg-gray-700/20 rounded">
+                            <div className="flex items-center gap-3">
+                              {ad.creativeType === 'video' ? (
+                                <Video className="w-4 h-4 text-purple-400" />
+                              ) : (
+                                <ImageIcon className="w-4 h-4 text-blue-400" />
+                              )}
+                              <div>
+                                <p className="text-sm font-medium">{ad.name}</p>
+                                <p className="text-xs text-gray-500">in {ad.adsetName}</p>
+                              </div>
+                            </div>
+                            <div className="grid grid-cols-5 gap-4 text-xs text-right">
+                              <div>
+                                <p className="text-gray-500">Impr.</p>
+                                <p className="font-medium">{formatNumberWithCommas(ad.impressions || 0)}</p>
+                              </div>
+                              <div>
+                                <p className="text-gray-500">Clicks</p>
+                                <p className="font-medium">{formatNumberWithCommas(ad.clicks || 0)}</p>
+                              </div>
+                              <div>
+                                <p className="text-gray-500">CTR</p>
+                                <p className={`font-medium ${getPerformanceColor(ad.ctr || 0, 'ctr')}`}>
+                                  {(ad.ctr || 0).toFixed(2)}%
+                                </p>
+                              </div>
+                              <div>
+                                <p className="text-gray-500">CPC</p>
+                                <p className={`font-medium ${getPerformanceColor(ad.cpc || 0, 'cpc')}`}>
+                                  {formatCurrency(ad.cpc || 0)}
+                                </p>
+                              </div>
+                              <div>
+                                <p className="text-gray-500">ROAS</p>
+                                <p className={`font-medium ${getPerformanceColor(ad.roas, 'roas')}`}>
+                                  {ad.roas.toFixed(2)}x
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )
+                })}
+              </CardContent>
+            </Card>
+          )
+        }
+        return null
+      })()}
 
       {/* Caption availability notice */}
       {data.adsets?.some((adset: any) => 
@@ -547,7 +665,8 @@ export function CampaignComprehensiveAnalysis({
                           )}
                         </div>
                         
-                        <div className="grid grid-cols-4 gap-2 text-xs">
+                        {/* Financial metrics */}
+                        <div className="grid grid-cols-4 gap-2 text-xs mb-2">
                           <div>
                             <span className="text-gray-500">Spend</span>
                             <p className="font-medium">{formatCurrency(ad.spend)}</p>
@@ -564,6 +683,30 @@ export function CampaignComprehensiveAnalysis({
                             <span className="text-gray-500">ROAS</span>
                             <p className={`font-medium ${getPerformanceColor(ad.roas, 'roas')}`}>
                               {ad.roas.toFixed(2)}x
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* Engagement metrics */}
+                        <div className="grid grid-cols-4 gap-2 text-xs p-2 bg-gray-800/30 rounded">
+                          <div>
+                            <span className="text-gray-500">Impressions</span>
+                            <p className="font-medium">{formatNumberWithCommas(ad.impressions || 0)}</p>
+                          </div>
+                          <div>
+                            <span className="text-gray-500">Clicks</span>
+                            <p className="font-medium">{formatNumberWithCommas(ad.clicks || 0)}</p>
+                          </div>
+                          <div>
+                            <span className="text-gray-500">CTR</span>
+                            <p className={`font-medium ${getPerformanceColor(ad.ctr || 0, 'ctr')}`}>
+                              {(ad.ctr || 0).toFixed(2)}%
+                            </p>
+                          </div>
+                          <div>
+                            <span className="text-gray-500">CPC</span>
+                            <p className={`font-medium ${getPerformanceColor(ad.cpc || 0, 'cpc')}`}>
+                              {formatCurrency(ad.cpc || 0)}
                             </p>
                           </div>
                         </div>
