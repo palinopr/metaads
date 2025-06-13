@@ -6,6 +6,7 @@ export async function GET(request: NextRequest) {
     const cookieStore = cookies()
     const accessToken = cookieStore.get('fb_access_token')?.value
     const adAccounts = cookieStore.get('fb_ad_accounts')?.value
+    const selectedAccount = cookieStore.get('fb_selected_account')?.value
 
     if (!accessToken) {
       return NextResponse.json({ 
@@ -33,6 +34,7 @@ export async function GET(request: NextRequest) {
       authenticated: true,
       user: userData,
       adAccounts: parsedAdAccounts,
+      selectedAccount: selectedAccount,
       token: accessToken // Only return for authenticated requests
     })
   } catch (error) {

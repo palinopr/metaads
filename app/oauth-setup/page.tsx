@@ -25,9 +25,40 @@ export default function OAuthSetupPage() {
     }
   }
 
-  const handleAccountSelect = (accountId: string) => {
+  const handleAccountSelect = async (accountId: string) => {
     setSelectedAccount(accountId)
-    setShowDashboard(true)
+    
+    try {
+      // Use API to set the account
+      const response = await fetch('/api/oauth/set-account', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ accountId })
+      })
+      
+      const data = await response.json()
+      
+      if (data.success) {
+        // Also store in localStorage as backup
+        if (typeof window !== 'undefined' && oauthData?.token) {
+          const credentials = {
+            accessToken: oauthData.token,
+            adAccountId: accountId
+          }
+          localStorage.setItem('metaAdsCredentials', JSON.stringify(credentials))
+        }
+        
+        // Redirect to dashboard
+        window.location.href = data.redirectUrl || '/dashboard'
+      } else {
+        alert('Error: ' + (data.error || 'Failed to select account'))
+      }
+    } catch (error) {
+      console.error('Error selecting account:', error)
+      alert('Failed to select account. Please try again.')
+    }
   }
 
   if (showDashboard && oauthData && selectedAccount) {
