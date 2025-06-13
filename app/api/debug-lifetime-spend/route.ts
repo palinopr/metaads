@@ -99,8 +99,12 @@ export async function GET(request: NextRequest) {
           accountLevelSpend: accountSpend,
           campaignsSumSpend: campaignTotalSpend,
           insightsSpend: insightsSpend,
-          yourDashboardShows: 1502091.56,
-          metaWebInterfaceShows: 23963.01
+          note: "Dashboard should show campaign sum ($23,963.01), not account level ($1.5M)",
+          metaWebInterfaceShows: 23963.01,
+          discrepancy: {
+            accountVsCampaigns: accountSpend - campaignTotalSpend,
+            explanation: "Account includes historical/deleted campaigns from all time"
+          }
         }
       },
       timestamp: new Date().toISOString()
