@@ -35,7 +35,7 @@ import {
   Settings, 
   TrendingUp, 
   BarChart3, 
-  Scatter, 
+  Scatter as ScatterIcon, 
   PieChart,
   Filter,
   Maximize2,
