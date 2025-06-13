@@ -1,0 +1,39 @@
+
+> my-v0-project@0.1.0 dev
+> next dev
+
+ ⚠ Port 3000 is in use, trying 3001 instead.
+ ⚠ Port 3001 is in use, trying 3002 instead.
+ ⚠ Port 3002 is in use, trying 3003 instead.
+  ▲ Next.js 14.2.16
+  - Local:        http://localhost:3003
+  - Environments: .env
+  - Experiments (use with caution):
+    · cpus
+
+ ✓ Starting...
+ ✓ Ready in 1155ms
+ ✓ Compiled /api/management-score in 306ms (57 modules)
+Management Score Error: Error: Invalid OAuth access token - Cannot parse access token
+    at POST (webpack-internal:///(rsc)/./app/api/management-score/route.ts:53:19)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async /Users/jaimeortiz/metaads/node_modules/.pnpm/next@14.2.16_react-dom@18.0.0_react@18.0.0__react@18.0.0/node_modules/next/dist/compiled/next-server/app-route.runtime.dev.js:6:55831
+    at async eO.execute (/Users/jaimeortiz/metaads/node_modules/.pnpm/next@14.2.16_react-dom@18.0.0_react@18.0.0__react@18.0.0/node_modules/next/dist/compiled/next-server/app-route.runtime.dev.js:6:46527)
+    at async eO.handle (/Users/jaimeortiz/metaads/node_modules/.pnpm/next@14.2.16_react-dom@18.0.0_react@18.0.0__react@18.0.0/node_modules/next/dist/compiled/next-server/app-route.runtime.dev.js:6:57165)
+    at async doRender (/Users/jaimeortiz/metaads/node_modules/.pnpm/next@14.2.16_react-dom@18.0.0_react@18.0.0__react@18.0.0/node_modules/next/dist/server/base-server.js:1352:42)
+    at async cacheEntry.responseCache.get.routeKind (/Users/jaimeortiz/metaads/node_modules/.pnpm/next@14.2.16_react-dom@18.0.0_react@18.0.0__react@18.0.0/node_modules/next/dist/server/base-server.js:1574:28)
+    at async DevServer.renderToResponseWithComponentsImpl (/Users/jaimeortiz/metaads/node_modules/.pnpm/next@14.2.16_react-dom@18.0.0_react@18.0.0__react@18.0.0/node_modules/next/dist/server/base-server.js:1482:28)
+    at async DevServer.renderPageComponent (/Users/jaimeortiz/metaads/node_modules/.pnpm/next@14.2.16_react-dom@18.0.0_react@18.0.0__react@18.0.0/node_modules/next/dist/server/base-server.js:1908:24)
+    at async DevServer.renderToResponseImpl (/Users/jaimeortiz/metaads/node_modules/.pnpm/next@14.2.16_react-dom@18.0.0_react@18.0.0__react@18.0.0/node_modules/next/dist/server/base-server.js:1946:32)
+    at async DevServer.pipeImpl (/Users/jaimeortiz/metaads/node_modules/.pnpm/next@14.2.16_react-dom@18.0.0_react@18.0.0__react@18.0.0/node_modules/next/dist/server/base-server.js:921:25)
+    at async NextNodeServer.handleCatchallRenderRequest (/Users/jaimeortiz/metaads/node_modules/.pnpm/next@14.2.16_react-dom@18.0.0_react@18.0.0__react@18.0.0/node_modules/next/dist/server/next-server.js:272:17)
+    at async DevServer.handleRequestImpl (/Users/jaimeortiz/metaads/node_modules/.pnpm/next@14.2.16_react-dom@18.0.0_react@18.0.0__react@18.0.0/node_modules/next/dist/server/base-server.js:817:17)
+    at async /Users/jaimeortiz/metaads/node_modules/.pnpm/next@14.2.16_react-dom@18.0.0_react@18.0.0__react@18.0.0/node_modules/next/dist/server/dev/next-dev-server.js:339:20
+    at async Span.traceAsyncFn (/Users/jaimeortiz/metaads/node_modules/.pnpm/next@14.2.16_react-dom@18.0.0_react@18.0.0__react@18.0.0/node_modules/next/dist/trace/trace.js:154:20)
+    at async DevServer.handleRequest (/Users/jaimeortiz/metaads/node_modules/.pnpm/next@14.2.16_react-dom@18.0.0_react@18.0.0__react@18.0.0/node_modules/next/dist/server/dev/next-dev-server.js:336:24)
+    at async invokeRender (/Users/jaimeortiz/metaads/node_modules/.pnpm/next@14.2.16_react-dom@18.0.0_react@18.0.0__react@18.0.0/node_modules/next/dist/server/lib/router-server.js:173:21)
+    at async handleRequest (/Users/jaimeortiz/metaads/node_modules/.pnpm/next@14.2.16_react-dom@18.0.0_react@18.0.0__react@18.0.0/node_modules/next/dist/server/lib/router-server.js:350:24)
+    at async requestHandlerImpl (/Users/jaimeortiz/metaads/node_modules/.pnpm/next@14.2.16_react-dom@18.0.0_react@18.0.0__react@18.0.0/node_modules/next/dist/server/lib/router-server.js:374:13)
+    at async Server.requestListener (/Users/jaimeortiz/metaads/node_modules/.pnpm/next@14.2.16_react-dom@18.0.0_react@18.0.0__react@18.0.0/node_modules/next/dist/server/lib/start-server.js:141:13)
+ POST /api/management-score 500 in 460ms
+ ✓ Compiled in 27ms

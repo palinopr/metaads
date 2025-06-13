@@ -55,7 +55,7 @@ export function CampaignComprehensiveAnalysis({
 
   useEffect(() => {
     fetchHierarchyData()
-    fetchScoreData()
+    // Don't fetch score data separately - calculate from hierarchy data
   }, [campaignId, datePreset])
 
   const fetchHierarchyData = async () => {
@@ -81,6 +81,11 @@ export function CampaignComprehensiveAnalysis({
       if (response.adsets?.length > 0) {
         setSelectedAdset(response.adsets[0].id)
       }
+      
+      // Calculate scores from the hierarchy data
+      const scores = calculateLocalScores(response)
+      setScoreData(scores)
+      setLoadingScore(false)
     } catch (err: any) {
       setError(err.message || "Failed to load campaign analysis")
     } finally {
@@ -88,29 +93,125 @@ export function CampaignComprehensiveAnalysis({
     }
   }
 
-  const fetchScoreData = async () => {
-    setLoadingScore(true)
+  // Calculate scores locally from the data we already have
+  const calculateLocalScores = (hierarchyData: any) => {
+    if (!hierarchyData) return null
     
-    try {
-      const response = await optimizedApiManager.request<any>(
-        "/api/management-score",
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            accessToken,
-            accountId,
-            datePreset
-          })
-        },
-        { priority: 3 }
-      )
+    const BENCHMARKS = {
+      roas: 3.0,
+      ctr: 2.0,
+      cpc: 1.0,
+      conversionRate: 2.5
+    }
+    
+    // Score calculation for a single entity
+    const scoreEntity = (entity: any, averages: any) => {
+      const metrics = entity
       
-      setScoreData(response)
-    } catch (err: any) {
-      console.error("Failed to fetch score data:", err)
-    } finally {
-      setLoadingScore(false)
+      // Calculate individual metric scores (0-100)
+      const scores = {
+        roas: scoreMetric(metrics.roas || 0, averages.roas, 'higher'),
+        ctr: scoreMetric(metrics.ctr || 0, averages.ctr, 'higher'),
+        cpc: scoreMetric(metrics.cpc || 0, averages.cpc, 'lower'),
+        conversionRate: metrics.clicks > 0 ? scoreMetric((metrics.conversions / metrics.clicks) * 100, averages.conversionRate, 'higher') : 50
+      }
+      
+      // Weighted total score
+      const totalScore = 
+        scores.roas * 0.30 +
+        scores.ctr * 0.20 +
+        scores.cpc * 0.20 +
+        scores.conversionRate * 0.30
+      
+      return Math.round(totalScore)
+    }
+    
+    const scoreMetric = (value: number, average: number, direction: 'higher' | 'lower'): number => {
+      if (average === 0) return 50
+      const ratio = value / average
+      
+      if (direction === 'higher') {
+        if (ratio >= 2) return 100
+        if (ratio >= 1.5) return 90
+        if (ratio >= 1.2) return 80
+        if (ratio >= 1) return 70
+        if (ratio >= 0.8) return 60
+        if (ratio >= 0.6) return 40
+        return 20
+      } else {
+        if (ratio <= 0.5) return 100
+        if (ratio <= 0.7) return 90
+        if (ratio <= 0.85) return 80
+        if (ratio <= 1) return 70
+        if (ratio <= 1.2) return 60
+        if (ratio <= 1.5) return 40
+        return 20
+      }
+    }
+    
+    // Calculate averages from all entities
+    const allEntities = [...(hierarchyData.adsets || []).flatMap(adset => adset.ads || [])]
+    const activeEntities = allEntities.filter(e => e.status === 'ACTIVE' && e.spend > 0)
+    
+    let averages = BENCHMARKS
+    if (activeEntities.length > 0) {
+      const totals = activeEntities.reduce((acc, entity) => ({
+        spend: acc.spend + entity.spend,
+        revenue: acc.revenue + entity.revenue,
+        impressions: acc.impressions + entity.impressions,
+        clicks: acc.clicks + entity.clicks,
+        conversions: acc.conversions + entity.conversions
+      }), { spend: 0, revenue: 0, impressions: 0, clicks: 0, conversions: 0 })
+      
+      averages = {
+        roas: totals.spend > 0 ? totals.revenue / totals.spend : 0,
+        ctr: totals.impressions > 0 ? (totals.clicks / totals.impressions) * 100 : 0,
+        cpc: totals.clicks > 0 ? totals.spend / totals.clicks : 0,
+        conversionRate: totals.clicks > 0 ? (totals.conversions / totals.clicks) * 100 : 0
+      }
+    }
+    
+    // Score all ads
+    const scoredAds = allEntities.map(ad => ({
+      id: ad.id,
+      score: scoreEntity(ad, averages),
+      percentileRank: 0 // Will calculate after scoring all
+    }))
+    
+    // Calculate percentile ranks
+    scoredAds.forEach(ad => {
+      const betterCount = scoredAds.filter(other => other.score > ad.score).length
+      ad.percentileRank = Math.round((betterCount / scoredAds.length) * 100)
+    })
+    
+    // Score adsets based on their ads
+    const scoredAdsets = (hierarchyData.adsets || []).map((adset: any) => {
+      const adsetAds = adset.ads || []
+      const adScores = adsetAds.map((ad: any) => {
+        const scoredAd = scoredAds.find(sa => sa.id === ad.id)
+        return scoredAd ? scoredAd.score : 50
+      })
+      
+      const adsetScore = adScores.length > 0 
+        ? Math.round(adScores.reduce((sum: number, score: number) => sum + score, 0) / adScores.length)
+        : scoreEntity(adset, averages)
+      
+      return {
+        id: adset.id,
+        score: adsetScore,
+        percentileRank: 0
+      }
+    })
+    
+    // Calculate campaign score
+    const campaignScore = scoredAdsets.length > 0
+      ? Math.round(scoredAdsets.reduce((sum, adset) => sum + adset.score, 0) / scoredAdsets.length)
+      : 50
+    
+    return {
+      campaigns: [{ id: campaignId, score: campaignScore }],
+      adsets: scoredAdsets,
+      ads: scoredAds
     }
   }
 

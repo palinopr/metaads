@@ -32,6 +32,8 @@ interface AccountManagementScoreProps {
   accessToken: string
   accountId: string
   datePreset: string
+  campaigns?: any[]
+  overviewData?: any
 }
 
 interface ScoreData {
@@ -76,7 +78,9 @@ interface ScoreData {
 export function AccountManagementScore({
   accessToken,
   accountId,
-  datePreset
+  datePreset,
+  campaigns = [],
+  overviewData
 }: AccountManagementScoreProps) {
   const [scoreData, setScoreData] = useState<ScoreData | null>(null)
   const [loading, setLoading] = useState(true)
@@ -86,9 +90,206 @@ export function AccountManagementScore({
   const [showAllCampaigns, setShowAllCampaigns] = useState(false)
 
   useEffect(() => {
-    fetchScoreData()
-  }, [accessToken, accountId, datePreset])
+    if (campaigns && campaigns.length > 0) {
+      calculateScoresLocally()
+    } else {
+      fetchScoreData()
+    }
+  }, [accessToken, accountId, datePreset, campaigns])
 
+  const calculateScoresLocally = () => {
+    setLoading(true)
+    setError(null)
+    
+    try {
+      const BENCHMARKS = {
+        roas: 3.0,
+        ctr: 2.0,
+        cpc: 1.0,
+        conversionRate: 2.5
+      }
+      
+      const WEIGHTS = {
+        roas: 0.30,
+        ctr: 0.20,
+        cpc: 0.20,
+        conversionRate: 0.20,
+        budgetUtilization: 0.10
+      }
+      
+      // Score calculation helper
+      const scoreMetric = (value: number, benchmark: number, direction: 'higher' | 'lower'): number => {
+        if (benchmark === 0) return 50
+        const ratio = value / benchmark
+        
+        if (direction === 'higher') {
+          if (ratio >= 2) return 100
+          if (ratio >= 1.5) return 90
+          if (ratio >= 1.2) return 80
+          if (ratio >= 1) return 70
+          if (ratio >= 0.8) return 60
+          if (ratio >= 0.6) return 40
+          return 20
+        } else {
+          if (ratio <= 0.5) return 100
+          if (ratio <= 0.7) return 90
+          if (ratio <= 0.85) return 80
+          if (ratio <= 1) return 70
+          if (ratio <= 1.2) return 60
+          if (ratio <= 1.5) return 40
+          return 20
+        }
+      }
+      
+      // Score each campaign
+      const scoredCampaigns = campaigns.map(campaign => {
+        const roas = campaign.roas || 0
+        const ctr = campaign.ctr || 0
+        const cpc = campaign.cpc || 0
+        const conversionRate = campaign.clicks > 0 ? (campaign.conversions / campaign.clicks) * 100 : 0
+        const budgetUtilization = 80 // Default for now
+        
+        const scores = {
+          roas: scoreMetric(roas, BENCHMARKS.roas, 'higher'),
+          ctr: scoreMetric(ctr, BENCHMARKS.ctr, 'higher'),
+          cpc: scoreMetric(cpc, BENCHMARKS.cpc, 'lower'),
+          conversionRate: scoreMetric(conversionRate, BENCHMARKS.conversionRate, 'higher'),
+          budgetUtilization
+        }
+        
+        const totalScore = 
+          scores.roas * WEIGHTS.roas +
+          scores.ctr * WEIGHTS.ctr +
+          scores.cpc * WEIGHTS.cpc +
+          scores.conversionRate * WEIGHTS.conversionRate +
+          scores.budgetUtilization * WEIGHTS.budgetUtilization
+        
+        const recommendations: string[] = []
+        if (scores.roas < 50) {
+          if (roas < 1) {
+            recommendations.push("Critical: Campaign is not profitable. Consider pausing and restructuring targeting.")
+          } else {
+            recommendations.push("Improve ROAS by refining audience targeting and testing new creatives.")
+          }
+        }
+        if (scores.ctr < 50) {
+          recommendations.push("Low CTR indicates poor ad relevance. Test new ad copy and visuals.")
+        }
+        if (scores.cpc < 50) {
+          recommendations.push("High CPC detected. Consider adjusting bidding strategy or improving Quality Score.")
+        }
+        
+        return {
+          id: campaign.id,
+          name: campaign.name,
+          status: campaign.status,
+          score: Math.round(totalScore),
+          metrics: {
+            spend: campaign.spend || 0,
+            revenue: campaign.revenue || 0,
+            roas,
+            ctr,
+            cpc,
+            conversionRate,
+            conversions: campaign.conversions || 0,
+            impressions: campaign.impressions || 0,
+            clicks: campaign.clicks || 0,
+            scores
+          },
+          recommendations,
+          adsetCount: campaign.adsets_count || 0,
+          adCount: 0,
+          adsetScores: [],
+          adScores: []
+        }
+      })
+      
+      // Calculate account score
+      const accountScore = overviewData ? {
+        roas: scoreMetric(overviewData.overallROAS, BENCHMARKS.roas, 'higher'),
+        ctr: scoreMetric(overviewData.avgCTR, BENCHMARKS.ctr, 'higher'),
+        cpc: scoreMetric(overviewData.avgCPC, BENCHMARKS.cpc, 'lower'),
+        conversionRate: scoreMetric(
+          overviewData.totalClicks > 0 ? (overviewData.totalConversions / overviewData.totalClicks) * 100 : 0,
+          BENCHMARKS.conversionRate, 
+          'higher'
+        ),
+        budgetUtilization: 80
+      } : {
+        roas: 50,
+        ctr: 50,
+        cpc: 50,
+        conversionRate: 50,
+        budgetUtilization: 50
+      }
+      
+      const totalAccountScore = 
+        accountScore.roas * WEIGHTS.roas +
+        accountScore.ctr * WEIGHTS.ctr +
+        accountScore.cpc * WEIGHTS.cpc +
+        accountScore.conversionRate * WEIGHTS.conversionRate +
+        accountScore.budgetUtilization * WEIGHTS.budgetUtilization
+      
+      const accountRecommendations: string[] = []
+      if (totalAccountScore < 50) {
+        accountRecommendations.push("Account performance below average. Comprehensive optimization needed.")
+      }
+      if (overviewData?.overallROAS < BENCHMARKS.roas) {
+        accountRecommendations.push(`Account ROAS (${overviewData.overallROAS.toFixed(2)}x) below benchmark (${BENCHMARKS.roas}x).`)
+      }
+      
+      // Sort campaigns for top/bottom performers
+      const sortedCampaigns = [...scoredCampaigns].sort((a, b) => b.score - a.score)
+      
+      // Create the score data structure
+      const data: ScoreData = {
+        account: {
+          score: Math.round(totalAccountScore),
+          totalSpend: overviewData?.totalSpend || 0,
+          totalRevenue: overviewData?.totalRevenue || 0,
+          overallROAS: overviewData?.overallROAS || 0,
+          breakdown: accountScore,
+          recommendations: accountRecommendations,
+          benchmarkComparison: {
+            roas: ((overviewData?.overallROAS || 0) - BENCHMARKS.roas) / BENCHMARKS.roas * 100,
+            ctr: ((overviewData?.avgCTR || 0) - BENCHMARKS.ctr) / BENCHMARKS.ctr * 100,
+            cpc: ((overviewData?.avgCPC || 0) - BENCHMARKS.cpc) / BENCHMARKS.cpc * 100,
+            conversionRate: ((overviewData?.totalClicks > 0 ? (overviewData.totalConversions / overviewData.totalClicks) * 100 : 0) - BENCHMARKS.conversionRate) / BENCHMARKS.conversionRate * 100
+          }
+        },
+        campaigns: scoredCampaigns,
+        adsets: [],
+        ads: [],
+        insights: {
+          topPerformers: {
+            campaigns: sortedCampaigns.slice(0, 5),
+            adsets: [],
+            ads: []
+          },
+          bottomPerformers: {
+            campaigns: sortedCampaigns.slice(-5).reverse(),
+            adsets: [],
+            ads: []
+          },
+          averages: {
+            roas: overviewData?.overallROAS || 0,
+            ctr: overviewData?.avgCTR || 0,
+            cpc: overviewData?.avgCPC || 0,
+            conversionRate: overviewData?.totalClicks > 0 ? (overviewData.totalConversions / overviewData.totalClicks) * 100 : 0
+          }
+        },
+        datePreset
+      }
+      
+      setScoreData(data)
+    } catch (err: any) {
+      console.error("Failed to calculate scores:", err)
+      setError("Failed to calculate management scores")
+    } finally {
+      setLoading(false)
+    }
+  }
+  
   const fetchScoreData = async () => {
     setLoading(true)
     setError(null)

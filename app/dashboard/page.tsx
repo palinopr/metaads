@@ -1491,12 +1491,14 @@ export default function DashboardPage() {
             </div>
 
             {/* Account Management Score */}
-            {showManagementScore && credentialsSubmitted && (
+            {showManagementScore && credentialsSubmitted && campaigns.length > 0 && (
               <div className="mb-8">
                 <AccountManagementScore
                   accessToken={credentials.accessToken}
                   accountId={credentials.adAccountId}
                   datePreset={selectedDateRange}
+                  campaigns={campaigns}
+                  overviewData={overviewData}
                 />
               </div>
             )}

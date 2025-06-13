@@ -67,7 +67,8 @@ export async function POST(request: Request) {
       )
     }
 
-    const cleanToken = accessToken.replace(/^Bearer\s+/i, '')
+    // Don't clean the token - use as-is like direct-campaigns API
+    // const cleanToken = accessToken.replace(/^Bearer\s+/i, '')
     
     // Map date presets
     const datePresetMap: { [key: string]: string } = {
@@ -82,100 +83,111 @@ export async function POST(request: Request) {
     }
     const metaDatePreset = datePresetMap[datePreset] || datePreset
 
-    // Fetch all campaigns with their adsets and ads
+    // Fetch campaigns first
     const campaignsUrl = `https://graph.facebook.com/v19.0/${accountId}/campaigns?` +
       `fields=id,name,status,objective,daily_budget,lifetime_budget,` +
-      `adsets{id,name,status,daily_budget,lifetime_budget,` +
-      `insights.date_preset(${metaDatePreset}){spend,impressions,clicks,ctr,cpc,actions,action_values},` +
-      `ads{id,name,status,` +
-      `insights.date_preset(${metaDatePreset}){spend,impressions,clicks,ctr,cpc,actions,action_values}}}` +
-      `&limit=100&access_token=${cleanToken}`
+      `insights.date_preset(${metaDatePreset}){spend,impressions,clicks,ctr,cpc,actions,action_values}` +
+      `&limit=100&access_token=${accessToken}`
 
+    console.log('Fetching campaigns for management score...')
     const campaignsRes = await railwayFetch(campaignsUrl)
     const campaignsData = await campaignsRes.json()
 
     if (campaignsData.error) {
+      console.error('Campaign fetch error:', campaignsData.error)
       throw new Error(campaignsData.error.message)
     }
 
-    // Collect all adsets and ads across all campaigns
-    const allAdsets: any[] = []
-    const allAds: any[] = []
+    // Process campaigns first
     const campaignMap = new Map<string, any>()
-
     campaignsData.data?.forEach((campaign: any) => {
-      campaignMap.set(campaign.id, {
-        ...campaign,
-        adsets: [],
-        ads: []
-      })
+      // Process campaign metrics
+      let campaignMetrics: MetricData = {
+        spend: 0,
+        impressions: 0,
+        clicks: 0,
+        conversions: 0,
+        revenue: 0,
+        budgetAllocated: parseFloat(campaign.daily_budget || campaign.lifetime_budget || "0")
+      }
 
-      campaign.adsets?.data?.forEach((adset: any) => {
-        const processedAdset = processAdsetMetrics(adset)
-        allAdsets.push({
-          ...processedAdset,
-          campaignId: campaign.id,
-          campaignName: campaign.name
-        })
-        campaignMap.get(campaign.id).adsets.push(processedAdset)
-
-        adset.ads?.data?.forEach((ad: any) => {
-          const processedAd = processAdMetrics(ad)
-          allAds.push({
-            ...processedAd,
-            adsetId: adset.id,
-            adsetName: adset.name,
-            campaignId: campaign.id,
-            campaignName: campaign.name
+      if (campaign.insights?.data?.[0]) {
+        const insights = campaign.insights.data[0]
+        campaignMetrics.spend = parseFloat(insights.spend || "0")
+        campaignMetrics.impressions = parseInt(insights.impressions || "0")
+        campaignMetrics.clicks = parseInt(insights.clicks || "0")
+        
+        // Extract conversions and revenue
+        if (insights.actions) {
+          insights.actions.forEach((action: any) => {
+            if (["purchase", "omni_purchase", "offsite_conversion.fb_pixel_purchase"].includes(action.action_type)) {
+              campaignMetrics.conversions += parseInt(action.value || "0")
+            }
           })
-          campaignMap.get(campaign.id).ads.push(processedAd)
-        })
-      })
-    })
+        }
+        if (insights.action_values) {
+          insights.action_values.forEach((av: any) => {
+            if (["purchase", "omni_purchase", "offsite_conversion.fb_pixel_purchase"].includes(av.action_type)) {
+              campaignMetrics.revenue += parseFloat(av.value || "0")
+            }
+          })
+        }
+      }
 
-    // Calculate account-wide averages for comparison
-    const accountAverages = calculateAverages([...allAdsets, ...allAds])
+      // Calculate derived metrics
+      campaignMetrics.roas = campaignMetrics.spend > 0 ? campaignMetrics.revenue / campaignMetrics.spend : 0
+      campaignMetrics.ctr = campaignMetrics.impressions > 0 ? (campaignMetrics.clicks / campaignMetrics.impressions) * 100 : 0
+      campaignMetrics.cpc = campaignMetrics.clicks > 0 ? campaignMetrics.spend / campaignMetrics.clicks : 0
+      campaignMetrics.conversionRate = campaignMetrics.clicks > 0 ? (campaignMetrics.conversions / campaignMetrics.clicks) * 100 : 0
 
-    // Score all adsets against each other
-    const scoredAdsets = allAdsets.map(adset => scoreEntity(adset, accountAverages, allAdsets))
-    
-    // Score all ads against each other
-    const scoredAds = allAds.map(ad => scoreEntity(ad, accountAverages, allAds))
-
-    // Calculate campaign scores based on their adsets and ads
-    const scoredCampaigns = Array.from(campaignMap.values()).map(campaign => {
-      const campaignAdsets = scoredAdsets.filter(adset => adset.campaignId === campaign.id)
-      const campaignAds = scoredAds.filter(ad => ad.campaignId === campaign.id)
-      
-      // Campaign score is the weighted average of its adsets and ads
-      const adsetAvgScore = campaignAdsets.length > 0 
-        ? campaignAdsets.reduce((sum, adset) => sum + adset.score, 0) / campaignAdsets.length 
-        : 0
-      const adAvgScore = campaignAds.length > 0 
-        ? campaignAds.reduce((sum, ad) => sum + ad.score, 0) / campaignAds.length 
-        : 0
-      
-      const campaignScore = (adsetAvgScore * 0.4 + adAvgScore * 0.6) // Ads weighted more heavily
-      
-      // Aggregate metrics from all adsets/ads
-      const aggregatedMetrics = aggregateMetrics([...campaignAdsets, ...campaignAds])
-      
-      return {
+      campaignMap.set(campaign.id, {
         id: campaign.id,
         name: campaign.name,
         status: campaign.status,
-        score: Math.round(campaignScore),
-        metrics: aggregatedMetrics,
-        adsetCount: campaignAdsets.length,
-        adCount: campaignAds.length,
-        adsetScores: campaignAdsets.map(a => ({ id: a.id, name: a.name, score: a.score })),
-        adScores: campaignAds.map(a => ({ id: a.id, name: a.name, score: a.score })),
-        recommendations: generateCampaignRecommendations(campaignScore, aggregatedMetrics, campaignAdsets, campaignAds)
+        metrics: campaignMetrics,
+        adsets: [],
+        ads: []
+      })
+    })
+
+    // Now fetch adsets for all campaigns
+    const allAdsets: any[] = []
+    const allAds: any[] = []
+    
+    console.log(`Processing ${campaignsData.data?.length || 0} campaigns for scoring...`)
+    
+    // For now, we'll work with campaign-level data only
+    // TODO: Add separate API calls to fetch adsets and ads if needed
+
+    // Calculate account-wide averages for comparison using campaigns
+    const campaignsArray = Array.from(campaignMap.values())
+    const accountAverages = calculateAverages(campaignsArray)
+
+    // Score campaigns against each other
+    const scoredCampaigns = campaignsArray.map(campaign => {
+      const scoredCampaign = scoreEntity(campaign, accountAverages, campaignsArray)
+      
+      return {
+        ...scoredCampaign,
+        adsetCount: 0, // Will be populated when we add adset fetching
+        adCount: 0, // Will be populated when we add ad fetching
+        adsetScores: [],
+        adScores: [],
+        recommendations: generateCampaignRecommendations(
+          scoredCampaign.score, 
+          scoredCampaign.metrics, 
+          [], // adsets placeholder
+          []  // ads placeholder
+        )
       }
     })
 
+    // For now, return empty arrays for adsets and ads
+    const scoredAdsets: any[] = []
+    const scoredAds: any[] = []
+
     // Calculate overall account score
-    const accountScore = calculateAccountScore(scoredCampaigns, allAdsets, allAds)
+    const accountScore = calculateAccountScore(scoredCampaigns, scoredAdsets, scoredAds)
 
     // Identify top and bottom performers
     const topCampaigns = [...scoredCampaigns].sort((a, b) => b.score - a.score).slice(0, 5)
