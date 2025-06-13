@@ -1984,6 +1984,7 @@ export default function DashboardPage() {
                                     campaignId={campaign.id}
                                     campaignName={campaign.name}
                                     accessToken={credentials.accessToken}
+                                    adAccountId={credentials.adAccountId}
                                     datePreset={selectedDateRange}
                                   />
                                 </Suspense>
