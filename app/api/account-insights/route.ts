@@ -178,11 +178,81 @@ export async function POST(request: NextRequest) {
         
       console.log('Lifetime totals from campaigns:', {
         campaigns: allCampaigns.length,
+        campaignsWithData: allCampaigns.filter(c => c.insights?.data?.[0]).length,
         impressions,
         clicks,
         conversions,
         revenue
       })
+      
+      // If we're missing data (98% of campaigns have no insights), fetch adsets
+      if (allCampaigns.filter(c => c.insights?.data?.[0]).length < allCampaigns.length * 0.5) {
+        console.log('Most campaigns lack insights, fetching adset data...')
+        
+        // Process campaigns in batches to get adset data
+        const batchSize = 10
+        for (let i = 0; i < Math.min(allCampaigns.length, 50); i += batchSize) { // Limit to first 50 campaigns for performance
+          const batch = allCampaigns.slice(i, i + batchSize)
+          
+          await Promise.all(batch.map(async (campaign) => {
+            try {
+              const adsetsUrl = `${META_API_BASE}/${campaign.id}/adsets`
+              const adsetsResponse = await fetch(
+                `${adsetsUrl}?access_token=${accessToken}&fields=insights{spend,impressions,clicks,actions,action_values}&limit=100`
+              )
+              const adsetsData = await adsetsResponse.json()
+              
+              if (adsetsData.data) {
+                adsetsData.data.forEach((adset: any) => {
+                  if (adset.insights?.data?.[0]) {
+                    const insight = adset.insights.data[0]
+                    
+                    impressions += parseInt(insight.impressions || '0')
+                    clicks += parseInt(insight.clicks || '0')
+                    
+                    // Calculate conversions and revenue - include ALL purchase types
+                    if (insight.actions) {
+                      insight.actions.forEach((action: any) => {
+                        if ([
+                          'purchase',
+                          'omni_purchase', 
+                          'offsite_conversion.fb_pixel_purchase',
+                          'web_in_store_purchase',
+                          'onsite_web_purchase',
+                          'onsite_web_app_purchase',
+                          'web_app_in_store_purchase'
+                        ].includes(action.action_type)) {
+                          conversions += parseInt(action.value || '0')
+                        }
+                      })
+                    }
+                    
+                    if (insight.action_values) {
+                      insight.action_values.forEach((actionValue: any) => {
+                        if ([
+                          'purchase',
+                          'omni_purchase',
+                          'offsite_conversion.fb_pixel_purchase',
+                          'web_in_store_purchase',
+                          'onsite_web_purchase',
+                          'onsite_web_app_purchase',
+                          'web_app_in_store_purchase'
+                        ].includes(actionValue.action_type)) {
+                          revenue += parseFloat(actionValue.value || '0')
+                        }
+                      })
+                    }
+                  }
+                })
+              }
+            } catch (error) {
+              console.error(`Error fetching adsets for campaign ${campaign.id}:`, error)
+            }
+          }))
+        }
+        
+        console.log('After adset data:', { conversions, revenue })
+      }
       
       return NextResponse.json({
         success: true,
@@ -208,9 +278,10 @@ export async function POST(request: NextRequest) {
         debug: {
           insightsSpend,
           lifetimeSpend,
-          method: 'campaign_aggregation',
+          method: allCampaigns.filter(c => c.insights?.data?.[0]).length < allCampaigns.length * 0.5 ? 'campaign_and_adset_aggregation' : 'campaign_aggregation',
           campaignsFetched: allCampaigns.length,
-          campaignsWithData: allCampaigns.filter(c => c.insights?.data?.[0]).length
+          campaignsWithData: allCampaigns.filter(c => c.insights?.data?.[0]).length,
+          note: 'Fetched adset data for better coverage'
         }
       })
     } else {
