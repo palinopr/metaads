@@ -910,9 +910,29 @@ async function handleMetaAPIRequest(request: NextRequest): Promise<NextResponse>
           }, { status: 400 })
         }
         
-        // Create API client instances
-        const client = new MetaAPIClient(accessToken, adAccountId)
-        const adSetClient = new AdSetAndAdAPI(accessToken, adAccountId, false)
+        // Create API client instances with error handling
+        let client: MetaAPIClient
+        let adSetClient: AdSetAndAdAPI
+        
+        try {
+          client = new MetaAPIClient(accessToken, adAccountId)
+          adSetClient = new AdSetAndAdAPI(accessToken, adAccountId, false)
+        } catch (validationError: any) {
+          console.error('Failed to create API clients:', validationError)
+          console.error('Validation error details:', {
+            error: validationError.message,
+            accountId: adAccountId,
+            tokenLength: accessToken.length
+          })
+          
+          // Return a more specific error
+          return NextResponse.json({
+            error: 'Failed to initialize API client',
+            details: validationError.message,
+            accountId: adAccountId,
+            success: false
+          }, { status: 400 })
+        }
         
         console.log(`Fetching campaigns with date preset: ${datePreset || 'last_30d'}`)
         
@@ -1193,9 +1213,15 @@ async function handleMetaAPIRequest(request: NextRequest): Promise<NextResponse>
     console.error('Error stack:', error.stack)
     console.error('Request details:', {
       hasToken: !!body?.accessToken,
+      tokenLength: body?.accessToken?.length,
       hasAccountId: !!body?.adAccountId,
+      accountId: body?.adAccountId,
       requestType: body?.type,
-      errorMessage: error.message
+      endpoint: body?.endpoint,
+      errorMessage: error.message,
+      errorName: error.name,
+      cookieToken: !!finalAccessToken,
+      cookieTokenLength: finalAccessToken?.length
     })
     
     // Check for token expiration
