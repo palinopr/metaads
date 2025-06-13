@@ -37,8 +37,8 @@ export async function POST(request: Request) {
       )
     }
 
-    // Clean the access token to remove Bearer prefix
-    const cleanToken = accessToken.replace(/^Bearer\s+/i, '')
+    // Use the access token directly - no cleaning needed
+    const cleanToken = accessToken
 
     // For lifetime, get campaign created_time
     let campaignStartDate: Date | null = null
