@@ -55,7 +55,7 @@ const DateRangeSelector = dynamicImport(() =>
 )
 
 const CampaignPredictions = dynamicImport(() => 
-  import('@/components/campaign-predictions').then(mod => ({ default: mod.CampaignPredictions })),
+  import('@/components/campaign-predictions-safe').then(mod => ({ default: mod.CampaignPredictionsSafe })),
   { 
     loading: () => <div className="h-64 flex items-center justify-center"><Loader2 className="w-6 h-6 animate-spin" /></div>,
     ssr: false 
@@ -1914,16 +1914,27 @@ export default function DashboardPage() {
                               </TabsContent>
                               <TabsContent value="predictions">
                                 <Suspense fallback={<div className="h-64 flex items-center justify-center"><Loader2 className="w-6 h-6 animate-spin" /></div>}>
-                                  <CampaignPredictions
-                                    campaignName={campaign.name}
-                                    historicalData={campaign.expandedData?.historicalDailyData || []}
-                                    currentMetrics={{
-                                      spend: campaign.spend || 0,
-                                      revenue: campaign.revenue || 0,
-                                      roas: String(campaign.roas || 0),
-                                      conversions: campaign.conversions || 0
-                                    }}
-                                  />
+                                  {(() => {
+                                    const historicalData = campaign.expandedData?.historicalDailyData || []
+                                    console.log('Predictions data:', {
+                                      campaignName: campaign.name,
+                                      historicalDataLength: historicalData.length,
+                                      firstItem: historicalData[0],
+                                      lastItem: historicalData[historicalData.length - 1]
+                                    })
+                                    return (
+                                      <CampaignPredictions
+                                        campaignName={campaign.name}
+                                        historicalData={historicalData}
+                                        currentMetrics={{
+                                          spend: campaign.spend || 0,
+                                          revenue: campaign.revenue || 0,
+                                          roas: String(campaign.roas || 0),
+                                          conversions: campaign.conversions || 0
+                                        }}
+                                      />
+                                    )
+                                  })()}
                                 </Suspense>
                               </TabsContent>
                               <TabsContent value="demographics">
