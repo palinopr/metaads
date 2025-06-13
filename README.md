@@ -10,6 +10,9 @@ A modern, responsive dashboard for managing and analyzing Meta (Facebook) ad cam
 - 🔐 Secure credential management
 - 🔄 Auto-refresh capabilities
 - 📱 Mobile-responsive design
+- 🤖 AI-powered campaign insights with Claude
+- 📈 Predictive analytics and recommendations
+- 🎯 Anomaly detection and optimization suggestions
 
 ## Quick Start
 
@@ -20,9 +23,10 @@ A modern, responsive dashboard for managing and analyzing Meta (Facebook) ad cam
    npm install
    ```
 
-2. **Configure**
+2. **Configure Environment**
    ```bash
    cp .env.example .env.local
+   # Edit .env.local and add your Anthropic API key
    ```
 
 3. **Run Development**
@@ -38,17 +42,34 @@ A modern, responsive dashboard for managing and analyzing Meta (Facebook) ad cam
 
 ## Setup
 
+### 1. Basic Setup
 1. Visit the application at `http://localhost:3000`
 2. Enter your Meta Access Token and Ad Account ID
 3. Click "Save & Connect"
 4. View your campaign data in the dashboard
 
+### 2. AI Features Setup (Optional but Recommended)
+1. Get an Anthropic API key from [console.anthropic.com](https://console.anthropic.com/)
+2. Add it to your `.env.local` file:
+   ```env
+   NEXT_PUBLIC_ANTHROPIC_API_KEY=sk-ant-api03-your-key-here
+   ```
+3. Or configure it in the UI at `http://localhost:3000/settings/ai`
+4. Enable AI-powered insights and predictions
+
 ## Getting Credentials
 
+### Meta Ads API
 1. Go to [Meta Business Manager](https://business.facebook.com)
 2. Navigate to System Users → Generate Token
 3. Required permissions: `ads_read`, `ads_management`
 4. Copy your Ad Account ID from Ads Manager
+
+### Anthropic API (for AI Features)
+1. Visit [Anthropic Console](https://console.anthropic.com/)
+2. Create an account or sign in
+3. Generate an API key
+4. Add to `.env.local` or configure in Settings → AI
 
 ## Documentation
 
@@ -62,6 +83,7 @@ A modern, responsive dashboard for managing and analyzing Meta (Facebook) ad cam
 - TypeScript
 - Tailwind CSS
 - Meta Graph API
+- Anthropic Claude API
 - Railway/Vercel compatible
 
 ## License
