@@ -47,24 +47,45 @@ export async function POST(request: NextRequest) {
       const lifetimeSpend = parseInt(accountData.amount_spent || '0') / 100
       
       // Also get account-level insights for other metrics
+      // For lifetime, we need to specify a very large date range
       const insightsUrl = `${META_API_BASE}/${adAccountId}/insights`
       const insightsParams = new URLSearchParams({
         access_token: accessToken,
-        fields: 'impressions,clicks,actions,action_values'
+        fields: 'impressions,clicks,actions,action_values,spend',
+        time_range: JSON.stringify({
+          since: '2014-01-01', // Facebook Ads started around this time
+          until: new Date().toISOString().split('T')[0] // Today
+        })
       })
       
       const insightsResponse = await fetch(`${insightsUrl}?${insightsParams}`)
       const insightsData = await insightsResponse.json()
       
+      console.log('Account lifetime insights response:', {
+        hasData: !!insightsData.data?.[0],
+        error: insightsData.error,
+        dataLength: insightsData.data?.length
+      })
+      
       let revenue = 0
       let conversions = 0
       let impressions = 0
       let clicks = 0
+      let insightsSpend = 0
       
       if (insightsData.data?.[0]) {
         const insight = insightsData.data[0]
         impressions = parseInt(insight.impressions || '0')
         clicks = parseInt(insight.clicks || '0')
+        insightsSpend = parseFloat(insight.spend || '0')
+        
+        console.log('Lifetime insights data:', {
+          impressions,
+          clicks,
+          insightsSpend,
+          hasActions: !!insight.actions,
+          hasActionValues: !!insight.action_values
+        })
         
         // Calculate conversions and revenue
         if (insight.actions) {
@@ -84,12 +105,61 @@ export async function POST(request: NextRequest) {
         }
       }
       
+      // If we couldn't get lifetime insights, try to get all campaigns and sum them up
+      if (impressions === 0 && clicks === 0) {
+        console.log('No lifetime insights data, fetching all campaigns...')
+        
+        // Get ALL campaigns with pagination
+        let allCampaigns: any[] = []
+        let nextUrl = `${META_API_BASE}/${adAccountId}/campaigns?access_token=${accessToken}&fields=insights{spend,impressions,clicks,actions,action_values}&limit=500`
+        let pageCount = 0
+        
+        while (nextUrl && pageCount < 10) { // Limit to 10 pages for safety
+          const response = await fetch(nextUrl)
+          const data = await response.json()
+          
+          if (data.data) {
+            allCampaigns = allCampaigns.concat(data.data)
+          }
+          
+          nextUrl = data.paging?.next || null
+          pageCount++
+        }
+        
+        console.log(`Fetched ${allCampaigns.length} campaigns across ${pageCount} pages`)
+        
+        // Sum up all campaign metrics
+        allCampaigns.forEach(campaign => {
+          if (campaign.insights?.data?.[0]) {
+            const insight = campaign.insights.data[0]
+            impressions += parseInt(insight.impressions || '0')
+            clicks += parseInt(insight.clicks || '0')
+            
+            if (insight.actions) {
+              insight.actions.forEach((action: any) => {
+                if (['purchase', 'omni_purchase', 'offsite_conversion.fb_pixel_purchase'].includes(action.action_type)) {
+                  conversions += parseInt(action.value || '0')
+                }
+              })
+            }
+            
+            if (insight.action_values) {
+              insight.action_values.forEach((actionValue: any) => {
+                if (['purchase', 'omni_purchase', 'offsite_conversion.fb_pixel_purchase'].includes(actionValue.action_type)) {
+                  revenue += parseFloat(actionValue.value || '0')
+                }
+              })
+            }
+          }
+        })
+      }
+      
       return NextResponse.json({
         success: true,
         accountLevel: true,
         datePreset: 'lifetime',
         metrics: {
-          spend: lifetimeSpend,
+          spend: lifetimeSpend, // Always use account-level spend for lifetime
           revenue,
           conversions,
           impressions,
@@ -104,6 +174,11 @@ export async function POST(request: NextRequest) {
           name: accountData.name,
           currency: accountData.currency,
           amountSpentCents: accountData.amount_spent
+        },
+        debug: {
+          insightsSpend,
+          lifetimeSpend,
+          method: impressions > 0 ? 'account_insights' : 'campaign_aggregation'
         }
       })
     } else {
