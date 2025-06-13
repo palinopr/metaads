@@ -72,6 +72,7 @@ export async function POST(request: NextRequest) {
       let impressions = 0
       let clicks = 0
       let insightsSpend = 0
+      let allCampaigns: any[] = []
       
       if (insightsData.data?.[0]) {
         const insight = insightsData.data[0]
@@ -125,33 +126,30 @@ export async function POST(request: NextRequest) {
       
       // Always fetch all campaigns for lifetime to get complete data
       // The account insights API doesn't return lifetime totals properly
-      if (true) { // Always do this for lifetime
-        console.log('Fetching all campaigns for complete lifetime data...')
+      // Force campaign fetching by resetting metrics first
+      impressions = 0
+      clicks = 0
+      conversions = 0
+      revenue = 0
+      
+      console.log('Fetching all campaigns for complete lifetime data...')
+      
+      // Get ALL campaigns with pagination
+      allCampaigns = []
+      let nextUrl = `${META_API_BASE}/${adAccountId}/campaigns?access_token=${accessToken}&fields=insights{spend,impressions,clicks,actions,action_values}&limit=500`
+      let pageCount = 0
+      
+      while (nextUrl && pageCount < 20) { // Increased to 20 pages to get all 211 campaigns
+        const response = await fetch(nextUrl)
+        const data = await response.json()
         
-        // Get ALL campaigns with pagination
-        let allCampaigns: any[] = []
-        let nextUrl = `${META_API_BASE}/${adAccountId}/campaigns?access_token=${accessToken}&fields=insights{spend,impressions,clicks,actions,action_values}&limit=500`
-        let pageCount = 0
-        
-        while (nextUrl && pageCount < 20) { // Increased to 20 pages to get all 211 campaigns
-          const response = await fetch(nextUrl)
-          const data = await response.json()
-          
-          if (data.data) {
-            allCampaigns = allCampaigns.concat(data.data)
-          }
-          
-          nextUrl = data.paging?.next || null
-          pageCount++
+        if (data.data) {
+          allCampaigns = allCampaigns.concat(data.data)
         }
         
-        console.log(`Fetched ${allCampaigns.length} campaigns across ${pageCount} pages`)
-        
-        // Reset metrics to use campaign data
-        impressions = 0
-        clicks = 0
-        conversions = 0
-        revenue = 0
+        nextUrl = data.paging?.next || null
+        pageCount++
+      }
         
         // Sum up all campaign metrics
         allCampaigns.forEach(campaign => {
@@ -178,14 +176,13 @@ export async function POST(request: NextRequest) {
           }
         })
         
-        console.log('Lifetime totals from campaigns:', {
-          campaigns: allCampaigns.length,
-          impressions,
-          clicks,
-          conversions,
-          revenue
-        })
-      }
+      console.log('Lifetime totals from campaigns:', {
+        campaigns: allCampaigns.length,
+        impressions,
+        clicks,
+        conversions,
+        revenue
+      })
       
       return NextResponse.json({
         success: true,
@@ -211,7 +208,9 @@ export async function POST(request: NextRequest) {
         debug: {
           insightsSpend,
           lifetimeSpend,
-          method: impressions > 0 ? 'account_insights' : 'campaign_aggregation'
+          method: 'campaign_aggregation',
+          campaignsFetched: allCampaigns.length,
+          campaignsWithData: allCampaigns.filter(c => c.insights?.data?.[0]).length
         }
       })
     } else {
