@@ -281,7 +281,7 @@ export function AIPDFExport({
       <DialogTrigger asChild>
         <Button variant="outline" className="flex items-center gap-2">
           <FileText className="w-4 h-4" />
-          AI PDF Report
+          Export Report
         </Button>
       </DialogTrigger>
       <DialogContent className="max-w-4xl w-[95vw] max-h-[90vh] overflow-y-auto bg-gray-900 border-gray-700">
