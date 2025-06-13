@@ -52,6 +52,7 @@ import { AccountManagementScore } from "@/components/account-management-score"
 import { CampaignComparisonTool } from "@/components/campaign-comparison-tool"
 import { AIPDFExport } from "@/components/ai-pdf-export"
 import { CampaignOptimizer } from "@/components/campaign-optimizer"
+import { SingleCampaignOptimizer } from "@/components/single-campaign-optimizer"
 
 // Lazy load heavy components
 const DateRangeSelector = dynamicImport(() => 
@@ -1243,6 +1244,7 @@ export default function DashboardPage() {
                   Pattern Analysis
                 </Button>
               </Link>
+              {/* Global AI Optimizer button removed - now available per campaign
               <Button
                 variant="outline"
                 className="flex items-center gap-2 text-xs border-gray-700 hover:bg-gray-800"
@@ -1251,6 +1253,7 @@ export default function DashboardPage() {
                 <Brain className="w-3 h-3 md:w-4 md:h-4" />
                 AI Optimizer
               </Button>
+              */}
               <Button
                 variant="outline"
                 className="flex items-center gap-2 text-xs border-gray-700 hover:bg-gray-800"
@@ -1555,7 +1558,7 @@ export default function DashboardPage() {
               </div>
             )}
 
-            {/* Campaign Optimizer */}
+            {/* Campaign Optimizer - Now available per campaign in the Optimizer tab
             {showCampaignOptimizer && credentialsSubmitted && campaigns.length > 0 && (
               <div className="mb-8">
                 <CampaignOptimizer
@@ -1572,6 +1575,7 @@ export default function DashboardPage() {
                 />
               </div>
             )}
+            */}
 
             {/* Summary Stats - Additional Metrics */}
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-4 mb-6 text-xs">
@@ -1822,13 +1826,14 @@ export default function DashboardPage() {
                               onValueChange={(value) => handleTabChange(campaign.id, value)}
                               className="w-full"
                             >
-                              <TabsList className="grid w-full grid-cols-3 sm:grid-cols-3 md:grid-cols-6 bg-gray-700/80 mb-4 p-1 rounded-md text-xs">
+                              <TabsList className="grid w-full grid-cols-3 sm:grid-cols-4 md:grid-cols-7 bg-gray-700/80 mb-4 p-1 rounded-md text-xs">
                                 <TabsTrigger value="analysis">Analysis</TabsTrigger>
                                 <TabsTrigger value="details">Details</TabsTrigger>
                                 <TabsTrigger value="predictions">Predictions</TabsTrigger>
                                 <TabsTrigger value="demographics">Demographics</TabsTrigger>
                                 <TabsTrigger value="dayweek">Day/Time</TabsTrigger>
                                 <TabsTrigger value="insights">AI Insights</TabsTrigger>
+                                <TabsTrigger value="optimizer">Optimizer</TabsTrigger>
                               </TabsList>
                               <TabsContent value="analysis">
                                 <Suspense fallback={<div className="h-64 flex items-center justify-center"><Loader2 className="w-6 h-6 animate-spin" /></div>}>
@@ -2100,6 +2105,17 @@ export default function DashboardPage() {
                                     </div>
                                   </CardContent>
                                 </Card>
+                              </TabsContent>
+                              <TabsContent value="optimizer">
+                                <SingleCampaignOptimizer
+                                  campaign={{
+                                    ...campaign,
+                                    frequency: campaign.processedInsights?.frequency || 0
+                                  }}
+                                  accountAvgROAS={overviewData.overallROAS}
+                                  accountAvgCPA={overviewData.totalSpend / (overviewData.totalConversions || 1)}
+                                  totalAccountBudget={campaigns.reduce((sum, c) => sum + (c.daily_budget || c.lifetime_budget || 0), 0)}
+                                />
                               </TabsContent>
                             </Tabs>
                           ) : (
