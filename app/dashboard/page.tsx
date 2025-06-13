@@ -506,12 +506,11 @@ export default function DashboardPage() {
         
         // Also get campaigns for display
         const campaignData = await optimizedApiManager.request<any>(
-          "/api/direct-meta",
+          "/api/direct-campaigns",
           {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
-              type: "overview",
               datePreset: selectedDateRange,
               accessToken: credentials.accessToken,
               adAccountId: credentials.adAccountId,

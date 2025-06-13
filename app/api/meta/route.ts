@@ -6,6 +6,7 @@ import { withSecurity } from '@/lib/security/security-middleware'
 import { createValidationMiddleware, secureSchemas } from '@/lib/security/input-validation'
 import { cookies } from 'next/headers'
 import { z } from 'zod'
+import { railwayFetch } from '@/lib/railway-fetch-fix'
 
 const META_API_BASE = 'https://graph.facebook.com/v19.0'
 
@@ -220,7 +221,7 @@ async function fetchBreakdownInsights(
   
   try {
     const response = await withTimeout(
-      fetch(url, {
+      railwayFetch(url, {
         method: 'GET',
         headers: { 'Accept': 'application/json' },
         signal: AbortSignal.timeout(15000)
@@ -401,7 +402,7 @@ async function handleMetaAPIRequest(request: NextRequest): Promise<NextResponse>
           fields: 'spend,impressions,clicks,ctr,cpc,actions,action_values,conversions,cost_per_conversion,reach,frequency,date_start,date_stop'
         })
         
-        const insightsResponse = await fetch(`${insightsUrl}?${params}`)
+        const insightsResponse = await railwayFetch(`${insightsUrl}?${params}`)
         const insightsData = await insightsResponse.json()
         
         // Also fetch ad sets for this campaign
@@ -411,7 +412,7 @@ async function handleMetaAPIRequest(request: NextRequest): Promise<NextResponse>
           fields: 'id,name,status,created_time,updated_time,insights{spend,impressions,clicks,ctr,cpc,actions,action_values}'
         })
         
-        const adSetsResponse = await fetch(`${adSetsUrl}?${adSetsParams}`)
+        const adSetsResponse = await railwayFetch(`${adSetsUrl}?${adSetsParams}`)
         const adSetsData = await adSetsResponse.json()
         
         // Process historical daily data (using insights data)

@@ -1,5 +1,6 @@
 // Meta Graph API Client with proper error handling and debugging
 import { z } from 'zod'
+import { railwayFetch } from './railway-fetch-fix'
 
 // Environment configuration
 const META_API_VERSION = 'v19.0'
@@ -122,7 +123,7 @@ export class MetaAPIClient {
           ? `http://localhost:${process.env.PORT || 3000}/api/meta`
           : '/api/meta'
           
-        const response = await fetch(apiUrl, {
+        const response = await railwayFetch(apiUrl, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
