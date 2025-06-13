@@ -44,6 +44,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { Skeleton } from "@/components/ui/skeleton"
 import Link from "next/link"
 import { HistoricalPerformanceChart } from "@/components/historical-performance-chart"
+import { EnhancedPerformanceCharts } from "@/components/enhanced-performance-charts"
 import { CampaignComprehensiveAnalysis } from "@/components/campaign-comprehensive-analysis"
 import { AccountManagementScore } from "@/components/account-management-score"
 
@@ -1774,18 +1775,12 @@ export default function DashboardPage() {
                               <TabsContent value="details" className="space-y-4">
                                 {campaign.expandedData?.historicalDailyData &&
                                   campaign.expandedData.historicalDailyData.length > 0 && (
-                                    <Card className="bg-gray-700/50 border-gray-600/70">
-                                      <CardHeader>
-                                        <CardTitle className="text-base">
-                                          Historical Performance ({selectedDateRange.replace(/_/g, " ")})
-                                        </CardTitle>
-                                      </CardHeader>
-                                      <CardContent className="h-[250px] md:h-[300px]">
-                                        <Suspense fallback={<Skeleton className="w-full h-full" />}>
-                                          <HistoricalPerformanceChart data={campaign.expandedData.historicalDailyData} />
-                                        </Suspense>
-                                      </CardContent>
-                                    </Card>
+                                    <Suspense fallback={<Skeleton className="w-full h-96" />}>
+                                      <EnhancedPerformanceCharts 
+                                        data={campaign.expandedData.historicalDailyData}
+                                        campaignName={campaign.name}
+                                      />
+                                    </Suspense>
                                   )}
                                 {campaign.expandedData?.todayHourlyData &&
                                   campaign.expandedData.todayHourlyData.length > 0 && (
