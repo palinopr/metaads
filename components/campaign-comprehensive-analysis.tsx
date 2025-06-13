@@ -263,6 +263,22 @@ export function CampaignComprehensiveAnalysis({
             </div>
           </div>
 
+          {/* Note about unknown or assumed creatives */}
+          {(data.creativeAnalysis?.byType.unknown.count > 0 || data.creativeAnalysis?.assumedTypes > 0) && (
+            <div className="mt-2 p-3 bg-yellow-900/20 border border-yellow-700/50 rounded-lg">
+              <p className="text-xs text-yellow-400">
+                <AlertCircle className="w-3 h-3 inline mr-1" />
+                {data.creativeAnalysis.byType.unknown.count > 0 && (
+                  <>Note: {data.creativeAnalysis.byType.unknown.count} ad{data.creativeAnalysis.byType.unknown.count > 1 ? 's' : ''} could not be categorized. </>
+                )}
+                {data.creativeAnalysis.assumedTypes > 0 && (
+                  <>{data.creativeAnalysis.assumedTypes} ad{data.creativeAnalysis.assumedTypes > 1 ? 's' : ''} assumed to be image ads based on performance data. </>
+                )}
+                Creative data may be limited due to API restrictions.
+              </p>
+            </div>
+          )}
+
           {/* Top Performing Ads */}
           {data.creativeAnalysis?.topPerformingAds?.length > 0 && (
             <div className="mt-4">

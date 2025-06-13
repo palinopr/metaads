@@ -167,10 +167,12 @@ export async function POST(request: Request) {
           }
           
           // Log for debugging and fallback
+          let wasAssumed = false
           if (creativeType === 'unknown' && adMetrics.spend > 0) {
             console.log('Unknown creative type for ad:', ad.id, 'creative data:', creative)
             // Default to image if we have spend but can't determine type
             creativeType = 'image'
+            wasAssumed = true
           }
 
           return {
@@ -180,6 +182,7 @@ export async function POST(request: Request) {
             creativeType,
             caption,
             mediaUrl,
+            wasAssumed,
             ...adMetrics
           }
         })
@@ -235,7 +238,8 @@ export async function POST(request: Request) {
         video: { count: 0, spend: 0, conversions: 0, revenue: 0 },
         unknown: { count: 0, spend: 0, conversions: 0, revenue: 0 }
       },
-      topPerformingAds: [] as any[]
+      topPerformingAds: [] as any[],
+      assumedTypes: 0 // Track how many we had to assume
     }
 
     let totalAdsProcessed = 0
@@ -247,6 +251,10 @@ export async function POST(request: Request) {
         creativeAnalysis.byType[type].spend += ad.spend
         creativeAnalysis.byType[type].conversions += ad.conversions
         creativeAnalysis.byType[type].revenue += ad.revenue
+        
+        if (ad.wasAssumed) {
+          creativeAnalysis.assumedTypes++
+        }
       })
     })
     
