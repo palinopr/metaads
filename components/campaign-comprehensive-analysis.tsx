@@ -108,44 +108,59 @@ export function CampaignComprehensiveAnalysis({
     const scoreEntity = (entity: any, averages: any) => {
       const metrics = entity
       
-      // Calculate individual metric scores (0-100)
-      const scores = {
-        roas: scoreMetric(metrics.roas || 0, averages.roas, 'higher'),
-        ctr: scoreMetric(metrics.ctr || 0, averages.ctr, 'higher'),
-        cpc: scoreMetric(metrics.cpc || 0, averages.cpc, 'lower'),
-        conversionRate: metrics.clicks > 0 ? scoreMetric((metrics.conversions / metrics.clicks) * 100, averages.conversionRate, 'higher') : 50
+      // Use industry benchmarks instead of account averages for more realistic scoring
+      const BENCHMARKS = {
+        roas: 3.0,  // 3x ROAS is good
+        ctr: 2.0,   // 2% CTR is average
+        cpc: 1.0,   // $1 CPC is average
+        conversionRate: 2.5  // 2.5% conversion rate is average
       }
       
-      // Weighted total score
+      // Calculate individual metric scores (0-100) using benchmarks
+      const scores = {
+        roas: scoreMetric(metrics.roas || 0, BENCHMARKS.roas, 'higher'),
+        ctr: scoreMetric(metrics.ctr || 0, BENCHMARKS.ctr, 'higher'),
+        cpc: scoreMetric(metrics.cpc || 0, BENCHMARKS.cpc, 'lower'),
+        conversionRate: metrics.clicks > 0 ? scoreMetric((metrics.conversions / metrics.clicks) * 100, BENCHMARKS.conversionRate, 'higher') : 50
+      }
+      
+      // Weighted total score (ROAS should be weighted much higher)
       const totalScore = 
-        scores.roas * 0.30 +
+        scores.roas * 0.50 +  // ROAS is most important
         scores.ctr * 0.20 +
-        scores.cpc * 0.20 +
-        scores.conversionRate * 0.30
+        scores.cpc * 0.15 +
+        scores.conversionRate * 0.15
       
       return Math.round(totalScore)
     }
     
-    const scoreMetric = (value: number, average: number, direction: 'higher' | 'lower'): number => {
-      if (average === 0) return 50
-      const ratio = value / average
+    const scoreMetric = (value: number, benchmark: number, direction: 'higher' | 'lower'): number => {
+      if (benchmark === 0) return 50
       
       if (direction === 'higher') {
-        if (ratio >= 2) return 100
-        if (ratio >= 1.5) return 90
-        if (ratio >= 1.2) return 80
-        if (ratio >= 1) return 70
-        if (ratio >= 0.8) return 60
-        if (ratio >= 0.6) return 40
-        return 20
+        // For ROAS, CTR, Conversion Rate - higher is better
+        if (value >= benchmark * 2) return 100    // 2x benchmark = 100 points
+        if (value >= benchmark * 1.5) return 90   // 1.5x benchmark = 90 points
+        if (value >= benchmark * 1.2) return 80   // 1.2x benchmark = 80 points
+        if (value >= benchmark) return 70         // Meet benchmark = 70 points
+        if (value >= benchmark * 0.8) return 60   // 80% of benchmark = 60 points
+        if (value >= benchmark * 0.6) return 50   // 60% of benchmark = 50 points
+        if (value >= benchmark * 0.4) return 40   // 40% of benchmark = 40 points
+        if (value >= benchmark * 0.2) return 30   // 20% of benchmark = 30 points
+        if (value >= benchmark * 0.1) return 20   // 10% of benchmark = 20 points
+        return 10  // Less than 10% of benchmark = 10 points
       } else {
-        if (ratio <= 0.5) return 100
-        if (ratio <= 0.7) return 90
-        if (ratio <= 0.85) return 80
-        if (ratio <= 1) return 70
-        if (ratio <= 1.2) return 60
-        if (ratio <= 1.5) return 40
-        return 20
+        // For CPC - lower is better
+        if (value <= benchmark * 0.5) return 100  // Half benchmark = 100 points
+        if (value <= benchmark * 0.7) return 90   // 70% of benchmark = 90 points
+        if (value <= benchmark * 0.85) return 80  // 85% of benchmark = 80 points
+        if (value <= benchmark) return 70         // Meet benchmark = 70 points
+        if (value <= benchmark * 1.2) return 60   // 20% above benchmark = 60 points
+        if (value <= benchmark * 1.5) return 50   // 50% above benchmark = 50 points
+        if (value <= benchmark * 2) return 40     // 2x benchmark = 40 points
+        if (value <= benchmark * 3) return 30     // 3x benchmark = 30 points
+        if (value <= benchmark * 4) return 20     // 4x benchmark = 20 points
+        return 10  // More than 4x benchmark = 10 points
       }
     }
     

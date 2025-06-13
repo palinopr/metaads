@@ -110,34 +110,41 @@ export function AccountManagementScore({
       }
       
       const WEIGHTS = {
-        roas: 0.30,
+        roas: 0.50,  // ROAS is most important for profitability
         ctr: 0.20,
-        cpc: 0.20,
-        conversionRate: 0.20,
-        budgetUtilization: 0.10
+        cpc: 0.15,
+        conversionRate: 0.15,
+        budgetUtilization: 0.00  // Remove budget utilization for now
       }
       
       // Score calculation helper
       const scoreMetric = (value: number, benchmark: number, direction: 'higher' | 'lower'): number => {
         if (benchmark === 0) return 50
-        const ratio = value / benchmark
         
         if (direction === 'higher') {
-          if (ratio >= 2) return 100
-          if (ratio >= 1.5) return 90
-          if (ratio >= 1.2) return 80
-          if (ratio >= 1) return 70
-          if (ratio >= 0.8) return 60
-          if (ratio >= 0.6) return 40
-          return 20
+          // For ROAS, CTR, Conversion Rate - higher is better
+          if (value >= benchmark * 2) return 100    // 2x benchmark = 100 points
+          if (value >= benchmark * 1.5) return 90   // 1.5x benchmark = 90 points
+          if (value >= benchmark * 1.2) return 80   // 1.2x benchmark = 80 points
+          if (value >= benchmark) return 70         // Meet benchmark = 70 points
+          if (value >= benchmark * 0.8) return 60   // 80% of benchmark = 60 points
+          if (value >= benchmark * 0.6) return 50   // 60% of benchmark = 50 points
+          if (value >= benchmark * 0.4) return 40   // 40% of benchmark = 40 points
+          if (value >= benchmark * 0.2) return 30   // 20% of benchmark = 30 points
+          if (value >= benchmark * 0.1) return 20   // 10% of benchmark = 20 points
+          return 10  // Less than 10% of benchmark = 10 points
         } else {
-          if (ratio <= 0.5) return 100
-          if (ratio <= 0.7) return 90
-          if (ratio <= 0.85) return 80
-          if (ratio <= 1) return 70
-          if (ratio <= 1.2) return 60
-          if (ratio <= 1.5) return 40
-          return 20
+          // For CPC - lower is better
+          if (value <= benchmark * 0.5) return 100  // Half benchmark = 100 points
+          if (value <= benchmark * 0.7) return 90   // 70% of benchmark = 90 points
+          if (value <= benchmark * 0.85) return 80  // 85% of benchmark = 80 points
+          if (value <= benchmark) return 70         // Meet benchmark = 70 points
+          if (value <= benchmark * 1.2) return 60   // 20% above benchmark = 60 points
+          if (value <= benchmark * 1.5) return 50   // 50% above benchmark = 50 points
+          if (value <= benchmark * 2) return 40     // 2x benchmark = 40 points
+          if (value <= benchmark * 3) return 30     // 3x benchmark = 30 points
+          if (value <= benchmark * 4) return 20     // 4x benchmark = 20 points
+          return 10  // More than 4x benchmark = 10 points
         }
       }
       
