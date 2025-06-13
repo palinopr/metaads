@@ -168,10 +168,10 @@ export async function POST(request: NextRequest) {
           })
         }
         
-        // Calculate conversions and revenue
+        // Calculate conversions and revenue - match Meta UI
         if (insight.actions) {
           insight.actions.forEach((action: any) => {
-            if (['purchase', 'omni_purchase', 'offsite_conversion.fb_pixel_purchase'].includes(action.action_type)) {
+            if (action.action_type === 'offsite_conversion.fb_pixel_purchase') {
               conversions += parseInt(action.value || '0')
             }
           })
@@ -179,7 +179,7 @@ export async function POST(request: NextRequest) {
         
         if (insight.action_values) {
           insight.action_values.forEach((actionValue: any) => {
-            if (['purchase', 'omni_purchase', 'offsite_conversion.fb_pixel_purchase'].includes(actionValue.action_type)) {
+            if (actionValue.action_type === 'offsite_conversion.fb_pixel_purchase') {
               revenue += parseFloat(actionValue.value || '0')
             }
           })
