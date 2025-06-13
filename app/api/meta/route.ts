@@ -872,6 +872,14 @@ async function handleMetaAPIRequest(request: NextRequest): Promise<NextResponse>
 
     // Handle legacy request format from dashboard
     if (type === 'overview' && adAccountId && accessToken) {
+      console.log('Processing overview request with credentials:', {
+        type,
+        hasToken: !!accessToken,
+        tokenLength: accessToken?.length || 0,
+        adAccountId: adAccountId,
+        datePreset: datePreset || 'last_30d'
+      })
+      
       // Rate limit API requests
       const rateLimit = checkRateLimit(clientIP, 'api')
       if (!rateLimit.allowed) {
@@ -937,7 +945,19 @@ async function handleMetaAPIRequest(request: NextRequest): Promise<NextResponse>
         console.log(`Fetching campaigns with date preset: ${datePreset || 'last_30d'}`)
         
         // Fetch campaigns with insights
-        const campaigns = await client.getCampaigns(datePreset || 'last_30d')
+        let campaigns
+        try {
+          campaigns = await client.getCampaigns(datePreset || 'last_30d')
+          console.log(`Successfully fetched ${campaigns.length} campaigns`)
+        } catch (campaignError: any) {
+          console.error('Failed to fetch campaigns:', campaignError)
+          console.error('Campaign fetch error details:', {
+            message: campaignError.message,
+            name: campaignError.name,
+            stack: campaignError.stack
+          })
+          throw campaignError
+        }
         
         console.log(`Found ${campaigns.length} campaigns, fetching ad sets for each...`)
         if (campaigns.length > 0) {
