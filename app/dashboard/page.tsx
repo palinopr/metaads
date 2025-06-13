@@ -601,12 +601,16 @@ export default function DashboardPage() {
         // Use account-level metrics for lifetime if available
         if (data.accountMetrics && selectedDateRange === 'lifetime') {
           const accountMetrics = data.accountMetrics
+          console.log('Account metrics received:', accountMetrics)
+          console.log('Before override - totals:', { ...totals })
+          
           totals.totalSpend = accountMetrics.spend
           totals.totalRevenue = accountMetrics.revenue
           totals.totalConversions = accountMetrics.conversions
           totals.totalImpressions = accountMetrics.impressions
           totals.totalClicks = accountMetrics.clicks
           
+          console.log('After override - totals:', { ...totals })
           console.log('Using account-level metrics for lifetime:', accountMetrics)
         }
         
