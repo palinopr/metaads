@@ -310,10 +310,17 @@ async function handleMetaAPIRequest(request: NextRequest): Promise<NextResponse>
     
     // Try to get access token from multiple sources
     let finalAccessToken = body.accessToken;
+    let finalAdAccountId = body.adAccountId;
+    
     if (!finalAccessToken) {
       // Try to get from OAuth cookies
       const cookieStore = cookies()
       finalAccessToken = cookieStore.get('fb_access_token')?.value
+      
+      // Also get selected account if not provided
+      if (!finalAdAccountId) {
+        finalAdAccountId = cookieStore.get('fb_selected_account')?.value
+      }
     }
     
     if (!finalAccessToken) {
@@ -323,8 +330,11 @@ async function handleMetaAPIRequest(request: NextRequest): Promise<NextResponse>
       }, { status: 401 })
     }
     
-    // Add token to body for processing
+    // Add token and account to body for processing
     body.accessToken = finalAccessToken;
+    if (finalAdAccountId && !body.adAccountId) {
+      body.adAccountId = finalAdAccountId;
+    }
     
     const { 
       endpoint, 
@@ -1146,6 +1156,12 @@ async function handleMetaAPIRequest(request: NextRequest): Promise<NextResponse>
   } catch (error: any) {
     console.error('API route error:', error)
     console.error('Error stack:', error.stack)
+    console.error('Request details:', {
+      hasToken: !!body?.accessToken,
+      hasAccountId: !!body?.adAccountId,
+      requestType: body?.type,
+      errorMessage: error.message
+    })
     
     // Check for token expiration
     if (error.message && (
