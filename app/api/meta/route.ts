@@ -321,12 +321,25 @@ async function handleMetaAPIRequest(request: NextRequest): Promise<NextResponse>
       if (!finalAdAccountId) {
         finalAdAccountId = cookieStore.get('fb_selected_account')?.value
       }
+      
+      console.log('OAuth credentials from cookies:', {
+        hasToken: !!finalAccessToken,
+        tokenLength: finalAccessToken?.length || 0,
+        hasAccount: !!finalAdAccountId,
+        account: finalAdAccountId
+      })
     }
     
     if (!finalAccessToken) {
+      console.error('No access token found in request or cookies')
       return NextResponse.json({
         error: 'Access token required',
-        message: 'Please provide an access token or authenticate with Facebook'
+        message: 'Please provide an access token or authenticate with Facebook',
+        debug: {
+          bodyHasToken: !!body.accessToken,
+          cookiesChecked: true,
+          timestamp: new Date().toISOString()
+        }
       }, { status: 401 })
     }
     
@@ -873,7 +886,29 @@ async function handleMetaAPIRequest(request: NextRequest): Promise<NextResponse>
       }
       
       try {
-        console.log('Creating Meta API clients for overview request...')
+        console.log('Creating Meta API clients for overview request...', {
+          hasToken: !!accessToken,
+          tokenLength: accessToken?.length || 0,
+          adAccountId: adAccountId,
+          clientIP: clientIP
+        })
+        
+        // Validate credentials format before making API calls
+        if (!accessToken || accessToken.length < 50) {
+          console.error('Invalid access token format')
+          return NextResponse.json({
+            error: 'Invalid access token format',
+            success: false
+          }, { status: 401 })
+        }
+        
+        if (!adAccountId || !adAccountId.startsWith('act_')) {
+          console.error('Invalid ad account ID format:', adAccountId)
+          return NextResponse.json({
+            error: 'Invalid ad account ID format. Must start with "act_"',
+            success: false
+          }, { status: 400 })
+        }
         
         // Create API client instances
         const client = new MetaAPIClient(accessToken, adAccountId)

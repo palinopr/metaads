@@ -9,6 +9,7 @@ import { useState, useEffect, useCallback, type FormEvent, Suspense, lazy } from
 import dynamicImport from 'next/dynamic'
 import { safeToFixed } from "@/lib/safe-utils"
 import { CredentialManager, type Credentials } from "@/lib/credential-manager"
+import { OAuthCredentialBridge } from "@/lib/oauth-credential-bridge"
 import { optimizedApiManager } from "@/lib/api-manager-optimized"
 import { EnhancedMetaAPIClient } from "@/lib/meta-api-client-enhanced"
 import {
@@ -436,6 +437,18 @@ export default function DashboardPage() {
   // Load credentials on mount
   useEffect(() => {
     const loadCredentials = async () => {
+      // First try OAuth credential bridge
+      const oauthCredentials = await OAuthCredentialBridge.checkAndSync()
+      
+      if (oauthCredentials) {
+        console.log('Loaded credentials from OAuth')
+        setCredentials(oauthCredentials)
+        setCredentialsSubmitted(true)
+        setShowSettings(false)
+        return
+      }
+      
+      // Fall back to regular CredentialManager
       const savedCredentials = await CredentialManager.load()
 
       if (savedCredentials) {
@@ -992,6 +1005,22 @@ export default function DashboardPage() {
             <CardDescription className="text-gray-400">
               Enter Meta Ads API Access Token & Ad Account ID. Stored in your browser.
             </CardDescription>
+            <div className="mt-4">
+              <Link href="/oauth-setup">
+                <Button variant="default" className="w-full bg-blue-600 hover:bg-blue-700">
+                  <ExternalLink className="w-4 h-4 mr-2" />
+                  Connect with Facebook (Recommended)
+                </Button>
+              </Link>
+              <div className="relative my-4">
+                <div className="absolute inset-0 flex items-center">
+                  <span className="w-full border-t border-gray-600" />
+                </div>
+                <div className="relative flex justify-center text-xs uppercase">
+                  <span className="bg-gray-800 px-2 text-gray-400">Or use manual setup</span>
+                </div>
+              </div>
+            </div>
           </CardHeader>
           <form onSubmit={handleSaveCredentials}>
             <CardContent className="space-y-4">
@@ -1083,6 +1112,12 @@ export default function DashboardPage() {
                   disabled={isLoading || isRefreshing}
                 />
               </Suspense>
+              <Link href="/oauth-debug" passHref>
+                <Button variant="outline" className="flex items-center gap-2 text-xs border-gray-700 hover:bg-gray-800">
+                  <Settings className="w-3 h-3 md:w-4 md:h-4" />
+                  OAuth Debug
+                </Button>
+              </Link>
               <Link href="/settings/token" passHref>
                 <Button variant="outline" className="flex items-center gap-2 text-xs border-gray-700 hover:bg-gray-800">
                   <Key className="w-3 h-3 md:w-4 md:h-4" />
