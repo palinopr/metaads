@@ -51,6 +51,7 @@ import { CampaignComprehensiveAnalysis } from "@/components/campaign-comprehensi
 import { AccountManagementScore } from "@/components/account-management-score"
 import { CampaignComparisonTool } from "@/components/campaign-comparison-tool"
 import { AIPDFExport } from "@/components/ai-pdf-export"
+import { CampaignOptimizer } from "@/components/campaign-optimizer"
 
 // Lazy load heavy components
 const DateRangeSelector = dynamicImport(() => 
@@ -444,6 +445,7 @@ export default function DashboardPage() {
   const [showComprehensiveView, setShowComprehensiveView] = useState(false)
   const [showManagementScore, setShowManagementScore] = useState(false)
   const [showCampaignComparison, setShowCampaignComparison] = useState(false)
+  const [showCampaignOptimizer, setShowCampaignOptimizer] = useState(false)
   const [comprehensiveData, setComprehensiveData] = useState<any>(null)
   const [chartData, setChartData] = useState<any[]>([])
   const [demographicData, setDemographicData] = useState<any>(null)
@@ -1244,6 +1246,14 @@ export default function DashboardPage() {
               <Button
                 variant="outline"
                 className="flex items-center gap-2 text-xs border-gray-700 hover:bg-gray-800"
+                onClick={() => setShowCampaignOptimizer(!showCampaignOptimizer)}
+              >
+                <Brain className="w-3 h-3 md:w-4 md:h-4" />
+                AI Optimizer
+              </Button>
+              <Button
+                variant="outline"
+                className="flex items-center gap-2 text-xs border-gray-700 hover:bg-gray-800"
                 onClick={() => setShowManagementScore(!showManagementScore)}
               >
                 <Target className="w-3 h-3 md:w-4 md:h-4" />
@@ -1541,6 +1551,24 @@ export default function DashboardPage() {
                   datePreset={selectedDateRange}
                   campaigns={campaigns}
                   overviewData={overviewData}
+                />
+              </div>
+            )}
+
+            {/* Campaign Optimizer */}
+            {showCampaignOptimizer && credentialsSubmitted && campaigns.length > 0 && (
+              <div className="mb-8">
+                <CampaignOptimizer
+                  campaigns={campaigns.map(c => ({
+                    ...c,
+                    frequency: c.processedInsights?.frequency || 0
+                  }))}
+                  overviewData={{
+                    totalSpend: overviewData.totalSpend,
+                    totalRevenue: overviewData.totalRevenue,
+                    overallROAS: overviewData.overallROAS,
+                    totalConversions: overviewData.totalConversions
+                  }}
                 />
               </div>
             )}
