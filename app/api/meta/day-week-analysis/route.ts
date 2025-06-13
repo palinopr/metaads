@@ -126,15 +126,30 @@ export async function POST(request: Request) {
         `&limit=1000` +
         `&access_token=${cleanToken}`
     } else if (datePreset === 'lifetime') {
-      // For lifetime, use time_range instead of date_preset
+      // For lifetime, hourly breakdown might not work for long ranges
+      // Limit to last 90 days for hourly data
+      const lifetimeEndDate = new Date()
+      const lifetimeStartDate = new Date()
+      lifetimeStartDate.setDate(lifetimeEndDate.getDate() - 90)
+      
+      // Use the more recent of: 90 days ago or campaign start
+      const effectiveStartDate = startDate > lifetimeStartDate ? startDate : lifetimeStartDate
+      
+      const limitedTimeRange = {
+        since: effectiveStartDate.toISOString().split("T")[0],
+        until: lifetimeEndDate.toISOString().split("T")[0]
+      }
+      
       insightsUrl =
         `https://graph.facebook.com/v19.0/${campaignId}/insights?` +
         `fields=spend,impressions,clicks,ctr,actions,action_values` +
         `&breakdowns=hourly_stats_aggregated_by_advertiser_time_zone` +
-        `&time_range=${JSON.stringify(timeRange)}` +
+        `&time_range=${JSON.stringify(limitedTimeRange)}` +
         `&time_increment=1` +
         `&limit=5000` +
         `&access_token=${cleanToken}`
+        
+      console.log('Lifetime day/week analysis limited to last 90 days for hourly data')
     } else {
       // For multi-day ranges, use date_preset with proper mapping
       const datePresetMap: { [key: string]: string } = {
@@ -190,11 +205,7 @@ export async function POST(request: Request) {
 
       if (hourData.action_values) {
         hourData.action_values.forEach((av) => {
-          if (
-            av.action_type === "omni_purchase" ||
-            av.action_type === "purchase" ||
-            av.action_type === "offsite_conversion.fb_pixel_purchase"
-          ) {
+          if (av.action_type === "offsite_conversion.fb_pixel_purchase") {
             revenue += Number.parseFloat(av.value || "0")
           }
         })
@@ -202,13 +213,7 @@ export async function POST(request: Request) {
 
       if (hourData.actions) {
         hourData.actions.forEach((a) => {
-          if (
-            a.action_type === "omni_purchase" ||
-            a.action_type === "purchase" ||
-            a.action_type === "offsite_conversion.fb_pixel_purchase" ||
-            a.action_type === "complete_registration" ||
-            a.action_type === "lead"
-          ) {
+          if (a.action_type === "offsite_conversion.fb_pixel_purchase") {
             conversions += Number.parseInt(a.value || "0", 10)
           }
         })
