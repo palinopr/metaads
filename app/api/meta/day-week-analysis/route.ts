@@ -36,6 +36,25 @@ export async function POST(request: Request) {
       )
     }
 
+    // Clean the access token to remove Bearer prefix
+    const cleanToken = accessToken.replace(/^Bearer\s+/i, '')
+
+    // For lifetime, get campaign created_time
+    let campaignStartDate: Date | null = null
+    if (datePreset === 'lifetime') {
+      try {
+        const campaignUrl = `https://graph.facebook.com/v19.0/${campaignId}?fields=created_time&access_token=${cleanToken}`
+        const campaignRes = await fetch(campaignUrl)
+        const campaignData = await campaignRes.json()
+        if (campaignData.created_time) {
+          campaignStartDate = new Date(campaignData.created_time)
+          console.log('Campaign created on:', campaignData.created_time)
+        }
+      } catch (e) {
+        console.warn('Could not fetch campaign creation date')
+      }
+    }
+
     const endDate = new Date()
     const startDate = new Date()
 
@@ -64,8 +83,13 @@ export async function POST(request: Request) {
         startDate.setDate(endDate.getDate() - 90)
         break
       case "lifetime":
-        // For lifetime, use a large date range
-        startDate.setFullYear(2014, 0, 1) // Facebook Ads started around 2014
+        // For lifetime, use campaign start date if available
+        if (campaignStartDate) {
+          startDate.setTime(campaignStartDate.getTime())
+        } else {
+          // Fallback to 3 years ago (within Meta's 37-month limit)
+          startDate.setFullYear(startDate.getFullYear() - 3)
+        }
         break
       case "this_month":
         startDate.setDate(1)
@@ -86,9 +110,6 @@ export async function POST(request: Request) {
       since: startDate.toISOString().split("T")[0],
       until: endDate.toISOString().split("T")[0],
     }
-
-    // Clean the access token to remove Bearer prefix
-    const cleanToken = accessToken.replace(/^Bearer\s+/i, '')
     
     // For historical data, we'll use date_preset or time_range with daily breakdown
     // Then we'll make a separate call for hourly data if needed

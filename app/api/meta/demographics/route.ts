@@ -42,6 +42,7 @@ async function fetchBreakdownData(
   datePreset: string,
   breakdown: string,
   fields: string,
+  campaignStartDate?: string,
 ): Promise<{ data?: any[]; error?: any; breakdownName?: string }> {
   // Clean the access token to remove Bearer prefix
   const cleanToken = accessToken.replace(/^Bearer\s+/i, '')
@@ -50,9 +51,9 @@ async function fetchBreakdownData(
   let urlParams = `fields=${fields}&breakdowns=${breakdown}&limit=500&access_token=${cleanToken}`
   
   if (datePreset === 'lifetime') {
-    // For lifetime, use a very large date range
+    // For lifetime, use campaign start date to today
     const timeRange = JSON.stringify({
-      since: '2014-01-01',
+      since: campaignStartDate || '2020-01-01',
       until: new Date().toISOString().split('T')[0]
     })
     urlParams += `&time_range=${timeRange}`
@@ -97,6 +98,22 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Campaign ID and Access Token are required." }, { status: 400 })
     }
 
+    // For lifetime, we need to get the campaign's created_time first
+    let campaignStartDate = '2020-01-01' // Default fallback
+    if (datePreset === 'lifetime') {
+      try {
+        const campaignUrl = `https://graph.facebook.com/${META_API_VERSION}/${campaignId}?fields=created_time&access_token=${cleanToken}`
+        const campaignRes = await fetch(campaignUrl)
+        const campaignData = await campaignRes.json()
+        if (campaignData.created_time) {
+          campaignStartDate = campaignData.created_time.split('T')[0]
+          console.log('Campaign created on:', campaignStartDate)
+        }
+      } catch (e) {
+        console.warn('Could not fetch campaign creation date, using default')
+      }
+    }
+
     const commonFields = "actions,action_values,impressions,spend"
 
     // 1. Fetch total campaign conversions for accurate percentage calculation
@@ -106,7 +123,7 @@ export async function POST(request: NextRequest) {
       
       if (datePreset === 'lifetime') {
         const timeRange = JSON.stringify({
-          since: '2014-01-01',
+          since: campaignStartDate,
           until: new Date().toISOString().split('T')[0]
         })
         totalStatsUrl += `&time_range=${timeRange}`
@@ -137,10 +154,10 @@ export async function POST(request: NextRequest) {
     }
 
     const results = await Promise.all([
-      fetchBreakdownData(campaignId, cleanToken, datePreset, "age", commonFields),
-      fetchBreakdownData(campaignId, cleanToken, datePreset, "gender", commonFields),
-      fetchBreakdownData(campaignId, cleanToken, datePreset, "region", commonFields),
-      fetchBreakdownData(campaignId, cleanToken, datePreset, "device_platform", commonFields),
+      fetchBreakdownData(campaignId, cleanToken, datePreset, "age", commonFields, campaignStartDate),
+      fetchBreakdownData(campaignId, cleanToken, datePreset, "gender", commonFields, campaignStartDate),
+      fetchBreakdownData(campaignId, cleanToken, datePreset, "region", commonFields, campaignStartDate),
+      fetchBreakdownData(campaignId, cleanToken, datePreset, "device_platform", commonFields, campaignStartDate),
     ])
 
     const errors = results.filter((r) => r.error)
