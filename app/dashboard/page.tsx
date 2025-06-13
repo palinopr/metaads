@@ -44,6 +44,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { Skeleton } from "@/components/ui/skeleton"
 import Link from "next/link"
 import { HistoricalPerformanceChart } from "@/components/historical-performance-chart"
+import { CampaignComprehensiveAnalysis } from "@/components/campaign-comprehensive-analysis"
 
 // Lazy load heavy components
 const DateRangeSelector = dynamicImport(() => 
@@ -1724,17 +1725,28 @@ export default function DashboardPage() {
                             </Alert>
                           ) : campaign.expandedData ? (
                             <Tabs
-                              defaultValue={activeTabs[campaign.id] || "details"}
+                              defaultValue={activeTabs[campaign.id] || "analysis"}
                               onValueChange={(value) => handleTabChange(campaign.id, value)}
                               className="w-full"
                             >
-                              <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 md:grid-cols-5 bg-gray-700/80 mb-4 p-1 rounded-md text-xs">
-                                <TabsTrigger value="details">Details & Ad Sets</TabsTrigger>
+                              <TabsList className="grid w-full grid-cols-3 sm:grid-cols-3 md:grid-cols-6 bg-gray-700/80 mb-4 p-1 rounded-md text-xs">
+                                <TabsTrigger value="analysis">Analysis</TabsTrigger>
+                                <TabsTrigger value="details">Details</TabsTrigger>
                                 <TabsTrigger value="predictions">Predictions</TabsTrigger>
                                 <TabsTrigger value="demographics">Demographics</TabsTrigger>
                                 <TabsTrigger value="dayweek">Day/Time</TabsTrigger>
                                 <TabsTrigger value="insights">AI Insights</TabsTrigger>
                               </TabsList>
+                              <TabsContent value="analysis">
+                                <Suspense fallback={<div className="h-64 flex items-center justify-center"><Loader2 className="w-6 h-6 animate-spin" /></div>}>
+                                  <CampaignComprehensiveAnalysis
+                                    campaignId={campaign.id}
+                                    campaignName={campaign.name}
+                                    accessToken={credentials.accessToken}
+                                    datePreset={selectedDateRange}
+                                  />
+                                </Suspense>
+                              </TabsContent>
                               <TabsContent value="details" className="space-y-4">
                                 {campaign.expandedData?.historicalDailyData &&
                                   campaign.expandedData.historicalDailyData.length > 0 && (
