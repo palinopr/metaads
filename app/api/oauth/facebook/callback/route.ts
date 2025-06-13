@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 
-const FACEBOOK_APP_ID = process.env.FACEBOOK_APP_ID
-const FACEBOOK_APP_SECRET = process.env.FACEBOOK_APP_SECRET
-const REDIRECT_URI = process.env.NEXT_PUBLIC_APP_URL + '/api/oauth/facebook/callback'
-
 export async function GET(request: NextRequest) {
+  // Access environment variables at runtime
+  const FACEBOOK_APP_ID = process.env.FACEBOOK_APP_ID
+  const FACEBOOK_APP_SECRET = process.env.FACEBOOK_APP_SECRET
+  const APP_URL = process.env.NEXT_PUBLIC_APP_URL || `https://${request.headers.get('host')}`
+  const REDIRECT_URI = `${APP_URL}/api/oauth/facebook/callback`
   const { searchParams } = new URL(request.url)
   const code = searchParams.get('code')
   const error = searchParams.get('error')
