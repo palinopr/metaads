@@ -132,9 +132,9 @@ export function DailyBudgetOptimizer({
   }
 
   const generateLocalDailyRecommendation = (): DailyRecommendation => {
-    const budget = campaign.daily_budget || 100
-    const todayROAS = campaign.todayROAS || campaign.roas
-    const todaySpend = campaign.todaySpend || campaign.spend
+    const budget = Number(campaign.daily_budget) || 100
+    const todayROAS = Number(campaign.todayROAS) || Number(campaign.roas) || 0
+    const todaySpend = Number(campaign.todaySpend) || Number(campaign.spend) || 0
     const spendPace = todaySpend / budget
     const expectedFullDaySpend = (todaySpend / (currentHour / 24))
     
@@ -300,14 +300,14 @@ export function DailyBudgetOptimizer({
         <div className="grid grid-cols-2 gap-3 text-xs">
           <div className="bg-gray-700/50 rounded p-2">
             <p className="text-gray-400">Today's ROAS</p>
-            <p className="font-bold text-lg">{(campaign.todayROAS || campaign.roas).toFixed(2)}x</p>
+            <p className="font-bold text-lg">{(Number(campaign.todayROAS) || Number(campaign.roas) || 0).toFixed(2)}x</p>
           </div>
           <div className="bg-gray-700/50 rounded p-2">
             <p className="text-gray-400">Budget Spent</p>
             <p className="font-bold text-lg">
-              ${(campaign.todaySpend || 0).toFixed(2)}
+              ${(Number(campaign.todaySpend) || 0).toFixed(2)}
               <span className="text-xs text-gray-400 ml-1">
-                / ${(campaign.daily_budget || 0).toFixed(2)}
+                / ${(Number(campaign.daily_budget) || 0).toFixed(2)}
               </span>
             </p>
           </div>

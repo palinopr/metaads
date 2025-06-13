@@ -15,7 +15,12 @@ export async function POST(request: Request) {
       apiKey: anthropicApiKey,
     })
 
-    // Prepare real-time analysis data
+    // Prepare real-time analysis data - ensure all numbers are properly parsed
+    const dailyBudget = Number(campaign.daily_budget) || 0
+    const todaySpend = Number(campaign.todaySpend) || 0
+    const todayRevenue = Number(campaign.todayRevenue) || 0
+    const todayROAS = Number(campaign.todayROAS) || Number(campaign.roas) || 0
+    
     const realtimeData = {
       currentTime: {
         hour: currentHour,
@@ -24,30 +29,30 @@ export async function POST(request: Request) {
       },
       campaign: {
         name: campaign.name,
-        dailyBudget: campaign.daily_budget || 0,
+        dailyBudget: dailyBudget,
         todayPerformance: {
-          spend: campaign.todaySpend || 0,
-          revenue: campaign.todayRevenue || 0,
-          roas: campaign.todayROAS || campaign.roas,
-          conversions: campaign.todayConversions || 0,
-          impressions: campaign.todayImpressions || 0,
-          ctr: campaign.todayCTR || campaign.ctr,
-          spendPace: (campaign.todaySpend || 0) / (campaign.daily_budget || 1),
-          expectedFullDaySpend: ((campaign.todaySpend || 0) / (currentHour / 24)) || 0
+          spend: todaySpend,
+          revenue: todayRevenue,
+          roas: todayROAS,
+          conversions: Number(campaign.todayConversions) || 0,
+          impressions: Number(campaign.todayImpressions) || 0,
+          ctr: Number(campaign.todayCTR) || Number(campaign.ctr) || 0,
+          spendPace: todaySpend / (dailyBudget || 1),
+          expectedFullDaySpend: (todaySpend / (currentHour / 24)) || 0
         },
         yesterdayPerformance: {
-          roas: campaign.yesterdayROAS || 0,
-          spend: campaign.yesterdaySpend || 0,
-          conversions: campaign.yesterdayConversions || 0
+          roas: Number(campaign.yesterdayROAS) || 0,
+          spend: Number(campaign.yesterdaySpend) || 0,
+          conversions: Number(campaign.yesterdayConversions) || 0
         },
         lifetimeMetrics: {
-          roas: campaign.roas,
-          cpa: campaign.cpa,
-          ctr: campaign.ctr
+          roas: Number(campaign.roas) || 0,
+          cpa: Number(campaign.cpa) || 0,
+          ctr: Number(campaign.ctr) || 0
         }
       },
       accountBenchmark: {
-        avgROAS: accountAvgROAS
+        avgROAS: Number(accountAvgROAS) || 0
       }
     }
 
