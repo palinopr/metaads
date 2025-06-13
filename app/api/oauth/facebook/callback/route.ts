@@ -44,25 +44,32 @@ export async function GET(request: NextRequest) {
 
     // Get user's ad accounts with pagination
     let allAccounts = []
-    let nextPage = `https://graph.facebook.com/v19.0/me/adaccounts?fields=id,name,account_status&limit=100&access_token=${tokenData.access_token}`
+    let nextPage = `https://graph.facebook.com/v19.0/me/adaccounts?fields=id,name,account_status,currency,timezone_name&limit=200&access_token=${tokenData.access_token}`
+    let pageCount = 0
     
     // Fetch all pages of ad accounts
     while (nextPage) {
+      console.log(`Fetching page ${pageCount + 1} of ad accounts...`)
       const adAccountsResponse = await fetch(nextPage)
       const adAccountsData = await adAccountsResponse.json()
       
       if (adAccountsData.data) {
         allAccounts = [...allAccounts, ...adAccountsData.data]
+        console.log(`Page ${pageCount + 1}: Found ${adAccountsData.data.length} accounts, total so far: ${allAccounts.length}`)
       }
       
       // Check for next page
       nextPage = adAccountsData.paging?.next || null
+      pageCount++
       
       // Safety limit to prevent infinite loops
-      if (allAccounts.length > 500) break
+      if (allAccounts.length > 1000 || pageCount > 20) {
+        console.log('Reached limit, stopping pagination')
+        break
+      }
     }
     
-    console.log(`Fetched ${allAccounts.length} ad accounts`)
+    console.log(`Fetched total of ${allAccounts.length} ad accounts across ${pageCount} pages`)
 
     // Store token and account info in session/cookie
     // Use the correct app URL for redirect
