@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
+import { railwayFetch } from '@/lib/railway-fetch-fix'
 
 const META_API_BASE = 'https://graph.facebook.com/v19.0'
 
@@ -86,7 +87,7 @@ export async function POST(request: NextRequest) {
     
     let response
     try {
-      response = await fetch(`${campaignsUrl}?${params}`)
+      response = await railwayFetch(`${campaignsUrl}?${params}`)
     } catch (fetchError: any) {
       console.error('Network error calling Meta API:', fetchError)
       return NextResponse.json({

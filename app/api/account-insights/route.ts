@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
+import { railwayFetch } from '@/lib/railway-fetch-fix'
 
 const META_API_BASE = 'https://graph.facebook.com/v19.0'
 
@@ -36,7 +37,7 @@ export async function POST(request: NextRequest) {
         fields: 'id,name,currency,amount_spent,balance'
       })
       
-      const accountResponse = await fetch(`${accountUrl}?${accountParams}`)
+      const accountResponse = await railwayFetch(`${accountUrl}?${accountParams}`)
       const accountData = await accountResponse.json()
       
       if (!accountResponse.ok) {
@@ -58,7 +59,7 @@ export async function POST(request: NextRequest) {
         })
       })
       
-      const insightsResponse = await fetch(`${insightsUrl}?${insightsParams}`)
+      const insightsResponse = await railwayFetch(`${insightsUrl}?${insightsParams}`)
       const insightsData = await insightsResponse.json()
       
       console.log('Account lifetime insights response:', {
@@ -124,7 +125,7 @@ export async function POST(request: NextRequest) {
       let pageCount = 0
       
       while (nextUrl && pageCount < 20) { // Increased to 20 pages to get all 211 campaigns
-        const response = await fetch(nextUrl)
+        const response = await railwayFetch(nextUrl)
         const data = await response.json()
         
         if (data.data) {
@@ -181,7 +182,7 @@ export async function POST(request: NextRequest) {
           await Promise.all(batch.map(async (campaign) => {
             try {
               const adsetsUrl = `${META_API_BASE}/${campaign.id}/adsets`
-              const adsetsResponse = await fetch(
+              const adsetsResponse = await railwayFetch(
                 `${adsetsUrl}?access_token=${accessToken}&fields=insights{spend,impressions,clicks,actions,action_values}&limit=100`
               )
               const adsetsData = await adsetsResponse.json()
@@ -273,7 +274,7 @@ export async function POST(request: NextRequest) {
         date_preset: metaDatePreset
       })
       
-      const response = await fetch(`${insightsUrl}?${params}`)
+      const response = await railwayFetch(`${insightsUrl}?${params}`)
       const data = await response.json()
       
       if (!response.ok) {
