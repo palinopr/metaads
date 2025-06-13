@@ -130,7 +130,8 @@ export class MetaAPIClient {
           body: JSON.stringify({
             endpoint,
             params,
-            accessToken: this.accessToken
+            accessToken: this.accessToken,
+            adAccountId: this.adAccountId
           })
         })
 
