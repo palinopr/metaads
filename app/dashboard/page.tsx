@@ -45,6 +45,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import Link from "next/link"
 import { HistoricalPerformanceChart } from "@/components/historical-performance-chart"
 import { CampaignComprehensiveAnalysis } from "@/components/campaign-comprehensive-analysis"
+import { AccountManagementScore } from "@/components/account-management-score"
 
 // Lazy load heavy components
 const DateRangeSelector = dynamicImport(() => 
@@ -436,6 +437,7 @@ export default function DashboardPage() {
 
   // Comprehensive components state
   const [showComprehensiveView, setShowComprehensiveView] = useState(false)
+  const [showManagementScore, setShowManagementScore] = useState(false)
   const [comprehensiveData, setComprehensiveData] = useState<any>(null)
   const [chartData, setChartData] = useState<any[]>([])
   const [demographicData, setDemographicData] = useState<any>(null)
@@ -1228,6 +1230,14 @@ export default function DashboardPage() {
                 </Button>
               </Link>
               <Button
+                variant="outline"
+                className="flex items-center gap-2 text-xs border-gray-700 hover:bg-gray-800"
+                onClick={() => setShowManagementScore(!showManagementScore)}
+              >
+                <Target className="w-3 h-3 md:w-4 md:h-4" />
+                Management Score
+              </Button>
+              <Button
                 variant={showComprehensiveView ? "default" : "outline"}
                 className="flex items-center gap-2 text-xs border-gray-700 hover:bg-gray-800"
                 onClick={() => setShowComprehensiveView(!showComprehensiveView)}
@@ -1479,6 +1489,17 @@ export default function DashboardPage() {
                 </Button>
               </div>
             </div>
+
+            {/* Account Management Score */}
+            {showManagementScore && credentialsSubmitted && (
+              <div className="mb-8">
+                <AccountManagementScore
+                  accessToken={credentials.accessToken}
+                  accountId={credentials.adAccountId}
+                  datePreset={selectedDateRange}
+                />
+              </div>
+            )}
 
             {/* Summary Stats - Additional Metrics */}
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-4 mb-6 text-xs">
