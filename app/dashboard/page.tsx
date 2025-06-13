@@ -484,9 +484,11 @@ export default function DashboardPage() {
       setFetchError(null)
 
       try {
-        // Use optimized API manager
+        // Temporarily use direct Meta API endpoint to bypass issues
+        const useDirectApi = true // Toggle this to switch between endpoints
+        
         const data = await optimizedApiManager.request<any>(
-          "/api/meta",
+          useDirectApi ? "/api/direct-meta" : "/api/meta",
           {
             method: "POST",
             headers: { "Content-Type": "application/json" },
