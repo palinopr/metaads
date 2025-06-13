@@ -814,6 +814,25 @@ export default function DashboardPage() {
     )
 
     try {
+      // Fetch historical daily data first
+      const historicalResponse = await optimizedApiManager.request<any>(
+        "/api/campaign-historical",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            campaignId,
+            datePreset: selectedDateRange,
+            accessToken: credentials.accessToken,
+          }),
+        },
+        {
+          priority: 2,
+          batch: true
+        }
+      )
+
+      // Then fetch other campaign details
       const detailsData = await optimizedApiManager.request<any>(
         "/api/meta",
         {
@@ -839,7 +858,7 @@ export default function DashboardPage() {
             ? {
                 ...c,
                 expandedData: {
-                  historicalDailyData: detailsData.historicalDailyData || [],
+                  historicalDailyData: historicalResponse.historicalData || [],
                   todayHourlyData: detailsData.todayHourlyData || [],
                   adSets: detailsData.adSets || [],
                   isLoading: false,
