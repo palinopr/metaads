@@ -12,6 +12,10 @@ export interface PDFReportData {
 export function generateEnhancedHTMLReport(data: PDFReportData): string {
   const { analysis, campaigns, overviewData, chartsData, exportOptions, datePreset } = data
   
+  // Debug logging
+  console.log('PDF Generation - Campaigns received:', campaigns?.length || 0)
+  console.log('PDF Generation - Overview data:', overviewData)
+  
   const formatCurrency = (num: number) => 
     `$${num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
   
@@ -133,6 +137,7 @@ export function generateEnhancedHTMLReport(data: PDFReportData): string {
     <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.tailwindcss.com https://cdn.jsdelivr.net; img-src * data:; font-src *;">
         <title>Meta Ads AI Analysis Report - ${new Date().toLocaleDateString()}</title>
         
         <!-- Tailwind CSS -->
@@ -220,6 +225,9 @@ export function generateEnhancedHTMLReport(data: PDFReportData): string {
         </style>
     </head>
     <body class="bg-gray-50 text-gray-900">
+        <!-- Isolated content wrapper to prevent extension interference -->
+        <div id="pdf-report-content" style="isolation: isolate; position: relative; z-index: 1;">
+        
         <!-- Modern Header -->
         <div class="bg-gradient-to-r from-gray-900 to-gray-800 text-white p-8 rounded-lg shadow-xl mb-8">
             <div class="max-w-7xl mx-auto">
@@ -352,16 +360,16 @@ export function generateEnhancedHTMLReport(data: PDFReportData): string {
                         </tr>
                     </thead>
                     <tbody>
-                        ${campaigns.map((campaign: any, index: number) => `
+                        ${campaigns && campaigns.length > 0 ? campaigns.map((campaign: any, index: number) => `
                             <tr class="border-b border-gray-200 hover:bg-gray-50 transition-colors">
                                 <td class="px-4 py-4">
-                                    <div class="font-medium text-gray-900">${campaign.name}</div>
-                                    <div class="text-sm text-gray-500">ID: ${campaign.id}</div>
+                                    <div class="font-medium text-gray-900">${campaign.name || 'Unnamed Campaign'}</div>
+                                    <div class="text-sm text-gray-500">ID: ${campaign.id || 'N/A'}</div>
                                 </td>
                                 <td class="px-4 py-4 text-center">
                                     <span class="inline-flex px-3 py-1 text-xs font-semibold rounded-full" 
-                                          style="background-color: ${getStatusColor(campaign.status)}20; color: ${getStatusColor(campaign.status)}">
-                                        ${campaign.status}
+                                          style="background-color: ${getStatusColor(campaign.status || 'UNKNOWN')}20; color: ${getStatusColor(campaign.status || 'UNKNOWN')}">
+                                        ${campaign.status || 'UNKNOWN'}
                                     </span>
                                 </td>
                                 <td class="px-4 py-4 text-right font-medium">${formatCurrency(campaign.spend || 0)}</td>
@@ -376,7 +384,13 @@ export function generateEnhancedHTMLReport(data: PDFReportData): string {
                                 <td class="px-4 py-4 text-right">${formatCurrency(campaign.cpc || 0)}</td>
                                 <td class="px-4 py-4 text-right">${formatCurrency(campaign.cpa || 0)}</td>
                             </tr>
-                        `).join('')}
+                        `).join('') : `
+                            <tr>
+                                <td colspan="9" class="px-4 py-8 text-center text-gray-500">
+                                    No campaign data available to display.
+                                </td>
+                            </tr>
+                        `}
                     </tbody>
                     <tfoot>
                         <tr class="bg-gray-100 font-semibold">
@@ -575,6 +589,8 @@ export function generateEnhancedHTMLReport(data: PDFReportData): string {
             });
         </script>
         ` : ''}
+        
+        </div> <!-- End isolated content wrapper -->
     </body>
     </html>
   `

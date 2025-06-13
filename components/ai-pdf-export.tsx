@@ -109,9 +109,14 @@ export function AIPDFExport({
       setCurrentStep('Collecting campaign data...')
       setProgress(10)
 
+      console.log('All campaigns:', campaigns.length)
+      console.log('Selected campaign IDs:', exportOptions.selectedCampaigns)
+      
       const selectedCampaignData = campaigns.filter(c => 
         exportOptions.selectedCampaigns.includes(c.id)
       )
+      
+      console.log('Filtered campaigns:', selectedCampaignData.length)
 
       // Step 2: Get detailed insights for selected campaigns
       setCurrentStep('Fetching detailed performance data...')
