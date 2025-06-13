@@ -9,13 +9,15 @@ export async function GET(request: NextRequest) {
   const code = searchParams.get('code')
   const error = searchParams.get('error')
 
+  const appUrl = 'https://metaads-production.up.railway.app'
+
   if (error) {
     console.error('Facebook OAuth error:', error)
-    return NextResponse.redirect(new URL('/?error=oauth_failed', request.url))
+    return NextResponse.redirect(new URL('/?error=oauth_failed', appUrl))
   }
 
   if (!code) {
-    return NextResponse.redirect(new URL('/?error=no_code', request.url))
+    return NextResponse.redirect(new URL('/?error=no_code', appUrl))
   }
 
   try {
@@ -37,7 +39,7 @@ export async function GET(request: NextRequest) {
 
     if (tokenData.error) {
       console.error('Token exchange error:', tokenData.error)
-      return NextResponse.redirect(new URL('/?error=token_exchange_failed', request.url))
+      return NextResponse.redirect(new URL('/?error=token_exchange_failed', appUrl))
     }
 
     // Get user's ad accounts
@@ -47,7 +49,9 @@ export async function GET(request: NextRequest) {
     const adAccountsData = await adAccountsResponse.json()
 
     // Store token and account info in session/cookie
-    const response = NextResponse.redirect(new URL('/setup-complete', request.url))
+    // Use the correct app URL for redirect
+    const appUrl = 'https://metaads-production.up.railway.app'
+    const response = NextResponse.redirect(new URL('/setup-complete', appUrl))
     
     // Set secure HTTP-only cookies
     response.cookies.set('fb_access_token', tokenData.access_token, {
@@ -69,6 +73,6 @@ export async function GET(request: NextRequest) {
     return response
   } catch (error) {
     console.error('OAuth callback error:', error)
-    return NextResponse.redirect(new URL('/?error=callback_failed', request.url))
+    return NextResponse.redirect(new URL('/?error=callback_failed', appUrl))
   }
 }
