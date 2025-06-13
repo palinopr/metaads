@@ -854,7 +854,7 @@ export function CampaignComprehensiveAnalysis({
                           />
                         </div>
                       </div>
-                    ))}
+                    )})}
                   </div>
                 </div>
               </TabsContent>
