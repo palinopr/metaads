@@ -46,14 +46,52 @@ export async function POST(request: NextRequest) {
       timestamp: new Date().toISOString()
     })
     
-    const response = await fetch(`${campaignsUrl}?${params}`)
-    const data = await response.json()
+    let response
+    try {
+      response = await fetch(`${campaignsUrl}?${params}`)
+    } catch (fetchError: any) {
+      console.error('Network error calling Meta API:', fetchError)
+      return NextResponse.json({
+        error: 'Network error',
+        message: fetchError.message,
+        success: false
+      }, { status: 500 })
+    }
+    let data
+    try {
+      data = await response.json()
+    } catch (jsonError) {
+      console.error('Failed to parse Meta API response as JSON')
+      return NextResponse.json({
+        error: 'Invalid response from Meta API',
+        status: response.status,
+        statusText: response.statusText,
+        success: false
+      }, { status: 500 })
+    }
     
     if (!response.ok) {
-      console.error('Direct Meta API error:', data)
+      console.error('Direct Meta API error:', {
+        status: response.status,
+        error: data.error,
+        datePreset,
+        url: campaignsUrl
+      })
+      
+      // Check if it's a date preset error
+      if (data.error?.message?.includes('date_preset')) {
+        return NextResponse.json({
+          error: 'Invalid date preset',
+          details: `The date preset "${datePreset}" may not be supported. Error: ${data.error.message}`,
+          validPresets: ['today', 'yesterday', 'last_7d', 'last_14d', 'last_28d', 'last_30d', 'last_90d', 'lifetime'],
+          success: false
+        }, { status: 400 })
+      }
+      
       return NextResponse.json({
         error: 'Meta API error',
         details: data.error,
+        datePreset,
         success: false
       }, { status: response.status })
     }
