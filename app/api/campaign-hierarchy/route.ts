@@ -143,19 +143,34 @@ export async function POST(request: Request) {
           const creative = ad.creative || (ad.adcreatives && ad.adcreatives.data?.[0]) || {}
           
           // Get caption/text from multiple possible locations
-          caption = creative.body || 
-                   creative.title || 
-                   ad.adcreatives?.data?.[0]?.body || 
-                   ad.adcreatives?.data?.[0]?.title || 
-                   creative.object_story_spec?.link_data?.message ||
-                   creative.object_story_spec?.link_data?.name ||
-                   creative.object_story_spec?.link_data?.description ||
-                   creative.object_story_spec?.video_data?.message ||
-                   creative.object_story_spec?.video_data?.title ||
-                   ''
+          // First check asset_feed_spec for dynamic creative ads
+          if (creative.asset_feed_spec?.bodies?.[0]?.text) {
+            caption = creative.asset_feed_spec.bodies[0].text
+          } else {
+            caption = creative.body || 
+                     creative.title || 
+                     ad.adcreatives?.data?.[0]?.body || 
+                     ad.adcreatives?.data?.[0]?.title || 
+                     creative.object_story_spec?.link_data?.message ||
+                     creative.object_story_spec?.link_data?.name ||
+                     creative.object_story_spec?.link_data?.description ||
+                     creative.object_story_spec?.video_data?.message ||
+                     creative.object_story_spec?.video_data?.title ||
+                     ''
+          }
+          
+          // Also get title from asset_feed_spec if available
+          let adTitle = ''
+          if (creative.asset_feed_spec?.titles?.[0]?.text) {
+            adTitle = creative.asset_feed_spec.titles[0].text
+          }
           
           // Determine creative type and media URL
-          if (creative.video_id || ad.adcreatives?.data?.[0]?.video_id) {
+          if (creative.asset_feed_spec?.videos?.length > 0) {
+            // Dynamic creative with videos
+            creativeType = 'video'
+            mediaUrl = creative.asset_feed_spec.videos[0].thumbnail_url || ''
+          } else if (creative.video_id || ad.adcreatives?.data?.[0]?.video_id) {
             creativeType = 'video'
             mediaUrl = creative.thumbnail_url || ad.adcreatives?.data?.[0]?.thumbnail_url || ''
           } else if (creative.image_url || ad.adcreatives?.data?.[0]?.image_url) {
@@ -193,6 +208,11 @@ export async function POST(request: Request) {
             }, null, 2))
           }
 
+          // Combine title and caption if both exist
+          if (adTitle && caption) {
+            caption = `${adTitle}\n\n${caption}`
+          }
+          
           return {
             id: ad.id,
             name: ad.name,
@@ -201,6 +221,7 @@ export async function POST(request: Request) {
             caption,
             mediaUrl,
             wasAssumed,
+            isDynamicCreative: !!creative.asset_feed_spec,
             ...adMetrics
           }
         })

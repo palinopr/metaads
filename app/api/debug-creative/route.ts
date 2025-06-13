@@ -81,7 +81,24 @@ export async function POST(request: Request) {
       }
     }
 
-    // Source 3: Object story spec
+    // Source 3: Asset feed spec (for dynamic creative)
+    if (adData.creative?.asset_feed_spec) {
+      const assetFeed = adData.creative.asset_feed_spec
+      creativeInfo.debug.assetFeedSpec = assetFeed
+      
+      if (assetFeed.bodies?.[0]?.text && !creativeInfo.caption) {
+        creativeInfo.caption = assetFeed.bodies[0].text
+      }
+      if (assetFeed.titles?.[0]?.text && !creativeInfo.title) {
+        creativeInfo.title = assetFeed.titles[0].text
+      }
+      if (assetFeed.videos?.length > 0 && creativeInfo.type === 'unknown') {
+        creativeInfo.type = 'video'
+        creativeInfo.mediaUrl = assetFeed.videos[0].thumbnail_url || ''
+      }
+    }
+
+    // Source 4: Object story spec
     const storySpec = adData.creative?.object_story_spec || adData.adcreatives?.data?.[0]?.object_story_spec
     if (storySpec) {
       creativeInfo.debug.storySpec = storySpec
