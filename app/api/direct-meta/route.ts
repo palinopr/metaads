@@ -146,16 +146,27 @@ export async function POST(request: NextRequest) {
     })
     
     // Process campaigns
-    const campaigns = (data.data || []).map((campaign: any) => {
+    const campaigns = (data.data || []).map((campaign: any, index: number) => {
       let spend = 0, revenue = 0, conversions = 0, impressions = 0, clicks = 0, ctr = 0, cpc = 0
       
       if (campaign.insights?.data?.[0]) {
         const insight = campaign.insights.data[0]
+        const rawSpend = insight.spend
         spend = parseFloat(insight.spend || '0')
         impressions = parseInt(insight.impressions || '0')
         clicks = parseInt(insight.clicks || '0')
         ctr = parseFloat(insight.ctr || '0')
         cpc = parseFloat(insight.cpc || '0')
+        
+        // Log first few campaigns to debug spend values
+        if (index < 3) {
+          console.log(`Campaign ${index + 1} spend:`, {
+            name: campaign.name,
+            rawSpend,
+            parsedSpend: spend,
+            hasInsights: true
+          })
+        }
         
         // Calculate conversions and revenue
         if (insight.actions) {
