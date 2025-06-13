@@ -37,3 +37,114 @@ Management Score Error: Error: Invalid OAuth access token - Cannot parse access 
     at async Server.requestListener (/Users/jaimeortiz/metaads/node_modules/.pnpm/next@14.2.16_react-dom@18.0.0_react@18.0.0__react@18.0.0/node_modules/next/dist/server/lib/start-server.js:141:13)
  POST /api/management-score 500 in 460ms
  ✓ Compiled in 27ms
+ ✓ Compiled /api/meta/day-week-analysis in 252ms (58 modules)
+Day/Week Analysis URL (without token): https://graph.facebook.com/v19.0/test/insights?fields=spend,impressions,clicks,ctr,actions,action_values&breakdowns=hourly_stats_aggregated_by_advertiser_time_zone&date_preset=last_30_d&time_increment=1&limit=5000
+Time range: { since: '2025-05-14', until: '2025-06-13' }
+Facebook API Error: {
+  message: 'Invalid OAuth access token - Cannot parse access token',
+  type: 'OAuthException',
+  code: 190,
+  fbtrace_id: 'AKFJiH267aNOyXj7yWH2UEw'
+}
+Day/Week Analysis API Error: Error: Facebook API Error: Invalid OAuth access token - Cannot parse access token (Code: 190)
+    at POST (webpack-internal:///(rsc)/./app/api/meta/day-week-analysis/route.ts:130:19)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async /Users/jaimeortiz/metaads/node_modules/.pnpm/next@14.2.16_react-dom@18.0.0_react@18.0.0__react@18.0.0/node_modules/next/dist/compiled/next-server/app-route.runtime.dev.js:6:55831
+    at async eO.execute (/Users/jaimeortiz/metaads/node_modules/.pnpm/next@14.2.16_react-dom@18.0.0_react@18.0.0__react@18.0.0/node_modules/next/dist/compiled/next-server/app-route.runtime.dev.js:6:46527)
+    at async eO.handle (/Users/jaimeortiz/metaads/node_modules/.pnpm/next@14.2.16_react-dom@18.0.0_react@18.0.0__react@18.0.0/node_modules/next/dist/compiled/next-server/app-route.runtime.dev.js:6:57165)
+    at async doRender (/Users/jaimeortiz/metaads/node_modules/.pnpm/next@14.2.16_react-dom@18.0.0_react@18.0.0__react@18.0.0/node_modules/next/dist/server/base-server.js:1352:42)
+    at async cacheEntry.responseCache.get.routeKind (/Users/jaimeortiz/metaads/node_modules/.pnpm/next@14.2.16_react-dom@18.0.0_react@18.0.0__react@18.0.0/node_modules/next/dist/server/base-server.js:1574:28)
+    at async DevServer.renderToResponseWithComponentsImpl (/Users/jaimeortiz/metaads/node_modules/.pnpm/next@14.2.16_react-dom@18.0.0_react@18.0.0__react@18.0.0/node_modules/next/dist/server/base-server.js:1482:28)
+    at async DevServer.renderPageComponent (/Users/jaimeortiz/metaads/node_modules/.pnpm/next@14.2.16_react-dom@18.0.0_react@18.0.0__react@18.0.0/node_modules/next/dist/server/base-server.js:1908:24)
+    at async DevServer.renderToResponseImpl (/Users/jaimeortiz/metaads/node_modules/.pnpm/next@14.2.16_react-dom@18.0.0_react@18.0.0__react@18.0.0/node_modules/next/dist/server/base-server.js:1946:32)
+    at async DevServer.pipeImpl (/Users/jaimeortiz/metaads/node_modules/.pnpm/next@14.2.16_react-dom@18.0.0_react@18.0.0__react@18.0.0/node_modules/next/dist/server/base-server.js:921:25)
+    at async NextNodeServer.handleCatchallRenderRequest (/Users/jaimeortiz/metaads/node_modules/.pnpm/next@14.2.16_react-dom@18.0.0_react@18.0.0__react@18.0.0/node_modules/next/dist/server/next-server.js:272:17)
+    at async DevServer.handleRequestImpl (/Users/jaimeortiz/metaads/node_modules/.pnpm/next@14.2.16_react-dom@18.0.0_react@18.0.0__react@18.0.0/node_modules/next/dist/server/base-server.js:817:17)
+    at async /Users/jaimeortiz/metaads/node_modules/.pnpm/next@14.2.16_react-dom@18.0.0_react@18.0.0__react@18.0.0/node_modules/next/dist/server/dev/next-dev-server.js:339:20
+    at async Span.traceAsyncFn (/Users/jaimeortiz/metaads/node_modules/.pnpm/next@14.2.16_react-dom@18.0.0_react@18.0.0__react@18.0.0/node_modules/next/dist/trace/trace.js:154:20)
+    at async DevServer.handleRequest (/Users/jaimeortiz/metaads/node_modules/.pnpm/next@14.2.16_react-dom@18.0.0_react@18.0.0__react@18.0.0/node_modules/next/dist/server/dev/next-dev-server.js:336:24)
+    at async invokeRender (/Users/jaimeortiz/metaads/node_modules/.pnpm/next@14.2.16_react-dom@18.0.0_react@18.0.0__react@18.0.0/node_modules/next/dist/server/lib/router-server.js:173:21)
+    at async handleRequest (/Users/jaimeortiz/metaads/node_modules/.pnpm/next@14.2.16_react-dom@18.0.0_react@18.0.0__react@18.0.0/node_modules/next/dist/server/lib/router-server.js:350:24)
+    at async requestHandlerImpl (/Users/jaimeortiz/metaads/node_modules/.pnpm/next@14.2.16_react-dom@18.0.0_react@18.0.0__react@18.0.0/node_modules/next/dist/server/lib/router-server.js:374:13)
+    at async Server.requestListener (/Users/jaimeortiz/metaads/node_modules/.pnpm/next@14.2.16_react-dom@18.0.0_react@18.0.0__react@18.0.0/node_modules/next/dist/server/lib/start-server.js:141:13)
+ POST /api/meta/day-week-analysis 500 in 443ms
+ ✓ Compiled in 28ms
+ ✓ Compiled /api/meta/day-week-analysis in 83ms (58 modules)
+Day/Week Analysis URL (without token): https://graph.facebook.com/v19.0/test/insights?fields=spend,impressions,clicks,ctr,actions,action_values&breakdowns=hourly_stats_aggregated_by_advertiser_time_zone&date_preset=last_7_d&time_increment=1&limit=5000
+Time range: { since: '2025-06-06', until: '2025-06-13' }
+Facebook API Error: {
+  message: 'Invalid OAuth access token - Cannot parse access token',
+  type: 'OAuthException',
+  code: 190,
+  fbtrace_id: 'APcEpqLk1X_nttlNFpudfoP'
+}
+Day/Week Analysis API Error: Error: Facebook API Error: Invalid OAuth access token - Cannot parse access token (Code: 190)
+    at POST (webpack-internal:///(rsc)/./app/api/meta/day-week-analysis/route.ts:130:19)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async /Users/jaimeortiz/metaads/node_modules/.pnpm/next@14.2.16_react-dom@18.0.0_react@18.0.0__react@18.0.0/node_modules/next/dist/compiled/next-server/app-route.runtime.dev.js:6:55831
+    at async eO.execute (/Users/jaimeortiz/metaads/node_modules/.pnpm/next@14.2.16_react-dom@18.0.0_react@18.0.0__react@18.0.0/node_modules/next/dist/compiled/next-server/app-route.runtime.dev.js:6:46527)
+    at async eO.handle (/Users/jaimeortiz/metaads/node_modules/.pnpm/next@14.2.16_react-dom@18.0.0_react@18.0.0__react@18.0.0/node_modules/next/dist/compiled/next-server/app-route.runtime.dev.js:6:57165)
+    at async doRender (/Users/jaimeortiz/metaads/node_modules/.pnpm/next@14.2.16_react-dom@18.0.0_react@18.0.0__react@18.0.0/node_modules/next/dist/server/base-server.js:1352:42)
+    at async cacheEntry.responseCache.get.routeKind (/Users/jaimeortiz/metaads/node_modules/.pnpm/next@14.2.16_react-dom@18.0.0_react@18.0.0__react@18.0.0/node_modules/next/dist/server/base-server.js:1574:28)
+    at async DevServer.renderToResponseWithComponentsImpl (/Users/jaimeortiz/metaads/node_modules/.pnpm/next@14.2.16_react-dom@18.0.0_react@18.0.0__react@18.0.0/node_modules/next/dist/server/base-server.js:1482:28)
+    at async DevServer.renderPageComponent (/Users/jaimeortiz/metaads/node_modules/.pnpm/next@14.2.16_react-dom@18.0.0_react@18.0.0__react@18.0.0/node_modules/next/dist/server/base-server.js:1908:24)
+    at async DevServer.renderToResponseImpl (/Users/jaimeortiz/metaads/node_modules/.pnpm/next@14.2.16_react-dom@18.0.0_react@18.0.0__react@18.0.0/node_modules/next/dist/server/base-server.js:1946:32)
+    at async DevServer.pipeImpl (/Users/jaimeortiz/metaads/node_modules/.pnpm/next@14.2.16_react-dom@18.0.0_react@18.0.0__react@18.0.0/node_modules/next/dist/server/base-server.js:921:25)
+    at async NextNodeServer.handleCatchallRenderRequest (/Users/jaimeortiz/metaads/node_modules/.pnpm/next@14.2.16_react-dom@18.0.0_react@18.0.0__react@18.0.0/node_modules/next/dist/server/next-server.js:272:17)
+    at async DevServer.handleRequestImpl (/Users/jaimeortiz/metaads/node_modules/.pnpm/next@14.2.16_react-dom@18.0.0_react@18.0.0__react@18.0.0/node_modules/next/dist/server/base-server.js:817:17)
+    at async /Users/jaimeortiz/metaads/node_modules/.pnpm/next@14.2.16_react-dom@18.0.0_react@18.0.0__react@18.0.0/node_modules/next/dist/server/dev/next-dev-server.js:339:20
+    at async Span.traceAsyncFn (/Users/jaimeortiz/metaads/node_modules/.pnpm/next@14.2.16_react-dom@18.0.0_react@18.0.0__react@18.0.0/node_modules/next/dist/trace/trace.js:154:20)
+    at async DevServer.handleRequest (/Users/jaimeortiz/metaads/node_modules/.pnpm/next@14.2.16_react-dom@18.0.0_react@18.0.0__react@18.0.0/node_modules/next/dist/server/dev/next-dev-server.js:336:24)
+    at async invokeRender (/Users/jaimeortiz/metaads/node_modules/.pnpm/next@14.2.16_react-dom@18.0.0_react@18.0.0__react@18.0.0/node_modules/next/dist/server/lib/router-server.js:173:21)
+    at async handleRequest (/Users/jaimeortiz/metaads/node_modules/.pnpm/next@14.2.16_react-dom@18.0.0_react@18.0.0__react@18.0.0/node_modules/next/dist/server/lib/router-server.js:350:24)
+    at async requestHandlerImpl (/Users/jaimeortiz/metaads/node_modules/.pnpm/next@14.2.16_react-dom@18.0.0_react@18.0.0__react@18.0.0/node_modules/next/dist/server/lib/router-server.js:374:13)
+    at async Server.requestListener (/Users/jaimeortiz/metaads/node_modules/.pnpm/next@14.2.16_react-dom@18.0.0_react@18.0.0__react@18.0.0/node_modules/next/dist/server/lib/start-server.js:141:13)
+ POST /api/meta/day-week-analysis 500 in 204ms
+ POST /api/meta/day-week-analysis 400 in 23ms
+Lifetime day/week analysis limited to last 90 days for hourly data
+Day/Week Analysis URL (without token): https://graph.facebook.com/v19.0/120210257433720010/insights?fields=spend,impressions,clicks,ctr,actions,action_values&breakdowns=hourly_stats_aggregated_by_advertiser_time_zone&time_range={"since":"2025-03-15","until":"2025-06-13"}&time_increment=1&limit=5000
+Time range: { since: '2022-06-13', until: '2025-06-13' }
+Facebook API Error: {
+  message: 'Invalid OAuth access token - Cannot parse access token',
+  type: 'OAuthException',
+  code: 190,
+  fbtrace_id: 'Alk-y-cz_CW3IA8pLhi4Axu'
+}
+Day/Week Analysis API Error: Error: Facebook API Error: Invalid OAuth access token - Cannot parse access token (Code: 190)
+    at POST (webpack-internal:///(rsc)/./app/api/meta/day-week-analysis/route.ts:130:19)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async /Users/jaimeortiz/metaads/node_modules/.pnpm/next@14.2.16_react-dom@18.0.0_react@18.0.0__react@18.0.0/node_modules/next/dist/compiled/next-server/app-route.runtime.dev.js:6:55831
+    at async eO.execute (/Users/jaimeortiz/metaads/node_modules/.pnpm/next@14.2.16_react-dom@18.0.0_react@18.0.0__react@18.0.0/node_modules/next/dist/compiled/next-server/app-route.runtime.dev.js:6:46527)
+    at async eO.handle (/Users/jaimeortiz/metaads/node_modules/.pnpm/next@14.2.16_react-dom@18.0.0_react@18.0.0__react@18.0.0/node_modules/next/dist/compiled/next-server/app-route.runtime.dev.js:6:57165)
+    at async doRender (/Users/jaimeortiz/metaads/node_modules/.pnpm/next@14.2.16_react-dom@18.0.0_react@18.0.0__react@18.0.0/node_modules/next/dist/server/base-server.js:1352:42)
+    at async cacheEntry.responseCache.get.routeKind (/Users/jaimeortiz/metaads/node_modules/.pnpm/next@14.2.16_react-dom@18.0.0_react@18.0.0__react@18.0.0/node_modules/next/dist/server/base-server.js:1574:28)
+    at async DevServer.renderToResponseWithComponentsImpl (/Users/jaimeortiz/metaads/node_modules/.pnpm/next@14.2.16_react-dom@18.0.0_react@18.0.0__react@18.0.0/node_modules/next/dist/server/base-server.js:1482:28)
+    at async DevServer.renderPageComponent (/Users/jaimeortiz/metaads/node_modules/.pnpm/next@14.2.16_react-dom@18.0.0_react@18.0.0__react@18.0.0/node_modules/next/dist/server/base-server.js:1908:24)
+    at async DevServer.renderToResponseImpl (/Users/jaimeortiz/metaads/node_modules/.pnpm/next@14.2.16_react-dom@18.0.0_react@18.0.0__react@18.0.0/node_modules/next/dist/server/base-server.js:1946:32)
+    at async DevServer.pipeImpl (/Users/jaimeortiz/metaads/node_modules/.pnpm/next@14.2.16_react-dom@18.0.0_react@18.0.0__react@18.0.0/node_modules/next/dist/server/base-server.js:921:25)
+    at async NextNodeServer.handleCatchallRenderRequest (/Users/jaimeortiz/metaads/node_modules/.pnpm/next@14.2.16_react-dom@18.0.0_react@18.0.0__react@18.0.0/node_modules/next/dist/server/next-server.js:272:17)
+    at async DevServer.handleRequestImpl (/Users/jaimeortiz/metaads/node_modules/.pnpm/next@14.2.16_react-dom@18.0.0_react@18.0.0__react@18.0.0/node_modules/next/dist/server/base-server.js:817:17)
+    at async /Users/jaimeortiz/metaads/node_modules/.pnpm/next@14.2.16_react-dom@18.0.0_react@18.0.0__react@18.0.0/node_modules/next/dist/server/dev/next-dev-server.js:339:20
+    at async Span.traceAsyncFn (/Users/jaimeortiz/metaads/node_modules/.pnpm/next@14.2.16_react-dom@18.0.0_react@18.0.0__react@18.0.0/node_modules/next/dist/trace/trace.js:154:20)
+    at async DevServer.handleRequest (/Users/jaimeortiz/metaads/node_modules/.pnpm/next@14.2.16_react-dom@18.0.0_react@18.0.0__react@18.0.0/node_modules/next/dist/server/dev/next-dev-server.js:336:24)
+    at async invokeRender (/Users/jaimeortiz/metaads/node_modules/.pnpm/next@14.2.16_react-dom@18.0.0_react@18.0.0__react@18.0.0/node_modules/next/dist/server/lib/router-server.js:173:21)
+    at async handleRequest (/Users/jaimeortiz/metaads/node_modules/.pnpm/next@14.2.16_react-dom@18.0.0_react@18.0.0__react@18.0.0/node_modules/next/dist/server/lib/router-server.js:350:24)
+    at async requestHandlerImpl (/Users/jaimeortiz/metaads/node_modules/.pnpm/next@14.2.16_react-dom@18.0.0_react@18.0.0__react@18.0.0/node_modules/next/dist/server/lib/router-server.js:374:13)
+    at async Server.requestListener (/Users/jaimeortiz/metaads/node_modules/.pnpm/next@14.2.16_react-dom@18.0.0_react@18.0.0__react@18.0.0/node_modules/next/dist/server/lib/start-server.js:141:13)
+ POST /api/meta/day-week-analysis 500 in 195ms
+ ✓ Compiled in 829ms (202 modules)
+<w> [webpack.cache.PackFileCacheStrategy] Caching failed for pack: Error: ENOENT: no such file or directory, lstat '/Users/jaimeortiz/metaads/.next/server/app/api/management-score'
+<w> [webpack.cache.PackFileCacheStrategy/webpack.FileSystemInfo] Resolving '../../../../../../../.next/server/app/api/management-score/route' in /Users/jaimeortiz/metaads/node_modules/.pnpm/next@14.2.16_react-dom@18.0.0_react@18.0.0__react@18.0.0/node_modules/next/dist/server for build dependencies doesn't lead to expected result '/Users/jaimeortiz/metaads/.next/server/app/api/management-score/route.js', but to 'Error: Can't resolve '../../../../../../../.next/server/app/api/management-score/route' in '/Users/jaimeortiz/metaads/node_modules/.pnpm/next@14.2.16_react-dom@18.0.0_react@18.0.0__react@18.0.0/node_modules/next/dist/server'' instead. Resolving dependencies are ignored for this path.
+<w>  at resolve commonjs file ../../../../../../../.next/server/app/api/management-score/route (expected /Users/jaimeortiz/metaads/.next/server/app/api/management-score/route.js)
+<w>  at file dependencies /Users/jaimeortiz/metaads/node_modules/.pnpm/next@14.2.16_react-dom@18.0.0_react@18.0.0__react@18.0.0/node_modules/next/dist/server/require.js
+<w>  at file /Users/jaimeortiz/metaads/node_modules/.pnpm/next@14.2.16_react-dom@18.0.0_react@18.0.0__react@18.0.0/node_modules/next/dist/server/require.js
+<w>  at file dependencies /Users/jaimeortiz/metaads/node_modules/.pnpm/next@14.2.16_react-dom@18.0.0_react@18.0.0__react@18.0.0/node_modules/next/dist/server/load-components.js
+<w>  at file /Users/jaimeortiz/metaads/node_modules/.pnpm/next@14.2.16_react-dom@18.0.0_react@18.0.0__react@18.0.0/node_modules/next/dist/server/load-components.js
+<w>  at file dependencies /Users/jaimeortiz/metaads/node_modules/.pnpm/next@14.2.16_react-dom@18.0.0_react@18.0.0__react@18.0.0/node_modules/next/dist/build/utils.js
+<w>  at file /Users/jaimeortiz/metaads/node_modules/.pnpm/next@14.2.16_react-dom@18.0.0_react@18.0.0__react@18.0.0/node_modules/next/dist/build/utils.js
+<w>  at file dependencies /Users/jaimeortiz/metaads/node_modules/.pnpm/next@14.2.16_react-dom@18.0.0_react@18.0.0__react@18.0.0/node_modules/next/dist/build/handle-externals.js
+<w>  at file /Users/jaimeortiz/metaads/node_modules/.pnpm/next@14.2.16_react-dom@18.0.0_react@18.0.0__react@18.0.0/node_modules/next/dist/build/handle-externals.js
+<w>  at file dependencies /Users/jaimeortiz/metaads/node_modules/.pnpm/next@14.2.16_react-dom@18.0.0_react@18.0.0__react@18.0.0/node_modules/next/dist/build/webpack/loaders/next-swc-loader.js
+<w>  at file /Users/jaimeortiz/metaads/node_modules/.pnpm/next@14.2.16_react-dom@18.0.0_react@18.0.0__react@18.0.0/node_modules/next/dist/build/webpack/loaders/next-swc-loader.js
+<w>  at resolve commonjs /Users/jaimeortiz/metaads/node_modules/.pnpm/next@14.2.16_react-dom@18.0.0_react@18.0.0__react@18.0.0/node_modules/next/dist/build/webpack/loaders/next-swc-loader.js
+ ✓ Compiled in 106ms (202 modules)

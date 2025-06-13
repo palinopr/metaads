@@ -31,6 +31,7 @@ import {
   Loader2,
   Key,
   Eye,
+  Filter,
 } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -42,11 +43,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
 import { Skeleton } from "@/components/ui/skeleton"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import Link from "next/link"
 import { HistoricalPerformanceChart } from "@/components/historical-performance-chart"
 import { EnhancedPerformanceCharts } from "@/components/enhanced-performance-charts"
 import { CampaignComprehensiveAnalysis } from "@/components/campaign-comprehensive-analysis"
 import { AccountManagementScore } from "@/components/account-management-score"
+import { CampaignComparisonTool } from "@/components/campaign-comparison-tool"
 
 // Lazy load heavy components
 const DateRangeSelector = dynamicImport(() => 
@@ -439,6 +442,7 @@ export default function DashboardPage() {
   // Comprehensive components state
   const [showComprehensiveView, setShowComprehensiveView] = useState(false)
   const [showManagementScore, setShowManagementScore] = useState(false)
+  const [showCampaignComparison, setShowCampaignComparison] = useState(false)
   const [comprehensiveData, setComprehensiveData] = useState<any>(null)
   const [chartData, setChartData] = useState<any[]>([])
   const [demographicData, setDemographicData] = useState<any>(null)
@@ -1237,6 +1241,14 @@ export default function DashboardPage() {
               >
                 <Target className="w-3 h-3 md:w-4 md:h-4" />
                 Management Score
+              </Button>
+              <Button
+                variant="outline"
+                className="flex items-center gap-2 text-xs border-gray-700 hover:bg-gray-800"
+                onClick={() => setShowCampaignComparison(true)}
+              >
+                <Filter className="w-3 h-3 md:w-4 md:h-4" />
+                Compare Campaigns
               </Button>
               <Button
                 variant={showComprehensiveView ? "default" : "outline"}
@@ -2060,6 +2072,39 @@ export default function DashboardPage() {
             </CardContent>
           </Card>
         )}
+
+        {/* Campaign Comparison Modal */}
+        <Dialog open={showCampaignComparison} onOpenChange={setShowCampaignComparison}>
+          <DialogContent className="max-w-7xl w-[95vw] max-h-[90vh] overflow-y-auto bg-gray-900 border-gray-700">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Filter className="w-5 h-5" />
+                Campaign Comparison Tool
+              </DialogTitle>
+            </DialogHeader>
+            {credentialsSubmitted && campaigns.length > 0 && (
+              <CampaignComparisonTool
+                campaigns={campaigns.map(campaign => ({
+                  id: campaign.id,
+                  name: campaign.name,
+                  status: campaign.status,
+                  spend: campaign.spend || 0,
+                  revenue: campaign.revenue || 0,
+                  roas: campaign.roas || 0,
+                  conversions: campaign.conversions || 0,
+                  impressions: campaign.impressions || 0,
+                  clicks: campaign.clicks || 0,
+                  ctr: campaign.ctr || 0,
+                  cpc: campaign.cpc || 0,
+                  cpa: campaign.cpa || 0
+                }))}
+                accessToken={credentials.accessToken}
+                adAccountId={credentials.adAccountId}
+                datePreset={selectedDateRange}
+              />
+            )}
+          </DialogContent>
+        </Dialog>
         
         <footer className="text-center mt-12 py-6 border-t border-gray-700">
           <p className="text-xs text-gray-500">Meta Ads Dashboard Pro | Built with Next.js & v0 | Optimized for Performance</p>
