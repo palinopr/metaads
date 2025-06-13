@@ -13,6 +13,32 @@ export async function POST(request: NextRequest) {
       body: { ...body, accessToken: body.accessToken ? '***' : undefined }
     })
     
+    // Validate date preset - Meta API doesn't support 'lifetime' as a date_preset
+    // For lifetime data, we need to omit the date_preset parameter
+    const validDatePresets = ['today', 'yesterday', 'last_7d', 'last_14d', 'last_28d', 'last_30d', 'last_90d']
+    const isLifetime = datePreset === 'lifetime'
+    
+    // Map frontend date presets to Meta API format
+    const datePresetMap: { [key: string]: string } = {
+      'last_14d': 'last_14_d', // Meta API uses underscore before 'd'
+      'last_28d': 'last_28_d',
+      'last_30d': 'last_30_d',
+      'last_90d': 'last_90_d',
+      'last_7d': 'last_7_d'
+    }
+    
+    const metaDatePreset = datePresetMap[datePreset] || datePreset
+    
+    if (!isLifetime && !validDatePresets.includes(datePreset)) {
+      console.error('Invalid date preset:', datePreset)
+      return NextResponse.json({
+        error: 'Invalid date preset',
+        details: `"${datePreset}" is not a valid date preset`,
+        validPresets: [...validDatePresets, 'lifetime'],
+        success: false
+      }, { status: 400 })
+    }
+    
     // Get credentials from body or cookies
     let accessToken = body.accessToken
     let adAccountId = body.adAccountId
@@ -32,16 +58,28 @@ export async function POST(request: NextRequest) {
     
     // Directly call Meta API
     const campaignsUrl = `${META_API_BASE}/${adAccountId}/campaigns`
+    
+    // Build fields parameter based on whether it's lifetime or not
+    let fieldsParam
+    if (isLifetime) {
+      // For lifetime, don't use date_preset
+      fieldsParam = 'id,name,status,effective_status,objective,created_time,updated_time,daily_budget,lifetime_budget,insights{spend,impressions,clicks,ctr,cpc,actions,action_values,conversions,cost_per_conversion,frequency,reach}'
+    } else {
+      // For other date ranges, use date_preset with the mapped value
+      fieldsParam = `id,name,status,effective_status,objective,created_time,updated_time,daily_budget,lifetime_budget,insights.date_preset(${metaDatePreset}){spend,impressions,clicks,ctr,cpc,actions,action_values,conversions,cost_per_conversion,frequency,reach}`
+    }
+    
     const params = new URLSearchParams({
       access_token: accessToken,
-      fields: `id,name,status,effective_status,objective,created_time,updated_time,daily_budget,lifetime_budget,insights.date_preset(${datePreset}){spend,impressions,clicks,ctr,cpc,actions,action_values,conversions,cost_per_conversion,frequency,reach}`,
+      fields: fieldsParam,
       limit: '100'
     })
     
     console.log('Direct Meta API call:', {
       url: campaignsUrl,
       datePreset,
-      fieldsPreset: `insights.date_preset(${datePreset})`,
+      isLifetime,
+      fields: fieldsParam.substring(0, 100) + '...',
       adAccountId,
       timestamp: new Date().toISOString()
     })
