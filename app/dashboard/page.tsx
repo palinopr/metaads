@@ -53,6 +53,9 @@ import { CampaignComparisonTool } from "@/components/campaign-comparison-tool"
 import { AIPDFExport } from "@/components/ai-pdf-export"
 import { CampaignOptimizer } from "@/components/campaign-optimizer"
 import { DailyBudgetOptimizer } from "@/components/daily-budget-optimizer"
+import { BudgetCommandCenter } from "@/components/budget-command-center"
+import { HistoricalPatternAnalyzer } from "@/components/historical-pattern-analyzer"
+import { PerformanceAnomalyDetector } from "@/components/performance-anomaly-detector"
 
 // Lazy load heavy components
 const DateRangeSelector = dynamicImport(() => 
@@ -447,6 +450,8 @@ export default function DashboardPage() {
   const [showManagementScore, setShowManagementScore] = useState(false)
   const [showCampaignComparison, setShowCampaignComparison] = useState(false)
   const [showCampaignOptimizer, setShowCampaignOptimizer] = useState(false)
+  const [showBudgetCommandCenter, setShowBudgetCommandCenter] = useState(false)
+  const [showAnomalyDetector, setShowAnomalyDetector] = useState(false)
   const [comprehensiveData, setComprehensiveData] = useState<any>(null)
   const [chartData, setChartData] = useState<any[]>([])
   const [demographicData, setDemographicData] = useState<any>(null)
@@ -1257,6 +1262,22 @@ export default function DashboardPage() {
               <Button
                 variant="outline"
                 className="flex items-center gap-2 text-xs border-gray-700 hover:bg-gray-800"
+                onClick={() => setShowBudgetCommandCenter(!showBudgetCommandCenter)}
+              >
+                <Brain className="w-3 h-3 md:w-4 md:h-4" />
+                Budget Command
+              </Button>
+              <Button
+                variant="outline"
+                className="flex items-center gap-2 text-xs border-gray-700 hover:bg-gray-800"
+                onClick={() => setShowAnomalyDetector(!showAnomalyDetector)}
+              >
+                <Eye className="w-3 h-3 md:w-4 md:h-4" />
+                Anomaly Detector
+              </Button>
+              <Button
+                variant="outline"
+                className="flex items-center gap-2 text-xs border-gray-700 hover:bg-gray-800"
                 onClick={() => setShowManagementScore(!showManagementScore)}
               >
                 <Target className="w-3 h-3 md:w-4 md:h-4" />
@@ -1826,7 +1847,7 @@ export default function DashboardPage() {
                               onValueChange={(value) => handleTabChange(campaign.id, value)}
                               className="w-full"
                             >
-                              <TabsList className="grid w-full grid-cols-3 sm:grid-cols-4 md:grid-cols-7 bg-gray-700/80 mb-4 p-1 rounded-md text-xs">
+                              <TabsList className="grid w-full grid-cols-4 sm:grid-cols-4 md:grid-cols-8 bg-gray-700/80 mb-4 p-1 rounded-md text-xs">
                                 <TabsTrigger value="analysis">Analysis</TabsTrigger>
                                 <TabsTrigger value="details">Details</TabsTrigger>
                                 <TabsTrigger value="predictions">Predictions</TabsTrigger>
@@ -1834,6 +1855,7 @@ export default function DashboardPage() {
                                 <TabsTrigger value="dayweek">Day/Time</TabsTrigger>
                                 <TabsTrigger value="insights">AI Insights</TabsTrigger>
                                 <TabsTrigger value="optimizer">Optimizer</TabsTrigger>
+                                <TabsTrigger value="patterns">Patterns</TabsTrigger>
                               </TabsList>
                               <TabsContent value="analysis">
                                 <Suspense fallback={<div className="h-64 flex items-center justify-center"><Loader2 className="w-6 h-6 animate-spin" /></div>}>
@@ -2122,6 +2144,31 @@ export default function DashboardPage() {
                                   currentHour={new Date().getHours()}
                                 />
                               </TabsContent>
+                              <TabsContent value="patterns">
+                                {campaign.expandedData?.historicalDailyData && campaign.expandedData.historicalDailyData.length > 0 ? (
+                                  <HistoricalPatternAnalyzer
+                                    campaignId={campaign.id}
+                                    campaignName={campaign.name}
+                                    historicalData={campaign.expandedData.historicalDailyData.map(d => ({
+                                      date: d.date,
+                                      dayOfWeek: new Date(d.date).getDay(),
+                                      spend: d.spend || 0,
+                                      revenue: d.purchase_roas?.value || 0,
+                                      roas: d.roas || 0,
+                                      conversions: d.conversions || 0,
+                                      impressions: d.impressions || 0,
+                                      clicks: d.clicks || 0,
+                                      ctr: d.ctr || 0,
+                                      cpc: d.cpc || 0
+                                    }))}
+                                  />
+                                ) : (
+                                  <div className="text-center py-8 text-gray-400">
+                                    <BarChart3 className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                                    <p>No historical data available for pattern analysis</p>
+                                  </div>
+                                )}
+                              </TabsContent>
                             </Tabs>
                           ) : (
                             <div className="text-center py-6 text-gray-500 text-sm">
@@ -2149,6 +2196,45 @@ export default function DashboardPage() {
               </Button>
             </CardContent>
           </Card>
+        )}
+
+        {/* Budget Command Center Modal */}
+        {showBudgetCommandCenter && credentialsSubmitted && campaigns.length > 0 && (
+          <Dialog open={showBudgetCommandCenter} onOpenChange={setShowBudgetCommandCenter}>
+            <DialogContent className="max-w-7xl w-[95vw] max-h-[90vh] overflow-y-auto bg-gray-900 border-gray-700">
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-2">
+                  <Brain className="w-5 h-5" />
+                  Budget Command Center
+                </DialogTitle>
+              </DialogHeader>
+              <BudgetCommandCenter 
+                campaigns={campaigns} 
+                overviewData={overviewData}
+              />
+            </DialogContent>
+          </Dialog>
+        )}
+
+        {/* Anomaly Detector Modal */}
+        {showAnomalyDetector && credentialsSubmitted && campaigns.length > 0 && (
+          <Dialog open={showAnomalyDetector} onOpenChange={setShowAnomalyDetector}>
+            <DialogContent className="max-w-6xl w-[95vw] max-h-[90vh] overflow-y-auto bg-gray-900 border-gray-700">
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-2">
+                  <Eye className="w-5 h-5" />
+                  Performance Anomaly Detector
+                </DialogTitle>
+              </DialogHeader>
+              <PerformanceAnomalyDetector 
+                campaigns={campaigns}
+                onAnomalyDetected={(anomaly) => {
+                  console.log('Anomaly detected:', anomaly)
+                  // Could show a toast notification here
+                }}
+              />
+            </DialogContent>
+          </Dialog>
         )}
 
         {/* Campaign Comparison Modal */}
