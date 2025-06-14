@@ -1,55 +1,144 @@
-# Deployment Guide
+# Deployment Guide for Meta Ads Dashboard
 
-## Quick Start
+## GitHub Deployment ✅
+The project has been successfully pushed to GitHub:
+- Repository: https://github.com/palinopr/metaads
+- Latest commit includes all advanced budget optimization features
 
-```bash
-# 1. Clone the repository
-git clone https://github.com/your-repo/metaads.git
-cd metaads
+## Railway Deployment Instructions
 
-# 2. Install dependencies
-npm install
+### Prerequisites
+1. Railway account: https://railway.app
+2. GitHub repository connected to Railway
 
-# 3. Set up environment variables
-cp .env.example .env.local
-# Edit .env.local with your values
+### Deployment Steps
 
-# 4. Build the application
-npm run build
+1. **Connect to Railway**
+   - Go to https://railway.app/dashboard
+   - Click "New Project"
+   - Select "Deploy from GitHub repo"
+   - Choose `palinopr/metaads` repository
 
-# 5. Start the application
-npm start
-```
+2. **Configure Environment Variables**
+   Add these in Railway's Variables section:
+   ```
+   NEXT_PUBLIC_ANTHROPIC_API_KEY=your_anthropic_api_key
+   FACEBOOK_APP_ID=your_facebook_app_id
+   FACEBOOK_APP_SECRET=your_facebook_app_secret
+   NODE_ENV=production
+   ```
 
-## Environment Variables
+3. **Deploy Settings**
+   - Build Command: `npm run build`
+   - Start Command: `npm run start`
+   - Port: Railway will auto-detect (usually 3000)
 
-```env
-# Required
-NEXT_PUBLIC_APP_URL=https://your-domain.com
+4. **Domain Setup**
+   - Railway provides a default domain
+   - Or add custom domain in Settings
 
-# Optional
-NODE_ENV=production
-PORT=3000
-```
+### Post-Deployment Checklist
 
-## Deployment Options
+- [ ] Verify environment variables are set
+- [ ] Check application logs for errors
+- [ ] Test Meta API connection
+- [ ] Verify Anthropic API integration
+- [ ] Test all new features:
+  - [ ] Budget Command Center
+  - [ ] Anomaly Detector
+  - [ ] Historical Pattern Analyzer
 
-### Railway
-1. Connect GitHub repository
-2. Set environment variables
-3. Deploy
+### Monitoring
+
+1. **Application Health**
+   - Check `/api/health` endpoint
+   - Monitor Railway metrics dashboard
+
+2. **Logs**
+   - View logs in Railway dashboard
+   - Check for API errors or warnings
+
+3. **Performance**
+   - Monitor response times
+   - Check memory usage
+   - Review API call patterns
+
+### Troubleshooting
+
+**Build Failures:**
+- Check Node.js version compatibility
+- Verify all dependencies are listed in package.json
+- Review build logs for specific errors
+
+**Runtime Errors:**
+- Ensure all environment variables are set
+- Check API credentials are valid
+- Verify Meta API permissions
+
+**Performance Issues:**
+- Enable caching where appropriate
+- Optimize API calls
+- Consider scaling if needed
+
+### Updates and Maintenance
+
+1. **Automatic Deployments**
+   - Railway auto-deploys on push to main branch
+   - Can be configured in Railway settings
+
+2. **Manual Deployments**
+   - Push changes to GitHub
+   - Railway will detect and deploy
+
+3. **Rollbacks**
+   - Use Railway's deployment history
+   - Or revert Git commits and push
+
+## Alternative Deployment Options
 
 ### Vercel
-1. Import GitHub repository
-2. Configure environment
-3. Deploy
-
-### Docker
 ```bash
-docker build -t metaads .
-docker run -p 3000:3000 metaads
+npm i -g vercel
+vercel
 ```
 
-## Troubleshooting
+### Self-Hosted
+```bash
+npm run build
+npm run start
+```
 
-See [TROUBLESHOOTING.md](./TROUBLESHOOTING.md) for common issues.
+### Docker
+```dockerfile
+FROM node:18-alpine
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci
+COPY . .
+RUN npm run build
+EXPOSE 3000
+CMD ["npm", "start"]
+```
+
+## Security Considerations
+
+1. **API Keys**
+   - Never commit API keys to Git
+   - Use environment variables
+   - Rotate keys regularly
+
+2. **CORS**
+   - Configure allowed origins
+   - Implement rate limiting
+
+3. **Authentication**
+   - Secure Meta OAuth flow
+   - Implement session management
+   - Add user access controls
+
+## Support
+
+For deployment issues:
+- Check Railway documentation: https://docs.railway.app
+- Review Next.js deployment guide: https://nextjs.org/docs/deployment
+- Contact support for platform-specific issues
