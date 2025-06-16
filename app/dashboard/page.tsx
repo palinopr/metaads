@@ -4,6 +4,7 @@ export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
 import React, { useState, useEffect, useCallback } from "react"
+import { useRouter } from "next/navigation"
 import { optimizedApiManager } from "@/lib/api-manager-optimized"
 import { EnhancedMetaAPIClient } from "@/lib/meta-api-client-enhanced"
 import { CredentialManager } from "@/lib/credential-manager"
@@ -70,6 +71,8 @@ export default function CleanDashboardPage() {
   const [refreshing, setRefreshing] = useState(false)
   const [showBudgetCenter, setShowBudgetCenter] = useState(false)
   const [showAnomalyDetector, setShowAnomalyDetector] = useState(false)
+  const [credentialsError, setCredentialsError] = useState(false)
+  const router = useRouter()
 
   const fetchData = useCallback(async () => {
     try {
@@ -79,7 +82,8 @@ export default function CleanDashboardPage() {
       const credentials = await credentialManager.getCredentials()
       
       if (!credentials) {
-        throw new Error("No credentials found")
+        setCredentialsError(true)
+        return
       }
 
       const client = new EnhancedMetaAPIClient(credentials)
@@ -135,9 +139,16 @@ export default function CleanDashboardPage() {
 
       setCampaigns(processedCampaigns)
       setOverview(newOverview)
-    } catch (error) {
+      setCredentialsError(false)
+    } catch (error: any) {
       console.error("Error fetching data:", error)
-      toast.error("Failed to fetch campaign data")
+      
+      // Check if it's a credentials issue
+      if (error.message?.includes('credentials') || error.message?.includes('token')) {
+        setCredentialsError(true)
+      } else {
+        toast.error("Failed to fetch campaign data: " + (error.message || "Unknown error"))
+      }
     } finally {
       setLoading(false)
       setRefreshing(false)
@@ -178,10 +189,34 @@ export default function CleanDashboardPage() {
     return new Intl.NumberFormat("en-US").format(num)
   }
 
-  if (loading) {
+  if (loading && !credentialsError) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <Loader2 className="w-8 h-8 animate-spin" />
+      </div>
+    )
+  }
+
+  if (credentialsError) {
+    return (
+      <div className="p-6 max-w-2xl mx-auto">
+        <Card>
+          <CardHeader>
+            <CardTitle>Setup Required</CardTitle>
+            <CardDescription>Configure your Meta API credentials to start using the dashboard</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <Alert>
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>
+                No Meta API credentials found. Please set up your credentials to view campaign data.
+              </AlertDescription>
+            </Alert>
+            <Button onClick={() => router.push('/')}>
+              Configure Credentials
+            </Button>
+          </CardContent>
+        </Card>
       </div>
     )
   }
