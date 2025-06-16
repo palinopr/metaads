@@ -121,17 +121,14 @@ export function CampaignHierarchyView({ campaigns }: CampaignHierarchyViewProps)
 
   // Fetch campaign details (ad sets and ads)
   const fetchCampaignDetails = async (campaignId: string) => {
-    console.log('fetchCampaignDetails called for:', campaignId)
     setLoadingCampaigns(prev => new Set(prev).add(campaignId))
     
     try {
       const credentials = await CredentialManager.load()
-      console.log('Credentials loaded:', !!credentials)
       if (!credentials) {
         throw new Error("No credentials found")
       }
 
-      console.log('Making API call to /api/campaign-details')
       // Fetch ad sets for the campaign
       const response = await fetch("/api/campaign-details", {
         method: "POST",
@@ -143,36 +140,28 @@ export function CampaignHierarchyView({ campaigns }: CampaignHierarchyViewProps)
         }),
       })
 
-      console.log('API response status:', response.status)
       if (!response.ok) {
-        const errorText = await response.text()
-        console.error('API error response:', errorText)
-        throw new Error(`Failed to fetch campaign details: ${response.status}`)
+        throw new Error("Failed to fetch campaign details")
       }
 
       const data = await response.json()
-      console.log('API response data:', data)
       
       // Update campaign data with ad sets
       setCampaignData(prev => {
         const updated = new Map(prev)
         const campaign = campaigns.find(c => c.id === campaignId)
-        console.log('Found campaign:', !!campaign)
         if (campaign) {
-          const campaignWithAdsets = {
+          updated.set(campaignId, {
             ...campaign,
             adsets: data.adsets || [],
             expanded: true,
-          }
-          console.log('Setting campaign data:', campaignWithAdsets)
-          updated.set(campaignId, campaignWithAdsets)
+          })
         }
         return updated
       })
-      toast.success(`Loaded ${data.adsets?.length || 0} ad sets`)
     } catch (error) {
       console.error("Error fetching campaign details:", error)
-      toast.error("Failed to load campaign details: " + (error as Error).message)
+      toast.error("Failed to load campaign details")
     } finally {
       setLoadingCampaigns(prev => {
         const updated = new Set(prev)
@@ -237,30 +226,20 @@ export function CampaignHierarchyView({ campaigns }: CampaignHierarchyViewProps)
 
   // Toggle campaign expansion
   const toggleCampaign = async (campaignId: string) => {
-    console.log('toggleCampaign called with:', campaignId)
     const isExpanded = expandedCampaigns.has(campaignId)
-    console.log('isExpanded:', isExpanded)
     
     if (isExpanded) {
       setExpandedCampaigns(prev => {
         const updated = new Set(prev)
         updated.delete(campaignId)
-        console.log('Collapsing campaign, new expanded set:', updated)
         return updated
       })
     } else {
-      setExpandedCampaigns(prev => {
-        const updated = new Set(prev).add(campaignId)
-        console.log('Expanding campaign, new expanded set:', updated)
-        return updated
-      })
+      setExpandedCampaigns(prev => new Set(prev).add(campaignId))
       
       // Fetch campaign details if not already loaded
       if (!campaignData.has(campaignId)) {
-        console.log('Fetching campaign details for:', campaignId)
         await fetchCampaignDetails(campaignId)
-      } else {
-        console.log('Campaign data already loaded for:', campaignId)
       }
     }
   }
