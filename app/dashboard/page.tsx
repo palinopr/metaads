@@ -16,6 +16,7 @@ import { SmartAlerts } from "@/components/smart-alerts"
 import { AdvancedDashboard } from "@/components/advanced-dashboard"
 import { CampaignTimeline } from "@/components/campaign-timeline"
 import { PredictiveAnalytics } from "@/components/predictive-analytics"
+import { CampaignHierarchyView } from "@/components/campaign-hierarchy-view"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
@@ -362,6 +363,7 @@ export default function CleanDashboardPage() {
           <TabsList>
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="campaigns">Campaigns</TabsTrigger>
+            <TabsTrigger value="hierarchy">Hierarchy</TabsTrigger>
             <TabsTrigger value="insights">Insights</TabsTrigger>
             <TabsTrigger value="realtime">
               <span className="flex items-center gap-1">
@@ -426,6 +428,10 @@ export default function CleanDashboardPage() {
                 </div>
               </CardContent>
             </Card>
+          </TabsContent>
+
+          <TabsContent value="hierarchy" className="space-y-4">
+            <CampaignHierarchyView campaigns={campaigns} />
           </TabsContent>
 
           <TabsContent value="insights" className="space-y-4">
