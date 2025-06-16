@@ -363,7 +363,7 @@ export default function CleanDashboardPage() {
           <TabsList>
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="campaigns">Campaigns</TabsTrigger>
-            <TabsTrigger value="hierarchy">Hierarchy</TabsTrigger>
+            <TabsTrigger value="hierarchy">Table View</TabsTrigger>
             <TabsTrigger value="insights">Insights</TabsTrigger>
             <TabsTrigger value="realtime">
               <span className="flex items-center gap-1">
@@ -381,11 +381,15 @@ export default function CleanDashboardPage() {
           </TabsContent>
 
           <TabsContent value="campaigns" className="space-y-4">
+            <CampaignHierarchyView campaigns={campaigns} />
+          </TabsContent>
+
+          <TabsContent value="hierarchy" className="space-y-4">
             <Card>
               <CardHeader>
-                <CardTitle>Campaign Performance</CardTitle>
+                <CardTitle>Campaign Performance Table</CardTitle>
                 <CardDescription>
-                  All optimization actions are available via the command palette (⌘K)
+                  Simple table view - Use "Campaigns" tab for expandable hierarchy
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -428,10 +432,6 @@ export default function CleanDashboardPage() {
                 </div>
               </CardContent>
             </Card>
-          </TabsContent>
-
-          <TabsContent value="hierarchy" className="space-y-4">
-            <CampaignHierarchyView campaigns={campaigns} />
           </TabsContent>
 
           <TabsContent value="insights" className="space-y-4">
