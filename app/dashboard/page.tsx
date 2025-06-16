@@ -366,7 +366,15 @@ export default function CleanDashboardPage() {
                 <CardDescription>30-day performance overview</CardDescription>
               </CardHeader>
               <CardContent>
-                <EnhancedPerformanceCharts campaigns={campaigns} />
+                {/* For now, show a simple message until we implement historical data fetching */}
+                <div className="flex items-center justify-center h-64 text-muted-foreground">
+                  <div className="text-center">
+                    <p className="text-lg mb-2">Campaign Performance Overview</p>
+                    <p className="text-sm">Total Campaigns: {campaigns.length}</p>
+                    <p className="text-sm">Active Campaigns: {overview.activeCampaigns}</p>
+                    <p className="text-sm mt-4">Use the command palette (⌘K) to access detailed analytics</p>
+                  </div>
+                </div>
               </CardContent>
             </Card>
           </TabsContent>
