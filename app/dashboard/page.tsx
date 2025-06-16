@@ -13,6 +13,9 @@ import { CommandPalette } from "@/components/command-palette"
 import { RealtimeProvider } from "@/lib/realtime-provider"
 import { RealTimeMonitor } from "@/components/real-time-monitor"
 import { SmartAlerts } from "@/components/smart-alerts"
+import { AdvancedDashboard } from "@/components/advanced-dashboard"
+import { CampaignTimeline } from "@/components/campaign-timeline"
+import { PredictiveAnalytics } from "@/components/predictive-analytics"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
@@ -372,23 +375,7 @@ export default function CleanDashboardPage() {
           </TabsList>
 
           <TabsContent value="overview" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>Performance Trends</CardTitle>
-                <CardDescription>30-day performance overview</CardDescription>
-              </CardHeader>
-              <CardContent>
-                {/* For now, show a simple message until we implement historical data fetching */}
-                <div className="flex items-center justify-center h-64 text-muted-foreground">
-                  <div className="text-center">
-                    <p className="text-lg mb-2">Campaign Performance Overview</p>
-                    <p className="text-sm">Total Campaigns: {campaigns.length}</p>
-                    <p className="text-sm">Active Campaigns: {overview.activeCampaigns}</p>
-                    <p className="text-sm mt-4">Use the command palette (⌘K) to access detailed analytics</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+            <AdvancedDashboard campaigns={campaigns} overview={overview} />
           </TabsContent>
 
           <TabsContent value="campaigns" className="space-y-4">
@@ -442,29 +429,51 @@ export default function CleanDashboardPage() {
           </TabsContent>
 
           <TabsContent value="insights" className="space-y-4">
-            <Alert>
-              <AlertCircle className="h-4 w-4" />
-              <AlertDescription>
-                Use the command palette (⌘K) to access advanced features like AI optimization, 
-                budget analysis, and anomaly detection.
-              </AlertDescription>
-            </Alert>
-            
-            <SmartAlerts campaigns={campaigns} />
-            
-            {showBudgetCenter && (
-              <BudgetCommandCenter 
-                campaigns={campaigns}
-                onClose={() => setShowBudgetCenter(false)}
-              />
-            )}
-            
-            {showAnomalyDetector && (
-              <PerformanceAnomalyDetector 
-                campaigns={campaigns}
-                onClose={() => setShowAnomalyDetector(false)}
-              />
-            )}
+            <Tabs defaultValue="alerts" className="w-full">
+              <TabsList className="grid w-full grid-cols-4">
+                <TabsTrigger value="alerts">Smart Alerts</TabsTrigger>
+                <TabsTrigger value="predictions">Predictions</TabsTrigger>
+                <TabsTrigger value="timeline">Timeline</TabsTrigger>
+                <TabsTrigger value="advanced">Advanced</TabsTrigger>
+              </TabsList>
+              
+              <TabsContent value="alerts" className="space-y-4">
+                <SmartAlerts campaigns={campaigns} />
+              </TabsContent>
+              
+              <TabsContent value="predictions" className="space-y-4">
+                <PredictiveAnalytics campaigns={campaigns} overview={overview} />
+              </TabsContent>
+              
+              <TabsContent value="timeline" className="space-y-4">
+                <CampaignTimeline campaigns={campaigns} />
+              </TabsContent>
+              
+              <TabsContent value="advanced" className="space-y-4">
+                {showBudgetCenter && (
+                  <BudgetCommandCenter 
+                    campaigns={campaigns}
+                    onClose={() => setShowBudgetCenter(false)}
+                  />
+                )}
+                
+                {showAnomalyDetector && (
+                  <PerformanceAnomalyDetector 
+                    campaigns={campaigns}
+                    onClose={() => setShowAnomalyDetector(false)}
+                  />
+                )}
+                
+                {!showBudgetCenter && !showAnomalyDetector && (
+                  <Alert>
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertDescription>
+                      Use the command palette (⌘K) to open Budget Command Center or Anomaly Detector
+                    </AlertDescription>
+                  </Alert>
+                )}
+              </TabsContent>
+            </Tabs>
           </TabsContent>
 
           <TabsContent value="realtime" className="space-y-4">
