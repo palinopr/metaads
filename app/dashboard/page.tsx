@@ -8,6 +8,7 @@ import { useRouter } from "next/navigation"
 import { optimizedApiManager } from "@/lib/api-manager-optimized"
 import { EnhancedMetaAPIClient } from "@/lib/meta-api-client-enhanced"
 import { CredentialManager } from "@/lib/credential-manager"
+import { OAuthCredentialBridge } from "@/lib/oauth-credential-bridge"
 import { CommandPalette } from "@/components/command-palette"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
@@ -78,8 +79,13 @@ export default function CleanDashboardPage() {
     try {
       if (!loading) setRefreshing(true)
       
-      const credentialManager = CredentialManager.getInstance()
-      const credentials = await credentialManager.getCredentials()
+      // Try OAuth first
+      let credentials = await OAuthCredentialBridge.checkAndSync()
+      
+      if (!credentials) {
+        // Fall back to saved credentials
+        credentials = await CredentialManager.load()
+      }
       
       if (!credentials) {
         setCredentialsError(true)
@@ -102,6 +108,12 @@ export default function CleanDashboardPage() {
       }
 
       const data = await response.json()
+      console.log("API Response:", data) // Debug log
+      
+      if (!data.success) {
+        throw new Error(data.error || "Failed to fetch campaigns")
+      }
+      
       const campaignsData = data.campaigns || []
 
       // Process campaigns - using the same structure as old dashboard
@@ -161,8 +173,31 @@ export default function CleanDashboardPage() {
     }
   }, [loading])
 
+  // Load credentials on mount
   useEffect(() => {
-    fetchData()
+    const loadCredentials = async () => {
+      // First try OAuth credential bridge
+      const oauthCredentials = await OAuthCredentialBridge.checkAndSync()
+      
+      if (oauthCredentials) {
+        console.log('Loaded credentials from OAuth')
+        // Trigger data fetch with OAuth credentials
+        fetchData()
+        return
+      }
+      
+      // Fall back to regular CredentialManager
+      const savedCredentials = await CredentialManager.load()
+      
+      if (savedCredentials) {
+        // Trigger data fetch with saved credentials
+        fetchData()
+      } else {
+        setCredentialsError(true)
+        setLoading(false)
+      }
+    }
+    loadCredentials()
   }, [])
 
   // Event listeners for command palette actions
