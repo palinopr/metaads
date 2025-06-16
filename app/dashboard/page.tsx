@@ -86,31 +86,37 @@ export default function CleanDashboardPage() {
         return
       }
 
-      const client = new EnhancedMetaAPIClient(credentials)
-      const campaignsData = await client.getCampaignsWithInsights({
-        fields: ["name", "status", "effective_status", "daily_budget", "lifetime_budget"],
-        insightFields: ["spend", "impressions", "clicks", "ctr", "conversions", "conversion_values"],
-        datePreset: "last_30d",
+      // Fetch campaigns using the same API endpoint as the old dashboard
+      const response = await fetch("/api/direct-campaigns", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          datePreset: "lifetime",
+          accessToken: credentials.accessToken,
+          adAccountId: credentials.adAccountId,
+        }),
       })
 
-      // Process campaigns
+      if (!response.ok) {
+        throw new Error(`API error: ${response.statusText}`)
+      }
+
+      const data = await response.json()
+      const campaignsData = data.campaigns || []
+
+      // Process campaigns - using the same structure as old dashboard
       const processedCampaigns = campaignsData.map((campaign: any) => {
-        const insights = campaign.insights?.data?.[0] || {}
-        const spend = parseFloat(insights.spend || "0")
-        const revenue = parseFloat(insights.conversion_values?.find((v: any) => v.action_type === "purchase")?.value || "0")
-        const conversions = parseInt(insights.conversions?.find((c: any) => c.action_type === "purchase")?.value || "0")
-        
         return {
           id: campaign.id,
           name: campaign.name,
           status: campaign.effective_status || campaign.status,
-          spend,
-          revenue,
-          roas: spend > 0 ? revenue / spend : 0,
-          impressions: parseInt(insights.impressions || "0"),
-          clicks: parseInt(insights.clicks || "0"),
-          ctr: parseFloat(insights.ctr || "0"),
-          conversions,
+          spend: campaign.spend || 0,
+          revenue: campaign.revenue || 0,
+          roas: campaign.roas || 0,
+          impressions: campaign.impressions || 0,
+          clicks: campaign.clicks || 0,
+          ctr: campaign.ctr || 0,
+          conversions: campaign.conversions || 0,
         }
       })
 
