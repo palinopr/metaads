@@ -83,7 +83,7 @@ export function CommandPalette() {
     {
       id: "reports",
       name: "View Reports",
-      icon: FileTextIcon,
+      icon: FileText,
       action: () => {
         router.push("/reports")
         setOpen(false)
@@ -136,7 +136,7 @@ export function CommandPalette() {
     {
       id: "optimize-campaigns",
       name: "Optimize All Campaigns",
-      icon: RocketIcon,
+      icon: Rocket,
       shortcut: "⌘O",
       action: () => {
         // Trigger campaign optimization
@@ -280,7 +280,7 @@ export function CommandPalette() {
     {
       id: "ai-insights",
       name: "Generate AI Insights",
-      icon: BrainIcon,
+      icon: Brain,
       shortcut: "⌘I",
       action: () => {
         const event = new CustomEvent('generate-ai-insights')
@@ -303,7 +303,7 @@ export function CommandPalette() {
     {
       id: "view-logs",
       name: "View Activity Logs",
-      icon: FileTextIcon,
+      icon: FileText,
       action: () => {
         router.push("/logs")
         setOpen(false)
