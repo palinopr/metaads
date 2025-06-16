@@ -10,6 +10,9 @@ import { EnhancedMetaAPIClient } from "@/lib/meta-api-client-enhanced"
 import { CredentialManager } from "@/lib/credential-manager"
 import { OAuthCredentialBridge } from "@/lib/oauth-credential-bridge"
 import { CommandPalette } from "@/components/command-palette"
+import { RealtimeProvider } from "@/lib/realtime-provider"
+import { RealTimeMonitor } from "@/components/real-time-monitor"
+import { SmartAlerts } from "@/components/smart-alerts"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
@@ -263,7 +266,7 @@ export default function CleanDashboardPage() {
   }
 
   return (
-    <>
+    <RealtimeProvider>
       <CommandPalette />
       
       <div className="p-6 space-y-6">
@@ -357,6 +360,15 @@ export default function CleanDashboardPage() {
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="campaigns">Campaigns</TabsTrigger>
             <TabsTrigger value="insights">Insights</TabsTrigger>
+            <TabsTrigger value="realtime">
+              <span className="flex items-center gap-1">
+                Real-Time
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+                </span>
+              </span>
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="overview" className="space-y-4">
@@ -438,6 +450,8 @@ export default function CleanDashboardPage() {
               </AlertDescription>
             </Alert>
             
+            <SmartAlerts campaigns={campaigns} />
+            
             {showBudgetCenter && (
               <BudgetCommandCenter 
                 campaigns={campaigns}
@@ -452,8 +466,12 @@ export default function CleanDashboardPage() {
               />
             )}
           </TabsContent>
+
+          <TabsContent value="realtime" className="space-y-4">
+            <RealTimeMonitor />
+          </TabsContent>
         </Tabs>
       </div>
-    </>
+    </RealtimeProvider>
   )
 }
