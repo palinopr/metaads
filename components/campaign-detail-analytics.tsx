@@ -217,13 +217,19 @@ export function CampaignDetailAnalytics({ campaign, onBack }: CampaignDetailAnal
   // Calculate key metrics
   const totalAdSets = campaignDetails.adSets.length
   const totalAds = campaignDetails.adSets.reduce((sum, adSet) => sum + adSet.ads.length, 0)
-  const avgFrequency = campaignDetails.adSets.reduce((sum, adSet) => sum + adSet.frequency, 0) / totalAdSets
-  const bestPerformingAdSet = campaignDetails.adSets.reduce((best, current) => 
-    current.roas > best.roas ? current : best
-  )
-  const worstPerformingAdSet = campaignDetails.adSets.reduce((worst, current) => 
-    current.roas < worst.roas ? current : worst
-  )
+  const avgFrequency = totalAdSets > 0 
+    ? campaignDetails.adSets.reduce((sum, adSet) => sum + adSet.frequency, 0) / totalAdSets 
+    : 0
+  const bestPerformingAdSet = campaignDetails.adSets.length > 0
+    ? campaignDetails.adSets.reduce((best, current) => 
+        current.roas > best.roas ? current : best
+      )
+    : null
+  const worstPerformingAdSet = campaignDetails.adSets.length > 0
+    ? campaignDetails.adSets.reduce((worst, current) => 
+        current.roas < worst.roas ? current : worst
+      )
+    : null
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('en-US', {
@@ -913,7 +919,7 @@ export function CampaignDetailAnalytics({ campaign, onBack }: CampaignDetailAnal
                         <Users className="h-4 w-4 text-blue-500" />
                         <span className="font-medium">Reach</span>
                       </div>
-                      <span>{formatNumber(campaign.impressions / avgFrequency)} people</span>
+                      <span>{avgFrequency > 0 ? formatNumber(campaign.impressions / avgFrequency) : '0'} people</span>
                     </div>
                     
                     <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
@@ -957,8 +963,12 @@ export function CampaignDetailAnalytics({ campaign, onBack }: CampaignDetailAnal
               <Alert className="border-green-200 bg-green-50 dark:bg-green-950/20">
                 <CheckCircle className="h-4 w-4 text-green-600" />
                 <AlertDescription>
-                  <strong>What's Working:</strong> Your retargeting ad set is performing exceptionally well with 
-                  an {bestPerformingAdSet.roas.toFixed(2)}x ROAS. The urgency messaging is driving conversions.
+                  <strong>What's Working:</strong> {bestPerformingAdSet ? (
+                    <>Your "{bestPerformingAdSet.name}" ad set is performing exceptionally well with 
+                    a {bestPerformingAdSet.roas.toFixed(2)}x ROAS.</>
+                  ) : (
+                    "Start running ad sets to see performance insights."
+                  )}
                 </AlertDescription>
               </Alert>
 
@@ -970,8 +980,12 @@ export function CampaignDetailAnalytics({ campaign, onBack }: CampaignDetailAnal
                     <div className="flex-1">
                       <p className="font-medium">Increase budget for top performer</p>
                       <p className="text-sm text-muted-foreground mt-1">
-                        Your "{bestPerformingAdSet.name}" ad set is limited by budget. 
-                        Increasing by $200/day could generate an additional ${(200 * bestPerformingAdSet.roas).toFixed(0)} in revenue.
+                        {bestPerformingAdSet ? (
+                          <>Your "{bestPerformingAdSet.name}" ad set is limited by budget. 
+                          Increasing by $200/day could generate an additional ${(200 * bestPerformingAdSet.roas).toFixed(0)} in revenue.</>
+                        ) : (
+                          "No ad sets found. Create ad sets to see optimization suggestions."
+                        )}
                       </p>
                       <Button size="sm" className="mt-2">
                         Apply Suggestion
