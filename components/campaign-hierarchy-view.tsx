@@ -1,11 +1,13 @@
 "use client"
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Progress } from "@/components/ui/progress"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 import {
   ChevronRight,
@@ -30,6 +32,21 @@ import {
   Settings,
   Copy,
   MoreVertical,
+  Calendar,
+  Clock,
+  Target,
+  Zap,
+  Activity,
+  Info,
+  ArrowUp,
+  ArrowDown,
+  CheckCircle,
+  XCircle,
+  RefreshCw,
+  Sparkles,
+  Layers,
+  Grid3x3,
+  ListTree,
 } from "lucide-react"
 import {
   DropdownMenu,
@@ -317,18 +334,174 @@ export function CampaignHierarchyView({ campaigns }: CampaignHierarchyViewProps)
     return matchesSearch && matchesStatus
   })
 
+  // Calculate summary metrics
+  const summaryMetrics = useMemo(() => {
+    const active = filteredCampaigns.filter(c => c.status === 'ACTIVE')
+    const totalSpend = filteredCampaigns.reduce((sum, c) => sum + c.spend, 0)
+    const totalRevenue = filteredCampaigns.reduce((sum, c) => sum + c.revenue, 0)
+    const totalImpressions = filteredCampaigns.reduce((sum, c) => sum + c.impressions, 0)
+    const totalClicks = filteredCampaigns.reduce((sum, c) => sum + c.clicks, 0)
+    const totalConversions = filteredCampaigns.reduce((sum, c) => sum + c.conversions, 0)
+    
+    return {
+      activeCampaigns: active.length,
+      totalCampaigns: filteredCampaigns.length,
+      totalSpend,
+      totalRevenue,
+      avgROAS: totalSpend > 0 ? totalRevenue / totalSpend : 0,
+      totalImpressions,
+      totalClicks,
+      avgCTR: totalImpressions > 0 ? (totalClicks / totalImpressions) * 100 : 0,
+      totalConversions,
+      conversionRate: totalClicks > 0 ? (totalConversions / totalClicks) * 100 : 0,
+    }
+  }, [filteredCampaigns])
+
+  const [viewMode, setViewMode] = useState<'hierarchy' | 'grid' | 'compact'>('hierarchy')
+  const [selectedMetric, setSelectedMetric] = useState<'spend' | 'revenue' | 'roas' | 'ctr'>('roas')
+
   return (
-    <div className="space-y-6">
-      {/* Enhanced Header */}
-      <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/20 dark:to-indigo-950/20 p-6 rounded-lg border">
+    <TooltipProvider>
+      <div className="space-y-6">
+      {/* Performance Summary Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+        <Card className="bg-gradient-to-br from-blue-500 to-blue-600 text-white border-0">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between mb-2">
+              <Layers className="h-5 w-5 opacity-80" />
+              <span className="text-xs bg-white/20 px-2 py-1 rounded">
+                {summaryMetrics.activeCampaigns}/{summaryMetrics.totalCampaigns} active
+              </span>
+            </div>
+            <p className="text-2xl font-bold">{formatCurrency(summaryMetrics.totalSpend)}</p>
+            <p className="text-sm opacity-90">Total Spend</p>
+            <Progress value={(summaryMetrics.activeCampaigns / summaryMetrics.totalCampaigns) * 100} className="mt-2 h-1 bg-white/20" />
+          </CardContent>
+        </Card>
+
+        <Card className="bg-gradient-to-br from-green-500 to-green-600 text-white border-0">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between mb-2">
+              <TrendingUp className="h-5 w-5 opacity-80" />
+              <span className="text-xs bg-white/20 px-2 py-1 rounded flex items-center gap-1">
+                {summaryMetrics.avgROAS > 2 ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />}
+                {((summaryMetrics.avgROAS - 1) * 100).toFixed(0)}%
+              </span>
+            </div>
+            <p className="text-2xl font-bold">{formatCurrency(summaryMetrics.totalRevenue)}</p>
+            <p className="text-sm opacity-90">Total Revenue • {summaryMetrics.avgROAS.toFixed(2)}x ROAS</p>
+            <div className="mt-2 flex items-center gap-1">
+              {[1, 2, 3, 4, 5].map((star) => (
+                <div
+                  key={star}
+                  className={`h-1 flex-1 rounded ${
+                    star <= Math.round(summaryMetrics.avgROAS) ? 'bg-white' : 'bg-white/30'
+                  }`}
+                />
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-gradient-to-br from-purple-500 to-purple-600 text-white border-0">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between mb-2">
+              <MousePointer className="h-5 w-5 opacity-80" />
+              <Badge className="bg-white/20 text-white border-0">
+                {summaryMetrics.avgCTR.toFixed(2)}%
+              </Badge>
+            </div>
+            <p className="text-2xl font-bold">{formatNumber(summaryMetrics.totalClicks)}</p>
+            <p className="text-sm opacity-90">Total Clicks</p>
+            <p className="text-xs mt-1 opacity-80">{formatNumber(summaryMetrics.totalImpressions)} impressions</p>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-gradient-to-br from-orange-500 to-orange-600 text-white border-0">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between mb-2">
+              <Target className="h-5 w-5 opacity-80" />
+              <Tooltip>
+                <TooltipTrigger>
+                  <Info className="h-4 w-4 opacity-80" />
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Conversion Rate: {summaryMetrics.conversionRate.toFixed(2)}%</p>
+                </TooltipContent>
+              </Tooltip>
+            </div>
+            <p className="text-2xl font-bold">{formatNumber(summaryMetrics.totalConversions)}</p>
+            <p className="text-sm opacity-90">Total Conversions</p>
+            <div className="mt-2 h-1 bg-white/20 rounded overflow-hidden">
+              <div
+                className="h-full bg-white transition-all duration-500"
+                style={{ width: `${Math.min(summaryMetrics.conversionRate * 10, 100)}%` }}
+              />
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Enhanced Header with View Modes */}
+      <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/20 dark:to-indigo-950/20 p-6 rounded-lg border shadow-sm">
         <div className="flex items-center justify-between gap-4 mb-4">
-          <div>
-            <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">Campaign Hierarchy</h2>
-            <p className="text-sm text-gray-600 dark:text-gray-400">
-              Expand campaigns to see ad sets and individual ads • {filteredCampaigns.length} campaigns shown
-            </p>
+          <div className="flex items-center gap-4">
+            <div>
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+                Campaign Management Center
+                <Sparkles className="h-5 w-5 text-yellow-500" />
+              </h2>
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                Real-time performance tracking • {filteredCampaigns.length} of {campaigns.length} campaigns
+              </p>
+            </div>
           </div>
           <div className="flex items-center gap-2">
+            <div className="flex bg-white dark:bg-gray-800 rounded-lg p-1 shadow-sm">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant={viewMode === 'hierarchy' ? 'default' : 'ghost'}
+                    size="sm"
+                    onClick={() => setViewMode('hierarchy')}
+                    className="px-3"
+                  >
+                    <ListTree className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Hierarchy View</TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant={viewMode === 'grid' ? 'default' : 'ghost'}
+                    size="sm"
+                    onClick={() => setViewMode('grid')}
+                    className="px-3"
+                  >
+                    <Grid3x3 className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Grid View</TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant={viewMode === 'compact' ? 'default' : 'ghost'}
+                    size="sm"
+                    onClick={() => setViewMode('compact')}
+                    className="px-3"
+                  >
+                    <BarChart3 className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Compact View</TooltipContent>
+              </Tooltip>
+            </div>
+            <Button variant="outline" size="sm" className="bg-white dark:bg-gray-800">
+              <RefreshCw className="h-4 w-4 mr-1" />
+              Refresh
+            </Button>
             <Button variant="outline" size="sm" className="bg-white dark:bg-gray-800">
               <Download className="h-4 w-4 mr-1" />
               Export
@@ -361,6 +534,27 @@ export function CampaignHierarchyView({ campaigns }: CampaignHierarchyViewProps)
           </select>
         </div>
       </div>
+
+      {/* Performance Alerts */}
+      {filteredCampaigns.some(c => c.roas < 1 && c.spend > 100) && (
+        <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
+          <div className="flex items-center gap-3">
+            <AlertCircle className="h-5 w-5 text-yellow-600" />
+            <div className="flex-1">
+              <p className="font-medium text-yellow-800 dark:text-yellow-200">
+                {filteredCampaigns.filter(c => c.roas < 1 && c.spend > 100).length} campaigns need optimization
+              </p>
+              <p className="text-sm text-yellow-700 dark:text-yellow-300 mt-1">
+                These campaigns have ROAS below 1.0x and significant spend. Consider pausing or optimizing them.
+              </p>
+            </div>
+            <Button size="sm" variant="outline" className="bg-yellow-100 hover:bg-yellow-200 dark:bg-yellow-800 dark:hover:bg-yellow-700">
+              <Zap className="h-4 w-4 mr-1" />
+              Quick Optimize
+            </Button>
+          </div>
+        </div>
+      )}
 
       {/* Enhanced Campaign Hierarchy */}
       <Card className="shadow-lg border-0 bg-white dark:bg-gray-900">
@@ -421,13 +615,59 @@ export function CampaignHierarchyView({ campaigns }: CampaignHierarchyViewProps)
                                 {campaign.name}
                               </span>
                               {campaign.objective && (
-                                <span className="text-xs text-gray-500 bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded">
-                                  {getObjectiveIcon(campaign.objective)}
-                                </span>
+                                <Tooltip>
+                                  <TooltipTrigger>
+                                    <span className="text-xs text-gray-500 bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded flex items-center gap-1">
+                                      {getObjectiveIcon(campaign.objective)}
+                                      <span className="capitalize">{campaign.objective?.toLowerCase()}</span>
+                                    </span>
+                                  </TooltipTrigger>
+                                  <TooltipContent>Campaign Objective</TooltipContent>
+                                </Tooltip>
+                              )}
+                              {/* Performance Indicator */}
+                              {campaign.spend > 0 && (
+                                <Tooltip>
+                                  <TooltipTrigger>
+                                    <div className={`flex items-center gap-1 text-xs px-2 py-1 rounded ${
+                                      campaign.roas >= 3 ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300' :
+                                      campaign.roas >= 1.5 ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300' :
+                                      'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300'
+                                    }`}>
+                                      {campaign.roas >= 3 ? <TrendingUp className="h-3 w-3" /> :
+                                       campaign.roas >= 1.5 ? <Activity className="h-3 w-3" /> :
+                                       <TrendingDown className="h-3 w-3" />}
+                                      {campaign.roas >= 3 ? 'Top Performer' :
+                                       campaign.roas >= 1.5 ? 'Average' :
+                                       'Needs Attention'}
+                                    </div>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <div>
+                                      <p className="font-semibold">Performance Analysis</p>
+                                      <p>ROAS: {campaign.roas.toFixed(2)}x</p>
+                                      <p>Spend: {formatCurrency(campaign.spend)}</p>
+                                      <p>Revenue: {formatCurrency(campaign.revenue)}</p>
+                                    </div>
+                                  </TooltipContent>
+                                </Tooltip>
                               )}
                             </div>
-                            <div className="text-xs text-gray-500 mt-1">
-                              Campaign • {formatNumber(campaign.impressions)} impressions
+                            <div className="text-xs text-gray-500 mt-1 flex items-center gap-3">
+                              <span className="flex items-center gap-1">
+                                <Clock className="h-3 w-3" />
+                                Campaign
+                              </span>
+                              <span className="flex items-center gap-1">
+                                <Eye className="h-3 w-3" />
+                                {formatNumber(campaign.impressions)} impressions
+                              </span>
+                              {campaign.conversions > 0 && (
+                                <span className="flex items-center gap-1">
+                                  <CheckCircle className="h-3 w-3 text-green-600" />
+                                  {formatNumber(campaign.conversions)} conversions
+                                </span>
+                              )}
                             </div>
                           </div>
                         </div>
@@ -440,35 +680,122 @@ export function CampaignHierarchyView({ campaigns }: CampaignHierarchyViewProps)
                         </Badge>
                       </div>
 
-                      {/* Metrics */}
+                      {/* Enhanced Metrics with Indicators */}
                       <div className="col-span-1 text-right">
-                        <p className="font-semibold text-gray-900 dark:text-gray-100 text-sm">
-                          {formatCurrency(campaign.spend)}
-                        </p>
+                        <Tooltip>
+                          <TooltipTrigger>
+                            <div>
+                              <p className="font-semibold text-gray-900 dark:text-gray-100 text-sm">
+                                {formatCurrency(campaign.spend)}
+                              </p>
+                              <div className="mt-1 h-1 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                                <div
+                                  className="h-full bg-blue-500 transition-all duration-300"
+                                  style={{ width: `${Math.min((campaign.spend / summaryMetrics.totalSpend) * 100, 100)}%` }}
+                                />
+                              </div>
+                            </div>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            {((campaign.spend / summaryMetrics.totalSpend) * 100).toFixed(1)}% of total spend
+                          </TooltipContent>
+                        </Tooltip>
                       </div>
                       <div className="col-span-1 text-right">
-                        <p className="font-semibold text-green-600 text-sm">
-                          {formatCurrency(campaign.revenue)}
-                        </p>
+                        <Tooltip>
+                          <TooltipTrigger>
+                            <div>
+                              <p className="font-semibold text-green-600 text-sm flex items-center justify-end gap-1">
+                                {campaign.revenue > campaign.spend && <ArrowUp className="h-3 w-3" />}
+                                {formatCurrency(campaign.revenue)}
+                              </p>
+                              <p className="text-xs text-gray-500">
+                                {campaign.spend > 0 ? `${((campaign.revenue / campaign.spend - 1) * 100).toFixed(0)}% profit` : 'No spend'}
+                              </p>
+                            </div>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            Profit: {formatCurrency(campaign.revenue - campaign.spend)}
+                          </TooltipContent>
+                        </Tooltip>
                       </div>
                       <div className="col-span-1 text-right">
-                        <p className={`font-bold text-sm ${
-                          campaign.roas >= 2 ? 'text-green-600' : 
-                          campaign.roas >= 1 ? 'text-yellow-600' : 
-                          'text-red-600'
-                        }`}>
-                          {campaign.roas.toFixed(2)}x
-                        </p>
+                        <Tooltip>
+                          <TooltipTrigger>
+                            <div className="flex flex-col items-end">
+                              <div className={`flex items-center gap-1 font-bold text-sm ${
+                                campaign.roas >= 2 ? 'text-green-600' : 
+                                campaign.roas >= 1 ? 'text-yellow-600' : 
+                                'text-red-600'
+                              }`}>
+                                {campaign.roas >= 2 ? <TrendingUp className="h-3 w-3" /> :
+                                 campaign.roas >= 1 ? <Activity className="h-3 w-3" /> :
+                                 <TrendingDown className="h-3 w-3" />}
+                                {campaign.roas.toFixed(2)}x
+                              </div>
+                              <div className="flex gap-0.5 mt-1">
+                                {[1, 2, 3, 4, 5].map((star) => (
+                                  <div
+                                    key={star}
+                                    className={`h-1 w-1 rounded-full ${
+                                      star <= Math.ceil(campaign.roas) ? 
+                                      campaign.roas >= 2 ? 'bg-green-600' : 
+                                      campaign.roas >= 1 ? 'bg-yellow-600' : 
+                                      'bg-red-600' : 'bg-gray-300'
+                                    }`}
+                                  />
+                                ))}
+                              </div>
+                            </div>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            {campaign.roas >= 2 ? 'Excellent performance' :
+                             campaign.roas >= 1 ? 'Breaking even' :
+                             'Below target'}
+                          </TooltipContent>
+                        </Tooltip>
                       </div>
                       <div className="col-span-1 text-right">
-                        <p className="font-medium text-gray-700 dark:text-gray-300 text-sm">
-                          {campaign.ctr.toFixed(2)}%
-                        </p>
+                        <Tooltip>
+                          <TooltipTrigger>
+                            <div>
+                              <p className="font-medium text-gray-700 dark:text-gray-300 text-sm">
+                                {campaign.ctr.toFixed(2)}%
+                              </p>
+                              <p className="text-xs text-gray-500">
+                                {campaign.ctr > summaryMetrics.avgCTR ? 
+                                  <span className="text-green-600">↑ Above avg</span> : 
+                                  <span className="text-red-600">↓ Below avg</span>
+                                }
+                              </p>
+                            </div>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            Average CTR: {summaryMetrics.avgCTR.toFixed(2)}%
+                          </TooltipContent>
+                        </Tooltip>
                       </div>
                       <div className="col-span-1 text-right">
-                        <p className="font-medium text-gray-700 dark:text-gray-300 text-sm">
-                          {formatNumber(campaign.conversions)}
-                        </p>
+                        <Tooltip>
+                          <TooltipTrigger>
+                            <div className="flex flex-col items-end">
+                              <p className="font-medium text-gray-700 dark:text-gray-300 text-sm">
+                                {formatNumber(campaign.conversions)}
+                              </p>
+                              {campaign.clicks > 0 && (
+                                <p className="text-xs text-gray-500">
+                                  {((campaign.conversions / campaign.clicks) * 100).toFixed(1)}% CVR
+                                </p>
+                              )}
+                            </div>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <div>
+                              <p>Conversion Rate: {campaign.clicks > 0 ? ((campaign.conversions / campaign.clicks) * 100).toFixed(2) : 0}%</p>
+                              <p>Cost per Conversion: {campaign.conversions > 0 ? formatCurrency(campaign.spend / campaign.conversions) : 'N/A'}</p>
+                            </div>
+                          </TooltipContent>
+                        </Tooltip>
                       </div>
 
                       {/* Actions */}
@@ -691,5 +1018,6 @@ export function CampaignHierarchyView({ campaigns }: CampaignHierarchyViewProps)
         </CardContent>
       </Card>
     </div>
+    </TooltipProvider>
   )
 }
