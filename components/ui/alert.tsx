@@ -23,13 +23,14 @@ export interface AlertProps extends React.HTMLAttributes<HTMLDivElement>, Varian
   children: React.ReactNode
 }
 
-function Alert({ className, variant, children, ...props }: AlertProps) {
+const Alert = React.forwardRef<HTMLDivElement, AlertProps>(({ className, variant, children, ...props }, ref) => {
   return (
-    <div className={cn(alertVariants({ variant }), className)} role="alert" {...props}>
+    <div ref={ref} className={cn(alertVariants({ variant }), className)} role="alert" {...props}>
       {children}
     </div>
   )
-}
+})
+Alert.displayName = "Alert"
 
 const AlertTitle = React.forwardRef<HTMLParagraphElement, React.HTMLAttributes<HTMLHeadingElement>>(
   ({ className, ...props }, ref) => (
