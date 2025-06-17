@@ -814,7 +814,7 @@ export function CampaignHierarchyView({ campaigns }: CampaignHierarchyViewProps)
                         <Button
                           size="sm"
                           variant="outline"
-                          onClick={() => setSelectedCampaignForAnalytics(campaign)}
+                          onClick={() => setSelectedCampaignForAnalytics(campaignDetails)}
                           className="text-xs px-3 py-1 h-7 border-blue-200 text-blue-600 hover:bg-blue-50 hover:border-blue-300"
                         >
                           <BarChart3 className="h-3 w-3 mr-1" />
@@ -828,7 +828,7 @@ export function CampaignHierarchyView({ campaigns }: CampaignHierarchyViewProps)
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
                             <DropdownMenuItem
-                              onClick={() => setSelectedCampaignForAnalytics(campaign)}
+                              onClick={() => setSelectedCampaignForAnalytics(campaignDetails)}
                               className="font-medium text-blue-600 hover:text-blue-700 hover:bg-blue-50"
                             >
                               <BarChart3 className="h-4 w-4 mr-2" />

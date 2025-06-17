@@ -147,6 +147,17 @@ export function CampaignDetailAnalytics({ campaign, onBack }: CampaignDetailAnal
   const [loading, setLoading] = useState(true)
   const [adSets, setAdSets] = useState<any[]>([])
   const [error, setError] = useState<string | null>(null)
+  
+  // Ensure we use fresh campaign data on each render
+  const [currentCampaign, setCurrentCampaign] = useState(campaign)
+  
+  // Update campaign when prop changes
+  useEffect(() => {
+    setCurrentCampaign(campaign)
+    setLoading(true) // Reset loading state
+    setAdSets([]) // Clear previous ad sets
+    setError(null) // Clear any errors
+  }, [campaign.id, campaign.spend, campaign.revenue])
 
   // Fetch real ad sets and ads data
   useEffect(() => {
@@ -165,7 +176,7 @@ export function CampaignDetailAnalytics({ campaign, onBack }: CampaignDetailAnal
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            campaignId: campaign.id,
+            campaignId: currentCampaign.id,
             accessToken: credentials.accessToken,
             adAccountId: credentials.adAccountId,
           }),
@@ -191,11 +202,11 @@ export function CampaignDetailAnalytics({ campaign, onBack }: CampaignDetailAnal
     }
 
     fetchCampaignDetails()
-  }, [campaign.id])
+  }, [currentCampaign.id])
 
   // Use real data with fallback to campaign data
   const campaignDetails = {
-    ...campaign,
+    ...currentCampaign,
     adSets: adSets.map(adSet => ({
       ...adSet,
       spend: adSet.insights?.spend || 0,
@@ -210,12 +221,12 @@ export function CampaignDetailAnalytics({ campaign, onBack }: CampaignDetailAnal
       frequency: adSet.frequency || 1,
       ads: adSet.ads || [],
     })),
-    // Generate time-based data from campaign metrics
-    hourlyData: generateHourlyData(campaign),
-    dailyTrend: generateDailyTrend(campaign),
-    demographics: generateDemographics(campaign),
-    devices: generateDeviceData(campaign),
-    topLocations: generateLocationData(campaign),
+    // Generate time-based data from current campaign metrics
+    hourlyData: generateHourlyData(currentCampaign),
+    dailyTrend: generateDailyTrend(currentCampaign),
+    demographics: generateDemographics(currentCampaign),
+    devices: generateDeviceData(currentCampaign),
+    topLocations: generateLocationData(currentCampaign),
   }
 
   // Calculate key metrics
@@ -266,7 +277,7 @@ export function CampaignDetailAnalytics({ campaign, onBack }: CampaignDetailAnal
             </Button>
             <Separator orientation="vertical" className="h-4" />
             <span className="text-sm text-muted-foreground">
-              {campaign.name} / {selectedAdSet.name} / {selectedAd.name}
+              {currentCampaign.name} / {selectedAdSet.name} / {selectedAd.name}
             </span>
           </div>
         </div>
@@ -362,7 +373,7 @@ export function CampaignDetailAnalytics({ campaign, onBack }: CampaignDetailAnal
             </Button>
             <Separator orientation="vertical" className="h-4" />
             <span className="text-sm text-muted-foreground">
-              {campaign.name} / {selectedAdSet.name}
+              {currentCampaign.name} / {selectedAdSet.name}
             </span>
           </div>
           <div className="flex items-center gap-2">
@@ -521,7 +532,7 @@ export function CampaignDetailAnalytics({ campaign, onBack }: CampaignDetailAnal
             </Button>
           )}
           <div>
-            <h2 className="text-2xl font-bold">{campaign.name}</h2>
+            <h2 className="text-2xl font-bold">{currentCampaign.name}</h2>
             <p className="text-muted-foreground">Loading campaign details...</p>
           </div>
         </div>
@@ -574,13 +585,13 @@ export function CampaignDetailAnalytics({ campaign, onBack }: CampaignDetailAnal
             </Button>
           )}
           <div>
-            <h2 className="text-2xl font-bold">{campaign.name}</h2>
+            <h2 className="text-2xl font-bold">{currentCampaign.name}</h2>
             <p className="text-muted-foreground">
-              Campaign ID: {campaign.id} • {totalAdSets} ad sets • {totalAds} ads
+              Campaign ID: {currentCampaign.id} • {totalAdSets} ad sets • {totalAds} ads
             </p>
           </div>
-          <Badge variant={campaign.status === 'ACTIVE' ? 'default' : 'secondary'}>
-            {campaign.status}
+          <Badge variant={currentCampaign.status === 'ACTIVE' ? 'default' : 'secondary'}>
+            {currentCampaign.status}
           </Badge>
         </div>
         <div className="flex items-center gap-2">
@@ -613,9 +624,9 @@ export function CampaignDetailAnalytics({ campaign, onBack }: CampaignDetailAnal
               <DollarSign className="h-5 w-5 text-blue-500" />
               <span className="text-xs text-muted-foreground">Total Spend</span>
             </div>
-            <p className="text-2xl font-bold">{formatCurrency(campaign.spend)}</p>
+            <p className="text-2xl font-bold">{formatCurrency(currentCampaign.spend)}</p>
             <p className="text-xs text-muted-foreground mt-1">
-              Avg {formatCurrency(campaign.spend / totalAdSets)} per ad set
+              Avg {formatCurrency(currentCampaign.spend / totalAdSets)} per ad set
             </p>
           </CardContent>
         </Card>
@@ -625,12 +636,12 @@ export function CampaignDetailAnalytics({ campaign, onBack }: CampaignDetailAnal
             <div className="flex items-center justify-between mb-2">
               <TrendingUp className="h-5 w-5 text-green-500" />
               <span className="text-xs text-green-600">
-                {campaign.roas >= 2 ? '+' : ''}{((campaign.roas - 1) * 100).toFixed(0)}%
+                {currentCampaign.roas >= 2 ? '+' : ''}{((currentCampaign.roas - 1) * 100).toFixed(0)}%
               </span>
             </div>
-            <p className="text-2xl font-bold">{formatCurrency(campaign.revenue)}</p>
+            <p className="text-2xl font-bold">{formatCurrency(currentCampaign.revenue)}</p>
             <p className="text-xs text-muted-foreground mt-1">
-              {campaign.roas.toFixed(2)}x ROAS
+              {currentCampaign.roas.toFixed(2)}x ROAS
             </p>
           </CardContent>
         </Card>
@@ -639,11 +650,11 @@ export function CampaignDetailAnalytics({ campaign, onBack }: CampaignDetailAnal
           <CardContent className="p-4">
             <div className="flex items-center justify-between mb-2">
               <MousePointer className="h-5 w-5 text-purple-500" />
-              <Badge variant="secondary" className="text-xs">{campaign.ctr.toFixed(2)}%</Badge>
+              <Badge variant="secondary" className="text-xs">{currentCampaign.ctr.toFixed(2)}%</Badge>
             </div>
-            <p className="text-2xl font-bold">{formatNumber(campaign.clicks)}</p>
+            <p className="text-2xl font-bold">{formatNumber(currentCampaign.clicks)}</p>
             <p className="text-xs text-muted-foreground mt-1">
-              From {formatNumber(campaign.impressions)} impressions
+              From {formatNumber(currentCampaign.impressions)} impressions
             </p>
           </CardContent>
         </Card>
@@ -653,12 +664,12 @@ export function CampaignDetailAnalytics({ campaign, onBack }: CampaignDetailAnal
             <div className="flex items-center justify-between mb-2">
               <ShoppingCart className="h-5 w-5 text-orange-500" />
               <span className="text-xs text-muted-foreground">
-                ${(campaign.spend / campaign.conversions).toFixed(2)} CPA
+                ${currentCampaign.conversions > 0 ? (currentCampaign.spend / currentCampaign.conversions).toFixed(2) : '0'} CPA
               </span>
             </div>
-            <p className="text-2xl font-bold">{formatNumber(campaign.conversions)}</p>
+            <p className="text-2xl font-bold">{formatNumber(currentCampaign.conversions)}</p>
             <p className="text-xs text-muted-foreground mt-1">
-              {((campaign.conversions / campaign.clicks) * 100).toFixed(1)}% CVR
+              {currentCampaign.clicks > 0 ? ((currentCampaign.conversions / currentCampaign.clicks) * 100).toFixed(1) : '0'}% CVR
             </p>
           </CardContent>
         </Card>
@@ -942,7 +953,7 @@ export function CampaignDetailAnalytics({ campaign, onBack }: CampaignDetailAnal
                         <Users className="h-4 w-4 text-blue-500" />
                         <span className="font-medium">Reach</span>
                       </div>
-                      <span>{avgFrequency > 0 ? formatNumber(campaign.impressions / avgFrequency) : '0'} people</span>
+                      <span>{avgFrequency > 0 ? formatNumber(currentCampaign.impressions / avgFrequency) : '0'} people</span>
                     </div>
                     
                     <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
