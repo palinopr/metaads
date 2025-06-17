@@ -59,6 +59,7 @@ import {
 import { EnhancedMetaAPIClient } from "@/lib/meta-api-client-enhanced"
 import { CredentialManager } from "@/lib/credential-manager"
 import { toast } from "sonner"
+import { CampaignDetailAnalytics } from "./campaign-detail-analytics"
 
 interface AdCreative {
   id: string
@@ -135,6 +136,7 @@ export function CampaignHierarchyView({ campaigns }: CampaignHierarchyViewProps)
   const [campaignData, setCampaignData] = useState<Map<string, CampaignWithHierarchy>>(new Map())
   const [searchTerm, setSearchTerm] = useState('')
   const [filterStatus, setFilterStatus] = useState('all')
+  const [selectedCampaignForAnalytics, setSelectedCampaignForAnalytics] = useState<any>(null)
 
   // Fetch campaign details (ad sets and ads)
   const fetchCampaignDetails = async (campaignId: string) => {
@@ -359,6 +361,15 @@ export function CampaignHierarchyView({ campaigns }: CampaignHierarchyViewProps)
 
   const [viewMode, setViewMode] = useState<'hierarchy' | 'grid' | 'compact'>('hierarchy')
   const [selectedMetric, setSelectedMetric] = useState<'spend' | 'revenue' | 'roas' | 'ctr'>('roas')
+
+  if (selectedCampaignForAnalytics) {
+    return (
+      <CampaignDetailAnalytics
+        campaign={selectedCampaignForAnalytics}
+        onBack={() => setSelectedCampaignForAnalytics(null)}
+      />
+    )
+  }
 
   return (
     <TooltipProvider>
@@ -807,6 +818,13 @@ export function CampaignHierarchyView({ campaigns }: CampaignHierarchyViewProps)
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
+                            <DropdownMenuItem
+                              onClick={() => setSelectedCampaignForAnalytics(campaign)}
+                            >
+                              <BarChart3 className="h-4 w-4 mr-2" />
+                              Analyze Campaign
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
                             <DropdownMenuItem>
                               <PlayCircle className="h-4 w-4 mr-2" />
                               Activate

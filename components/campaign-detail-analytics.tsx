@@ -1,0 +1,1077 @@
+"use client"
+
+import React, { useState } from 'react'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
+import { Progress } from "@/components/ui/progress"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Separator } from "@/components/ui/separator"
+import {
+  LineChart,
+  Line,
+  AreaChart,
+  Area,
+  BarChart,
+  Bar,
+  ComposedChart,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+  RadialBarChart,
+  RadialBar,
+  Cell,
+  PieChart,
+  Pie,
+} from 'recharts'
+import {
+  TrendingUp,
+  TrendingDown,
+  DollarSign,
+  Eye,
+  MousePointer,
+  ShoppingCart,
+  Clock,
+  Calendar,
+  AlertTriangle,
+  CheckCircle,
+  Info,
+  Zap,
+  Target,
+  Activity,
+  BarChart3,
+  ArrowUp,
+  ArrowDown,
+  Settings,
+  Play,
+  Pause,
+  RefreshCw,
+  Download,
+  ChevronLeft,
+  ChevronRight,
+  Layers,
+  FileText,
+  Image,
+  Video,
+  Users,
+  MapPin,
+  Smartphone,
+  Monitor,
+  Brain,
+  Lightbulb,
+} from "lucide-react"
+
+interface CampaignDetailAnalyticsProps {
+  campaign: any
+  onBack?: () => void
+}
+
+export function CampaignDetailAnalytics({ campaign, onBack }: CampaignDetailAnalyticsProps) {
+  const [selectedAdSet, setSelectedAdSet] = useState<any>(null)
+  const [selectedAd, setSelectedAd] = useState<any>(null)
+  const [dateRange, setDateRange] = useState('last_7_days')
+
+  // Mock detailed campaign data
+  const campaignDetails = {
+    ...campaign,
+    adSets: [
+      {
+        id: '1',
+        name: 'Prospecting - Broad',
+        status: 'ACTIVE',
+        budget: 500,
+        spend: 450,
+        revenue: 2250,
+        roas: 5.0,
+        impressions: 45000,
+        clicks: 900,
+        ctr: 2.0,
+        conversions: 45,
+        cpc: 0.50,
+        cpa: 10.00,
+        frequency: 1.8,
+        ads: [
+          {
+            id: '1-1',
+            name: 'Summer Sale Video',
+            type: 'video',
+            status: 'ACTIVE',
+            spend: 225,
+            revenue: 1350,
+            roas: 6.0,
+            impressions: 25000,
+            clicks: 500,
+            ctr: 2.0,
+            conversions: 27,
+            thumbnailUrl: '/api/placeholder/200/200',
+          },
+          {
+            id: '1-2',
+            name: 'Product Showcase',
+            type: 'image',
+            status: 'ACTIVE',
+            spend: 225,
+            revenue: 900,
+            roas: 4.0,
+            impressions: 20000,
+            clicks: 400,
+            ctr: 2.0,
+            conversions: 18,
+            thumbnailUrl: '/api/placeholder/200/200',
+          },
+        ],
+      },
+      {
+        id: '2',
+        name: 'Retargeting - Cart Abandoners',
+        status: 'ACTIVE',
+        budget: 300,
+        spend: 280,
+        revenue: 2240,
+        roas: 8.0,
+        impressions: 20000,
+        clicks: 600,
+        ctr: 3.0,
+        conversions: 56,
+        cpc: 0.47,
+        cpa: 5.00,
+        frequency: 3.2,
+        ads: [
+          {
+            id: '2-1',
+            name: 'Urgency Reminder',
+            type: 'carousel',
+            status: 'ACTIVE',
+            spend: 280,
+            revenue: 2240,
+            roas: 8.0,
+            impressions: 20000,
+            clicks: 600,
+            ctr: 3.0,
+            conversions: 56,
+            thumbnailUrl: '/api/placeholder/200/200',
+          },
+        ],
+      },
+    ],
+    hourlyData: [
+      { hour: '00:00', spend: 20, revenue: 100, clicks: 25, conversions: 2 },
+      { hour: '03:00', spend: 15, revenue: 60, clicks: 18, conversions: 1 },
+      { hour: '06:00', spend: 25, revenue: 150, clicks: 30, conversions: 3 },
+      { hour: '09:00', spend: 40, revenue: 280, clicks: 50, conversions: 5 },
+      { hour: '12:00', spend: 60, revenue: 420, clicks: 75, conversions: 8 },
+      { hour: '15:00', spend: 55, revenue: 385, clicks: 68, conversions: 7 },
+      { hour: '18:00', spend: 65, revenue: 520, clicks: 80, conversions: 10 },
+      { hour: '21:00', spend: 45, revenue: 315, clicks: 55, conversions: 6 },
+    ],
+    dailyTrend: [
+      { date: 'Mon', spend: 320, revenue: 1920, roas: 6.0, ctr: 2.1 },
+      { date: 'Tue', spend: 340, revenue: 2040, roas: 6.0, ctr: 2.2 },
+      { date: 'Wed', spend: 310, revenue: 2170, roas: 7.0, ctr: 2.3 },
+      { date: 'Thu', spend: 330, revenue: 2310, roas: 7.0, ctr: 2.4 },
+      { date: 'Fri', spend: 360, revenue: 2880, roas: 8.0, ctr: 2.5 },
+      { date: 'Sat', spend: 380, revenue: 3040, roas: 8.0, ctr: 2.6 },
+      { date: 'Sun', spend: 350, revenue: 2450, roas: 7.0, ctr: 2.4 },
+    ],
+    demographics: [
+      { age: '18-24', spend: 300, revenue: 1500, conversions: 30 },
+      { age: '25-34', spend: 500, revenue: 3500, conversions: 70 },
+      { age: '35-44', spend: 400, revenue: 2800, conversions: 56 },
+      { age: '45-54', spend: 200, revenue: 1000, conversions: 20 },
+      { age: '55+', spend: 100, revenue: 400, conversions: 8 },
+    ],
+    devices: [
+      { device: 'Mobile', percentage: 65, spend: 975, revenue: 6825 },
+      { device: 'Desktop', percentage: 30, spend: 450, revenue: 3150 },
+      { device: 'Tablet', percentage: 5, spend: 75, revenue: 525 },
+    ],
+    topLocations: [
+      { location: 'California', spend: 400, revenue: 2800, conversions: 56 },
+      { location: 'Texas', spend: 300, revenue: 2100, conversions: 42 },
+      { location: 'New York', spend: 250, revenue: 1750, conversions: 35 },
+      { location: 'Florida', spend: 200, revenue: 1400, conversions: 28 },
+      { location: 'Illinois', spend: 150, revenue: 1050, conversions: 21 },
+    ],
+  }
+
+  // Calculate key metrics
+  const totalAdSets = campaignDetails.adSets.length
+  const totalAds = campaignDetails.adSets.reduce((sum, adSet) => sum + adSet.ads.length, 0)
+  const avgFrequency = campaignDetails.adSets.reduce((sum, adSet) => sum + adSet.frequency, 0) / totalAdSets
+  const bestPerformingAdSet = campaignDetails.adSets.reduce((best, current) => 
+    current.roas > best.roas ? current : best
+  )
+  const worstPerformingAdSet = campaignDetails.adSets.reduce((worst, current) => 
+    current.roas < worst.roas ? current : worst
+  )
+
+  const formatCurrency = (value: number) => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(value)
+  }
+
+  const formatNumber = (value: number) => {
+    return new Intl.NumberFormat('en-US').format(value)
+  }
+
+  const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6']
+
+  if (selectedAd) {
+    // Ad Detail View
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setSelectedAd(null)}
+            >
+              <ChevronLeft className="h-4 w-4 mr-1" />
+              Back to Ad Set
+            </Button>
+            <Separator orientation="vertical" className="h-4" />
+            <span className="text-sm text-muted-foreground">
+              {campaign.name} / {selectedAdSet.name} / {selectedAd.name}
+            </span>
+          </div>
+        </div>
+
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="flex items-center gap-2">
+                  {selectedAd.type === 'video' ? <Video className="h-5 w-5" /> : <Image className="h-5 w-5" />}
+                  {selectedAd.name}
+                </CardTitle>
+                <CardDescription>
+                  Individual ad performance metrics
+                </CardDescription>
+              </div>
+              <Badge variant={selectedAd.status === 'ACTIVE' ? 'default' : 'secondary'}>
+                {selectedAd.status}
+              </Badge>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <img
+                  src={selectedAd.thumbnailUrl}
+                  alt={selectedAd.name}
+                  className="w-full rounded-lg border"
+                />
+              </div>
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <Card>
+                    <CardContent className="p-4">
+                      <p className="text-sm text-muted-foreground">Spend</p>
+                      <p className="text-2xl font-bold">{formatCurrency(selectedAd.spend)}</p>
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardContent className="p-4">
+                      <p className="text-sm text-muted-foreground">Revenue</p>
+                      <p className="text-2xl font-bold text-green-600">{formatCurrency(selectedAd.revenue)}</p>
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardContent className="p-4">
+                      <p className="text-sm text-muted-foreground">ROAS</p>
+                      <p className="text-2xl font-bold">{selectedAd.roas.toFixed(2)}x</p>
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardContent className="p-4">
+                      <p className="text-sm text-muted-foreground">CTR</p>
+                      <p className="text-2xl font-bold">{selectedAd.ctr.toFixed(2)}%</p>
+                    </CardContent>
+                  </Card>
+                </div>
+                <div className="space-y-2">
+                  <div className="flex justify-between">
+                    <span className="text-sm text-muted-foreground">Impressions</span>
+                    <span className="font-medium">{formatNumber(selectedAd.impressions)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-sm text-muted-foreground">Clicks</span>
+                    <span className="font-medium">{formatNumber(selectedAd.clicks)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-sm text-muted-foreground">Conversions</span>
+                    <span className="font-medium">{formatNumber(selectedAd.conversions)}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
+  if (selectedAdSet) {
+    // Ad Set Detail View
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setSelectedAdSet(null)}
+            >
+              <ChevronLeft className="h-4 w-4 mr-1" />
+              Back to Campaign
+            </Button>
+            <Separator orientation="vertical" className="h-4" />
+            <span className="text-sm text-muted-foreground">
+              {campaign.name} / {selectedAdSet.name}
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm">
+              <Settings className="h-4 w-4 mr-1" />
+              Edit Ad Set
+            </Button>
+            <Button variant="outline" size="sm">
+              {selectedAdSet.status === 'ACTIVE' ? (
+                <>
+                  <Pause className="h-4 w-4 mr-1" />
+                  Pause
+                </>
+              ) : (
+                <>
+                  <Play className="h-4 w-4 mr-1" />
+                  Activate
+                </>
+              )}
+            </Button>
+          </div>
+        </div>
+
+        {/* Ad Set Metrics */}
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between mb-2">
+                <DollarSign className="h-4 w-4 text-blue-500" />
+                <span className="text-xs text-muted-foreground">Budget</span>
+              </div>
+              <p className="text-2xl font-bold">${selectedAdSet.budget}</p>
+              <Progress value={(selectedAdSet.spend / selectedAdSet.budget) * 100} className="mt-2 h-1" />
+              <p className="text-xs text-muted-foreground mt-1">
+                {((selectedAdSet.spend / selectedAdSet.budget) * 100).toFixed(0)}% spent
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between mb-2">
+                <TrendingUp className="h-4 w-4 text-green-500" />
+                <Badge variant="secondary" className="text-xs">ROAS</Badge>
+              </div>
+              <p className="text-2xl font-bold">{selectedAdSet.roas.toFixed(2)}x</p>
+              <p className="text-xs text-green-600">
+                {formatCurrency(selectedAdSet.revenue)} revenue
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between mb-2">
+                <MousePointer className="h-4 w-4 text-purple-500" />
+                <span className="text-xs text-muted-foreground">CTR</span>
+              </div>
+              <p className="text-2xl font-bold">{selectedAdSet.ctr.toFixed(2)}%</p>
+              <p className="text-xs text-muted-foreground">
+                {formatNumber(selectedAdSet.clicks)} clicks
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between mb-2">
+                <ShoppingCart className="h-4 w-4 text-orange-500" />
+                <span className="text-xs text-muted-foreground">CPA</span>
+              </div>
+              <p className="text-2xl font-bold">${selectedAdSet.cpa.toFixed(2)}</p>
+              <p className="text-xs text-muted-foreground">
+                {formatNumber(selectedAdSet.conversions)} conversions
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between mb-2">
+                <Users className="h-4 w-4 text-indigo-500" />
+                <span className="text-xs text-muted-foreground">Frequency</span>
+              </div>
+              <p className="text-2xl font-bold">{selectedAdSet.frequency.toFixed(1)}</p>
+              <p className="text-xs text-muted-foreground">
+                Avg times shown
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Ads in this Ad Set */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Ads Performance</CardTitle>
+            <CardDescription>
+              {selectedAdSet.ads.length} ads in this ad set
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {selectedAdSet.ads.map((ad: any) => (
+                <Card
+                  key={ad.id}
+                  className="cursor-pointer hover:shadow-md transition-shadow"
+                  onClick={() => setSelectedAd(ad)}
+                >
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-4">
+                        <img
+                          src={ad.thumbnailUrl}
+                          alt={ad.name}
+                          className="w-16 h-16 rounded object-cover"
+                        />
+                        <div>
+                          <p className="font-medium flex items-center gap-2">
+                            {ad.type === 'video' ? <Video className="h-4 w-4" /> : 
+                             ad.type === 'carousel' ? <Layers className="h-4 w-4" /> : 
+                             <Image className="h-4 w-4" />}
+                            {ad.name}
+                          </p>
+                          <p className="text-sm text-muted-foreground">
+                            {formatNumber(ad.impressions)} impressions • {ad.ctr.toFixed(2)}% CTR
+                          </p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className="font-medium">{ad.roas.toFixed(2)}x ROAS</p>
+                        <p className="text-sm text-muted-foreground">
+                          {formatCurrency(ad.spend)} → {formatCurrency(ad.revenue)}
+                        </p>
+                      </div>
+                      <ChevronRight className="h-5 w-5 text-muted-foreground" />
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
+  // Campaign Detail View
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          {onBack && (
+            <Button variant="ghost" size="sm" onClick={onBack}>
+              <ChevronLeft className="h-4 w-4 mr-1" />
+              Back
+            </Button>
+          )}
+          <div>
+            <h2 className="text-2xl font-bold">{campaign.name}</h2>
+            <p className="text-muted-foreground">
+              Campaign ID: {campaign.id} • {totalAdSets} ad sets • {totalAds} ads
+            </p>
+          </div>
+          <Badge variant={campaign.status === 'ACTIVE' ? 'default' : 'secondary'}>
+            {campaign.status}
+          </Badge>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm">
+            <Download className="h-4 w-4 mr-1" />
+            Export
+          </Button>
+          <Button variant="outline" size="sm">
+            <Settings className="h-4 w-4 mr-1" />
+            Edit Campaign
+          </Button>
+        </div>
+      </div>
+
+      {/* Campaign Summary Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <Card className="border-l-4 border-l-blue-500">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between mb-2">
+              <DollarSign className="h-5 w-5 text-blue-500" />
+              <span className="text-xs text-muted-foreground">Total Spend</span>
+            </div>
+            <p className="text-2xl font-bold">{formatCurrency(campaign.spend)}</p>
+            <p className="text-xs text-muted-foreground mt-1">
+              Avg {formatCurrency(campaign.spend / totalAdSets)} per ad set
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card className="border-l-4 border-l-green-500">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between mb-2">
+              <TrendingUp className="h-5 w-5 text-green-500" />
+              <span className="text-xs text-green-600">
+                {campaign.roas >= 2 ? '+' : ''}{((campaign.roas - 1) * 100).toFixed(0)}%
+              </span>
+            </div>
+            <p className="text-2xl font-bold">{formatCurrency(campaign.revenue)}</p>
+            <p className="text-xs text-muted-foreground mt-1">
+              {campaign.roas.toFixed(2)}x ROAS
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card className="border-l-4 border-l-purple-500">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between mb-2">
+              <MousePointer className="h-5 w-5 text-purple-500" />
+              <Badge variant="secondary" className="text-xs">{campaign.ctr.toFixed(2)}%</Badge>
+            </div>
+            <p className="text-2xl font-bold">{formatNumber(campaign.clicks)}</p>
+            <p className="text-xs text-muted-foreground mt-1">
+              From {formatNumber(campaign.impressions)} impressions
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card className="border-l-4 border-l-orange-500">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between mb-2">
+              <ShoppingCart className="h-5 w-5 text-orange-500" />
+              <span className="text-xs text-muted-foreground">
+                ${(campaign.spend / campaign.conversions).toFixed(2)} CPA
+              </span>
+            </div>
+            <p className="text-2xl font-bold">{formatNumber(campaign.conversions)}</p>
+            <p className="text-xs text-muted-foreground mt-1">
+              {((campaign.conversions / campaign.clicks) * 100).toFixed(1)}% CVR
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Main Analytics Tabs */}
+      <Tabs defaultValue="performance" className="space-y-4">
+        <TabsList className="grid w-full grid-cols-6">
+          <TabsTrigger value="performance">Performance</TabsTrigger>
+          <TabsTrigger value="adsets">Ad Sets</TabsTrigger>
+          <TabsTrigger value="audience">Audience</TabsTrigger>
+          <TabsTrigger value="optimization">AI Optimization</TabsTrigger>
+          <TabsTrigger value="trends">Trends</TabsTrigger>
+          <TabsTrigger value="insights">Insights</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="performance" className="space-y-4">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            {/* Daily Performance */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Daily Performance</CardTitle>
+                <CardDescription>
+                  Last 7 days performance metrics
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ResponsiveContainer width="100%" height={300}>
+                  <ComposedChart data={campaignDetails.dailyTrend}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="date" />
+                    <YAxis yAxisId="left" />
+                    <YAxis yAxisId="right" orientation="right" />
+                    <Tooltip />
+                    <Legend />
+                    <Bar yAxisId="left" dataKey="spend" fill="#3B82F6" name="Spend ($)" />
+                    <Line yAxisId="right" type="monotone" dataKey="roas" stroke="#10B981" name="ROAS" strokeWidth={2} />
+                  </ComposedChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+
+            {/* Hourly Performance */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Hourly Performance</CardTitle>
+                <CardDescription>
+                  Best times for conversions
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ResponsiveContainer width="100%" height={300}>
+                  <AreaChart data={campaignDetails.hourlyData}>
+                    <defs>
+                      <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#10B981" stopOpacity={0.8}/>
+                        <stop offset="95%" stopColor="#10B981" stopOpacity={0.1}/>
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="hour" />
+                    <YAxis />
+                    <Tooltip />
+                    <Area
+                      type="monotone"
+                      dataKey="revenue"
+                      stroke="#10B981"
+                      fillOpacity={1}
+                      fill="url(#colorRevenue)"
+                      name="Revenue ($)"
+                    />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Device & Location Performance */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>Device Breakdown</CardTitle>
+                <CardDescription>
+                  Performance by device type
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {campaignDetails.devices.map((device) => (
+                    <div key={device.device} className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          {device.device === 'Mobile' ? <Smartphone className="h-4 w-4" /> : 
+                           device.device === 'Desktop' ? <Monitor className="h-4 w-4" /> : 
+                           <Layers className="h-4 w-4" />}
+                          <span className="font-medium">{device.device}</span>
+                        </div>
+                        <span className="text-sm text-muted-foreground">
+                          {device.percentage}% • {formatCurrency(device.revenue)} revenue
+                        </span>
+                      </div>
+                      <Progress value={device.percentage} className="h-2" />
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Top Locations</CardTitle>
+                <CardDescription>
+                  Best performing geographic regions
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {campaignDetails.topLocations.map((location, index) => (
+                    <div key={location.location} className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-medium text-muted-foreground">#{index + 1}</span>
+                        <MapPin className="h-4 w-4" />
+                        <span className="font-medium">{location.location}</span>
+                      </div>
+                      <div className="text-right">
+                        <p className="font-medium">{formatCurrency(location.revenue)}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {location.conversions} conv • {(location.revenue / location.spend).toFixed(2)}x ROAS
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="adsets" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle>Ad Sets Comparison</CardTitle>
+                  <CardDescription>
+                    Click on an ad set to view detailed analytics
+                  </CardDescription>
+                </div>
+                <Button size="sm">
+                  <Plus className="h-4 w-4 mr-1" />
+                  New Ad Set
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {campaignDetails.adSets.map((adSet) => (
+                  <Card
+                    key={adSet.id}
+                    className="cursor-pointer hover:shadow-md transition-shadow"
+                    onClick={() => setSelectedAdSet(adSet)}
+                  >
+                    <CardContent className="p-4">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="font-medium flex items-center gap-2">
+                            <FileText className="h-4 w-4 text-purple-600" />
+                            {adSet.name}
+                            <Badge variant={adSet.status === 'ACTIVE' ? 'default' : 'secondary'} className="text-xs">
+                              {adSet.status}
+                            </Badge>
+                          </p>
+                          <p className="text-sm text-muted-foreground mt-1">
+                            {adSet.ads.length} ads • ${adSet.budget} daily budget • {adSet.frequency.toFixed(1)} frequency
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-lg font-bold">
+                            <span className={adSet.roas >= 5 ? 'text-green-600' : 'text-yellow-600'}>
+                              {adSet.roas.toFixed(2)}x
+                            </span>
+                          </p>
+                          <p className="text-sm text-muted-foreground">
+                            {formatCurrency(adSet.spend)} → {formatCurrency(adSet.revenue)}
+                          </p>
+                        </div>
+                        <ChevronRight className="h-5 w-5 text-muted-foreground" />
+                      </div>
+                      <div className="grid grid-cols-4 gap-4 mt-4 pt-4 border-t">
+                        <div>
+                          <p className="text-xs text-muted-foreground">CTR</p>
+                          <p className="font-medium">{adSet.ctr.toFixed(2)}%</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground">CPC</p>
+                          <p className="font-medium">${adSet.cpc.toFixed(2)}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground">CPA</p>
+                          <p className="font-medium">${adSet.cpa.toFixed(2)}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground">Conversions</p>
+                          <p className="font-medium">{adSet.conversions}</p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+
+              {/* Ad Set Performance Comparison */}
+              <div className="mt-6">
+                <h4 className="font-medium mb-3">Performance Comparison</h4>
+                <ResponsiveContainer width="100%" height={200}>
+                  <BarChart data={campaignDetails.adSets}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="name" />
+                    <YAxis />
+                    <Tooltip />
+                    <Bar dataKey="roas" fill="#3B82F6" name="ROAS" />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="audience" className="space-y-4">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>Age Demographics</CardTitle>
+                <CardDescription>
+                  Performance by age group
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ResponsiveContainer width="100%" height={300}>
+                  <BarChart data={campaignDetails.demographics}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="age" />
+                    <YAxis />
+                    <Tooltip />
+                    <Bar dataKey="revenue" fill="#10B981" name="Revenue" />
+                    <Bar dataKey="spend" fill="#3B82F6" name="Spend" />
+                  </BarChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Audience Insights</CardTitle>
+                <CardDescription>
+                  Key audience characteristics
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <Alert>
+                    <Lightbulb className="h-4 w-4" />
+                    <AlertDescription>
+                      Your best performing audience is <strong>25-34 year olds</strong> with 
+                      a {((3500/500 - 1) * 100).toFixed(0)}% ROI
+                    </AlertDescription>
+                  </Alert>
+                  
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
+                      <div className="flex items-center gap-2">
+                        <Users className="h-4 w-4 text-blue-500" />
+                        <span className="font-medium">Reach</span>
+                      </div>
+                      <span>{formatNumber(campaign.impressions / avgFrequency)} people</span>
+                    </div>
+                    
+                    <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
+                      <div className="flex items-center gap-2">
+                        <Eye className="h-4 w-4 text-purple-500" />
+                        <span className="font-medium">Frequency</span>
+                      </div>
+                      <span>{avgFrequency.toFixed(1)} times per person</span>
+                    </div>
+                    
+                    <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
+                      <div className="flex items-center gap-2">
+                        <Target className="h-4 w-4 text-green-500" />
+                        <span className="font-medium">Audience Quality</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Progress value={85} className="w-20 h-2" />
+                        <span className="text-sm">85%</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="optimization" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Brain className="h-5 w-5 text-purple-500" />
+                AI Optimization Suggestions
+              </CardTitle>
+              <CardDescription>
+                Specific recommendations for this campaign
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {/* Best Performing Elements */}
+              <Alert className="border-green-200 bg-green-50 dark:bg-green-950/20">
+                <CheckCircle className="h-4 w-4 text-green-600" />
+                <AlertDescription>
+                  <strong>What's Working:</strong> Your retargeting ad set is performing exceptionally well with 
+                  an {bestPerformingAdSet.roas.toFixed(2)}x ROAS. The urgency messaging is driving conversions.
+                </AlertDescription>
+              </Alert>
+
+              {/* Optimization Opportunities */}
+              <div className="space-y-3">
+                <div className="p-4 rounded-lg border border-orange-200 bg-orange-50 dark:bg-orange-950/20">
+                  <div className="flex items-start gap-3">
+                    <Zap className="h-5 w-5 text-orange-500 mt-0.5" />
+                    <div className="flex-1">
+                      <p className="font-medium">Increase budget for top performer</p>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        Your "{bestPerformingAdSet.name}" ad set is limited by budget. 
+                        Increasing by $200/day could generate an additional ${(200 * bestPerformingAdSet.roas).toFixed(0)} in revenue.
+                      </p>
+                      <Button size="sm" className="mt-2">
+                        Apply Suggestion
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="p-4 rounded-lg border border-yellow-200 bg-yellow-50 dark:bg-yellow-950/20">
+                  <div className="flex items-start gap-3">
+                    <AlertTriangle className="h-5 w-5 text-yellow-500 mt-0.5" />
+                    <div className="flex-1">
+                      <p className="font-medium">Optimize underperforming demographics</p>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        Ages 55+ showing poor performance ({(400/100).toFixed(2)}x ROAS). 
+                        Consider excluding this age group to improve overall efficiency.
+                      </p>
+                      <Button size="sm" className="mt-2" variant="outline">
+                        Review Targeting
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="p-4 rounded-lg border border-blue-200 bg-blue-50 dark:bg-blue-950/20">
+                  <div className="flex items-start gap-3">
+                    <Clock className="h-5 w-5 text-blue-500 mt-0.5" />
+                    <div className="flex-1">
+                      <p className="font-medium">Adjust dayparting schedule</p>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        Your ads perform 3x better between 6pm-9pm. 
+                        Focus budget on these peak hours for better efficiency.
+                      </p>
+                      <Button size="sm" className="mt-2" variant="outline">
+                        Configure Schedule
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="trends" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Performance Trends</CardTitle>
+              <CardDescription>
+                Campaign performance over time
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={400}>
+                <LineChart data={campaignDetails.dailyTrend}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="date" />
+                  <YAxis yAxisId="left" />
+                  <YAxis yAxisId="right" orientation="right" />
+                  <Tooltip />
+                  <Legend />
+                  <Line
+                    yAxisId="left"
+                    type="monotone"
+                    dataKey="revenue"
+                    stroke="#10B981"
+                    strokeWidth={2}
+                    name="Revenue ($)"
+                  />
+                  <Line
+                    yAxisId="left"
+                    type="monotone"
+                    dataKey="spend"
+                    stroke="#3B82F6"
+                    strokeWidth={2}
+                    name="Spend ($)"
+                  />
+                  <Line
+                    yAxisId="right"
+                    type="monotone"
+                    dataKey="ctr"
+                    stroke="#F59E0B"
+                    strokeWidth={2}
+                    name="CTR (%)"
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="insights" className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>Key Insights</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="flex items-start gap-2">
+                  <CheckCircle className="h-5 w-5 text-green-500 mt-0.5" />
+                  <div>
+                    <p className="font-medium">Strong mobile performance</p>
+                    <p className="text-sm text-muted-foreground">
+                      65% of conversions come from mobile devices
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-2">
+                  <TrendingUp className="h-5 w-5 text-blue-500 mt-0.5" />
+                  <div>
+                    <p className="font-medium">Weekend spike</p>
+                    <p className="text-sm text-muted-foreground">
+                      ROAS increases by 33% on weekends
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-2">
+                  <Users className="h-5 w-5 text-purple-500 mt-0.5" />
+                  <div>
+                    <p className="font-medium">Audience overlap</p>
+                    <p className="text-sm text-muted-foreground">
+                      15% audience overlap between ad sets
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Recommendations</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="flex items-start gap-2">
+                  <Lightbulb className="h-5 w-5 text-yellow-500 mt-0.5" />
+                  <div>
+                    <p className="font-medium">Test video creatives</p>
+                    <p className="text-sm text-muted-foreground">
+                      Video ads typically see 2x higher engagement
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-2">
+                  <Target className="h-5 w-5 text-red-500 mt-0.5" />
+                  <div>
+                    <p className="font-medium">Expand to lookalike audiences</p>
+                    <p className="text-sm text-muted-foreground">
+                      1% lookalike of converters could scale results
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-2">
+                  <DollarSign className="h-5 w-5 text-green-500 mt-0.5" />
+                  <div>
+                    <p className="font-medium">Implement bid caps</p>
+                    <p className="text-sm text-muted-foreground">
+                      Set max CPA at $12 to maintain profitability
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+      </Tabs>
+    </div>
+  )
+}
+
+// Add Plus import if missing
+import { Plus } from "lucide-react"
