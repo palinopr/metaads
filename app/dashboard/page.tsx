@@ -34,6 +34,9 @@ import {
   RefreshCw,
   Loader2,
   AlertCircle,
+  Download,
+  BarChart3,
+  Target,
 } from "lucide-react"
 import { EnhancedPerformanceCharts } from "@/components/enhanced-performance-charts"
 import { DailyBudgetOptimizer } from "@/components/daily-budget-optimizer"
