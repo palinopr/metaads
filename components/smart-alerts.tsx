@@ -139,7 +139,7 @@ export function SmartAlerts({ campaigns }: SmartAlertsProps) {
           }
 
           if (shouldTrigger) {
-            const alert: Alert = {
+            const alert: SmartAlert = {
               id: `${Date.now()}-${Math.random()}`,
               ruleId: rule.id,
               campaignId: campaign.id,
