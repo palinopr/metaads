@@ -595,6 +595,16 @@ export function CampaignDetailAnalytics({ campaign, onBack }: CampaignDetailAnal
         </div>
       </div>
 
+      {/* Data Notice */}
+      <Alert className="border-blue-200 bg-blue-50 dark:bg-blue-950/20">
+        <Info className="h-4 w-4" />
+        <AlertDescription>
+          <strong>Note:</strong> Charts show estimated distributions based on total campaign metrics. 
+          For detailed time-series data, additional API calls to Meta's Insights API with specific breakdowns would be required.
+          Currently showing ad set level data only.
+        </AlertDescription>
+      </Alert>
+
       {/* Campaign Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card className="border-l-4 border-l-blue-500">
@@ -672,7 +682,7 @@ export function CampaignDetailAnalytics({ campaign, onBack }: CampaignDetailAnal
               <CardHeader>
                 <CardTitle>Daily Performance</CardTitle>
                 <CardDescription>
-                  Last 7 days performance metrics
+                  Estimated based on total campaign metrics
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -696,7 +706,7 @@ export function CampaignDetailAnalytics({ campaign, onBack }: CampaignDetailAnal
               <CardHeader>
                 <CardTitle>Hourly Performance</CardTitle>
                 <CardDescription>
-                  Best times for conversions
+                  Simulated distribution (not actual data)
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -805,7 +815,15 @@ export function CampaignDetailAnalytics({ campaign, onBack }: CampaignDetailAnal
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
-                {campaignDetails.adSets.map((adSet) => (
+                {campaignDetails.adSets.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <FileText className="h-12 w-12 mx-auto mb-3 text-gray-300" />
+                    <p className="text-lg font-medium">No ad sets found</p>
+                    <p className="text-sm mt-1">This campaign doesn't have any ad sets yet.</p>
+                    <p className="text-sm mt-2">Create ad sets in Meta Ads Manager to see detailed analytics here.</p>
+                  </div>
+                ) : (
+                  campaignDetails.adSets.map((adSet) => (
                   <Card
                     key={adSet.id}
                     className="cursor-pointer hover:shadow-md transition-shadow"
@@ -857,7 +875,8 @@ export function CampaignDetailAnalytics({ campaign, onBack }: CampaignDetailAnal
                       </div>
                     </CardContent>
                   </Card>
-                ))}
+                  ))
+                )}
               </div>
 
               {/* Ad Set Performance Comparison */}
@@ -883,7 +902,7 @@ export function CampaignDetailAnalytics({ campaign, onBack }: CampaignDetailAnal
               <CardHeader>
                 <CardTitle>Age Demographics</CardTitle>
                 <CardDescription>
-                  Performance by age group
+                  Estimated distribution (not actual data)
                 </CardDescription>
               </CardHeader>
               <CardContent>
