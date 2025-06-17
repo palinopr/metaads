@@ -17,6 +17,9 @@ import { AdvancedDashboard } from "@/components/advanced-dashboard"
 import { CampaignTimeline } from "@/components/campaign-timeline"
 import { PredictiveAnalytics } from "@/components/predictive-analytics"
 import { CampaignHierarchyView } from "@/components/campaign-hierarchy-view"
+import { AIOptimizationEngine } from "@/components/ai-optimization-engine"
+import { CreativeIntelligence } from "@/components/creative-intelligence"
+import { CrossPlatformAnalytics } from "@/components/cross-platform-analytics"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
@@ -360,28 +363,43 @@ export default function CleanDashboardPage() {
 
         {/* Main Content Tabs */}
         <Tabs defaultValue="overview" className="space-y-4">
-          <TabsList>
+          <TabsList className="grid w-full grid-cols-8">
             <TabsTrigger value="overview">Overview</TabsTrigger>
+            <TabsTrigger value="unified">Analytics</TabsTrigger>
             <TabsTrigger value="campaigns">Campaigns</TabsTrigger>
-            <TabsTrigger value="hierarchy">Table View</TabsTrigger>
+            <TabsTrigger value="ai">AI Engine</TabsTrigger>
+            <TabsTrigger value="creative">Creative</TabsTrigger>
             <TabsTrigger value="insights">Insights</TabsTrigger>
             <TabsTrigger value="realtime">
               <span className="flex items-center gap-1">
-                Real-Time
+                Live
                 <span className="relative flex h-2 w-2">
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
                   <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
                 </span>
               </span>
             </TabsTrigger>
+            <TabsTrigger value="reports">Reports</TabsTrigger>
           </TabsList>
 
           <TabsContent value="overview" className="space-y-4">
             <AdvancedDashboard campaigns={campaigns} overview={overview} />
           </TabsContent>
 
+          <TabsContent value="unified" className="space-y-4">
+            <CrossPlatformAnalytics campaigns={campaigns} />
+          </TabsContent>
+
           <TabsContent value="campaigns" className="space-y-4">
             <CampaignHierarchyView campaigns={campaigns} />
+          </TabsContent>
+
+          <TabsContent value="ai" className="space-y-4">
+            <AIOptimizationEngine campaigns={campaigns} />
+          </TabsContent>
+
+          <TabsContent value="creative" className="space-y-4">
+            <CreativeIntelligence campaigns={campaigns} />
           </TabsContent>
 
           <TabsContent value="hierarchy" className="space-y-4">
@@ -484,6 +502,45 @@ export default function CleanDashboardPage() {
 
           <TabsContent value="realtime" className="space-y-4">
             <RealTimeMonitor />
+          </TabsContent>
+
+          <TabsContent value="reports" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>Automated Reports</CardTitle>
+                <CardDescription>
+                  Schedule and customize reports for stakeholders
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <Card className="border-dashed border-2 hover:border-primary cursor-pointer">
+                    <CardContent className="p-6 text-center">
+                      <Download className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
+                      <p className="font-medium">Executive Summary</p>
+                      <p className="text-sm text-muted-foreground">Weekly performance overview</p>
+                      <Button size="sm" className="mt-4">Configure</Button>
+                    </CardContent>
+                  </Card>
+                  <Card className="border-dashed border-2 hover:border-primary cursor-pointer">
+                    <CardContent className="p-6 text-center">
+                      <BarChart3 className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
+                      <p className="font-medium">Campaign Analysis</p>
+                      <p className="text-sm text-muted-foreground">Deep dive into campaigns</p>
+                      <Button size="sm" className="mt-4">Configure</Button>
+                    </CardContent>
+                  </Card>
+                  <Card className="border-dashed border-2 hover:border-primary cursor-pointer">
+                    <CardContent className="p-6 text-center">
+                      <Target className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
+                      <p className="font-medium">ROI Report</p>
+                      <p className="text-sm text-muted-foreground">Financial performance metrics</p>
+                      <Button size="sm" className="mt-4">Configure</Button>
+                    </CardContent>
+                  </Card>
+                </div>
+              </CardContent>
+            </Card>
           </TabsContent>
         </Tabs>
       </div>
