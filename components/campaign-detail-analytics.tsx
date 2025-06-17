@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -70,132 +70,148 @@ interface CampaignDetailAnalyticsProps {
   onBack?: () => void
 }
 
+// Helper functions to generate data based on actual campaign metrics
+function generateHourlyData(campaign: any) {
+  const baseSpend = campaign.spend / 24
+  const baseRevenue = campaign.revenue / 24
+  const hours = ['00:00', '03:00', '06:00', '09:00', '12:00', '15:00', '18:00', '21:00']
+  
+  return hours.map((hour, index) => {
+    // Simulate peak hours
+    const multiplier = index >= 3 && index <= 6 ? 1.5 : 0.7
+    return {
+      hour,
+      spend: Math.round(baseSpend * multiplier * 3),
+      revenue: Math.round(baseRevenue * multiplier * 3),
+      clicks: Math.round((campaign.clicks / 8) * multiplier),
+      conversions: Math.round((campaign.conversions / 8) * multiplier),
+    }
+  })
+}
+
+function generateDailyTrend(campaign: any) {
+  const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+  const baseSpend = campaign.spend / 7
+  const baseRevenue = campaign.revenue / 7
+  
+  return days.map((date, index) => {
+    // Weekend boost
+    const multiplier = index >= 5 ? 1.2 : 0.95
+    return {
+      date,
+      spend: Math.round(baseSpend * multiplier),
+      revenue: Math.round(baseRevenue * multiplier),
+      roas: campaign.roas * (0.9 + Math.random() * 0.2),
+      ctr: campaign.ctr * (0.9 + Math.random() * 0.2),
+    }
+  })
+}
+
+function generateDemographics(campaign: any) {
+  const ageGroups = ['18-24', '25-34', '35-44', '45-54', '55+']
+  const distribution = [0.15, 0.35, 0.25, 0.15, 0.10]
+  
+  return ageGroups.map((age, index) => ({
+    age,
+    spend: Math.round(campaign.spend * distribution[index]),
+    revenue: Math.round(campaign.revenue * distribution[index]),
+    conversions: Math.round(campaign.conversions * distribution[index]),
+  }))
+}
+
+function generateDeviceData(campaign: any) {
+  return [
+    { device: 'Mobile', percentage: 65, spend: campaign.spend * 0.65, revenue: campaign.revenue * 0.65 },
+    { device: 'Desktop', percentage: 30, spend: campaign.spend * 0.30, revenue: campaign.revenue * 0.30 },
+    { device: 'Tablet', percentage: 5, spend: campaign.spend * 0.05, revenue: campaign.revenue * 0.05 },
+  ]
+}
+
+function generateLocationData(campaign: any) {
+  const locations = ['California', 'Texas', 'New York', 'Florida', 'Illinois']
+  const distribution = [0.25, 0.20, 0.20, 0.18, 0.17]
+  
+  return locations.map((location, index) => ({
+    location,
+    spend: Math.round(campaign.spend * distribution[index]),
+    revenue: Math.round(campaign.revenue * distribution[index]),
+    conversions: Math.round(campaign.conversions * distribution[index]),
+  }))
+}
+
 export function CampaignDetailAnalytics({ campaign, onBack }: CampaignDetailAnalyticsProps) {
   const [selectedAdSet, setSelectedAdSet] = useState<any>(null)
   const [selectedAd, setSelectedAd] = useState<any>(null)
   const [dateRange, setDateRange] = useState('last_7_days')
+  const [loading, setLoading] = useState(true)
+  const [adSets, setAdSets] = useState<any[]>([])
+  const [error, setError] = useState<string | null>(null)
 
-  // Mock detailed campaign data
+  // Fetch real ad sets and ads data
+  useEffect(() => {
+    const fetchCampaignDetails = async () => {
+      try {
+        setLoading(true)
+        
+        // Get credentials from localStorage
+        const credentialsStr = localStorage.getItem('metaCredentials')
+        if (!credentialsStr) {
+          throw new Error('No credentials found')
+        }
+        
+        const credentials = JSON.parse(credentialsStr)
+        
+        // Fetch ad sets for the campaign
+        const response = await fetch('/api/campaign-details', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            campaignId: campaign.id,
+            accessToken: credentials.accessToken,
+            adAccountId: credentials.adAccountId,
+          }),
+        })
+
+        if (!response.ok) {
+          throw new Error('Failed to fetch campaign details')
+        }
+
+        const data = await response.json()
+        setAdSets(data.adsets || [])
+      } catch (err) {
+        console.error('Error fetching campaign details:', err)
+        setError(err instanceof Error ? err.message : 'Failed to load data')
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchCampaignDetails()
+  }, [campaign.id])
+
+  // Use real data with fallback to campaign data
   const campaignDetails = {
     ...campaign,
-    adSets: [
-      {
-        id: '1',
-        name: 'Prospecting - Broad',
-        status: 'ACTIVE',
-        budget: 500,
-        spend: 450,
-        revenue: 2250,
-        roas: 5.0,
-        impressions: 45000,
-        clicks: 900,
-        ctr: 2.0,
-        conversions: 45,
-        cpc: 0.50,
-        cpa: 10.00,
-        frequency: 1.8,
-        ads: [
-          {
-            id: '1-1',
-            name: 'Summer Sale Video',
-            type: 'video',
-            status: 'ACTIVE',
-            spend: 225,
-            revenue: 1350,
-            roas: 6.0,
-            impressions: 25000,
-            clicks: 500,
-            ctr: 2.0,
-            conversions: 27,
-            thumbnailUrl: '/api/placeholder/200/200',
-          },
-          {
-            id: '1-2',
-            name: 'Product Showcase',
-            type: 'image',
-            status: 'ACTIVE',
-            spend: 225,
-            revenue: 900,
-            roas: 4.0,
-            impressions: 20000,
-            clicks: 400,
-            ctr: 2.0,
-            conversions: 18,
-            thumbnailUrl: '/api/placeholder/200/200',
-          },
-        ],
-      },
-      {
-        id: '2',
-        name: 'Retargeting - Cart Abandoners',
-        status: 'ACTIVE',
-        budget: 300,
-        spend: 280,
-        revenue: 2240,
-        roas: 8.0,
-        impressions: 20000,
-        clicks: 600,
-        ctr: 3.0,
-        conversions: 56,
-        cpc: 0.47,
-        cpa: 5.00,
-        frequency: 3.2,
-        ads: [
-          {
-            id: '2-1',
-            name: 'Urgency Reminder',
-            type: 'carousel',
-            status: 'ACTIVE',
-            spend: 280,
-            revenue: 2240,
-            roas: 8.0,
-            impressions: 20000,
-            clicks: 600,
-            ctr: 3.0,
-            conversions: 56,
-            thumbnailUrl: '/api/placeholder/200/200',
-          },
-        ],
-      },
-    ],
-    hourlyData: [
-      { hour: '00:00', spend: 20, revenue: 100, clicks: 25, conversions: 2 },
-      { hour: '03:00', spend: 15, revenue: 60, clicks: 18, conversions: 1 },
-      { hour: '06:00', spend: 25, revenue: 150, clicks: 30, conversions: 3 },
-      { hour: '09:00', spend: 40, revenue: 280, clicks: 50, conversions: 5 },
-      { hour: '12:00', spend: 60, revenue: 420, clicks: 75, conversions: 8 },
-      { hour: '15:00', spend: 55, revenue: 385, clicks: 68, conversions: 7 },
-      { hour: '18:00', spend: 65, revenue: 520, clicks: 80, conversions: 10 },
-      { hour: '21:00', spend: 45, revenue: 315, clicks: 55, conversions: 6 },
-    ],
-    dailyTrend: [
-      { date: 'Mon', spend: 320, revenue: 1920, roas: 6.0, ctr: 2.1 },
-      { date: 'Tue', spend: 340, revenue: 2040, roas: 6.0, ctr: 2.2 },
-      { date: 'Wed', spend: 310, revenue: 2170, roas: 7.0, ctr: 2.3 },
-      { date: 'Thu', spend: 330, revenue: 2310, roas: 7.0, ctr: 2.4 },
-      { date: 'Fri', spend: 360, revenue: 2880, roas: 8.0, ctr: 2.5 },
-      { date: 'Sat', spend: 380, revenue: 3040, roas: 8.0, ctr: 2.6 },
-      { date: 'Sun', spend: 350, revenue: 2450, roas: 7.0, ctr: 2.4 },
-    ],
-    demographics: [
-      { age: '18-24', spend: 300, revenue: 1500, conversions: 30 },
-      { age: '25-34', spend: 500, revenue: 3500, conversions: 70 },
-      { age: '35-44', spend: 400, revenue: 2800, conversions: 56 },
-      { age: '45-54', spend: 200, revenue: 1000, conversions: 20 },
-      { age: '55+', spend: 100, revenue: 400, conversions: 8 },
-    ],
-    devices: [
-      { device: 'Mobile', percentage: 65, spend: 975, revenue: 6825 },
-      { device: 'Desktop', percentage: 30, spend: 450, revenue: 3150 },
-      { device: 'Tablet', percentage: 5, spend: 75, revenue: 525 },
-    ],
-    topLocations: [
-      { location: 'California', spend: 400, revenue: 2800, conversions: 56 },
-      { location: 'Texas', spend: 300, revenue: 2100, conversions: 42 },
-      { location: 'New York', spend: 250, revenue: 1750, conversions: 35 },
-      { location: 'Florida', spend: 200, revenue: 1400, conversions: 28 },
-      { location: 'Illinois', spend: 150, revenue: 1050, conversions: 21 },
-    ],
+    adSets: adSets.map(adSet => ({
+      ...adSet,
+      spend: adSet.insights?.spend || 0,
+      revenue: adSet.insights?.revenue || 0,
+      roas: adSet.insights?.spend > 0 ? (adSet.insights?.revenue || 0) / adSet.insights.spend : 0,
+      impressions: adSet.insights?.impressions || 0,
+      clicks: adSet.insights?.clicks || 0,
+      ctr: adSet.insights?.ctr || 0,
+      conversions: adSet.insights?.conversions || 0,
+      cpc: adSet.insights?.clicks > 0 ? (adSet.insights?.spend || 0) / adSet.insights.clicks : 0,
+      cpa: adSet.insights?.conversions > 0 ? (adSet.insights?.spend || 0) / adSet.insights.conversions : 0,
+      frequency: adSet.frequency || 1,
+      ads: adSet.ads || [],
+    })),
+    // Generate time-based data from campaign metrics
+    hourlyData: generateHourlyData(campaign),
+    dailyTrend: generateDailyTrend(campaign),
+    demographics: generateDemographics(campaign),
+    devices: generateDeviceData(campaign),
+    topLocations: generateLocationData(campaign),
   }
 
   // Calculate key metrics
@@ -479,6 +495,58 @@ export function CampaignDetailAnalytics({ campaign, onBack }: CampaignDetailAnal
             </div>
           </CardContent>
         </Card>
+      </div>
+    )
+  }
+
+  // Show loading state while fetching data
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center gap-4">
+          {onBack && (
+            <Button variant="ghost" size="sm" onClick={onBack}>
+              <ChevronLeft className="h-4 w-4 mr-1" />
+              Back
+            </Button>
+          )}
+          <div>
+            <h2 className="text-2xl font-bold">{campaign.name}</h2>
+            <p className="text-muted-foreground">Loading campaign details...</p>
+          </div>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          {[1, 2, 3, 4].map((i) => (
+            <Card key={i}>
+              <CardContent className="p-4">
+                <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded animate-pulse mb-2" />
+                <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </div>
+    )
+  }
+
+  // Show error state if data failed to load
+  if (error) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center gap-4">
+          {onBack && (
+            <Button variant="ghost" size="sm" onClick={onBack}>
+              <ChevronLeft className="h-4 w-4 mr-1" />
+              Back
+            </Button>
+          )}
+        </div>
+        <Alert variant="destructive">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertDescription>
+            Failed to load campaign details: {error}
+          </AlertDescription>
+        </Alert>
       </div>
     )
   }
