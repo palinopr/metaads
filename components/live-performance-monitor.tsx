@@ -46,12 +46,12 @@ interface CampaignPerformance {
     conversionRate: PerformanceMetric
     impressionShare: PerformanceMetric
   }
-  alerts: Alert[]
+  alerts: PerformanceAlert[]
   lastUpdate: Date
   healthScore: number
 }
 
-interface Alert {
+interface PerformanceAlert {
   id: string
   type: 'performance' | 'budget' | 'delivery' | 'quality'
   severity: 'info' | 'warning' | 'error' | 'critical'

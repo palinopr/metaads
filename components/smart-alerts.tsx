@@ -34,7 +34,7 @@ interface AlertRule {
   lastTriggered?: string
 }
 
-interface Alert {
+interface SmartAlert {
   id: string
   ruleId: string
   campaignId: string
@@ -90,7 +90,7 @@ export function SmartAlerts({ campaigns }: SmartAlertsProps) {
     }
   ])
 
-  const [alerts, setAlerts] = useState<Alert[]>([])
+  const [alerts, setAlerts] = useState<SmartAlert[]>([])
   const [showSettings, setShowSettings] = useState(false)
   const [newRule, setNewRule] = useState<Partial<AlertRule>>({
     type: 'spend',
@@ -103,7 +103,7 @@ export function SmartAlerts({ campaigns }: SmartAlertsProps) {
   // Check campaigns against alert rules
   useEffect(() => {
     const checkAlerts = () => {
-      const newAlerts: Alert[] = []
+      const newAlerts: SmartAlert[] = []
 
       campaigns.forEach(campaign => {
         alertRules.forEach(rule => {
