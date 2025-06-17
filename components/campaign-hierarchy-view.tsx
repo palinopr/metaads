@@ -573,14 +573,14 @@ export function CampaignHierarchyView({ campaigns }: CampaignHierarchyViewProps)
           {/* Table Header */}
           <div className="bg-gray-50 dark:bg-gray-800 px-6 py-4 border-b border-gray-200 dark:border-gray-700">
             <div className="grid grid-cols-12 gap-4 text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
-              <div className="col-span-5">Campaign / Ad Set / Ad</div>
+              <div className="col-span-4">Campaign / Ad Set / Ad</div>
               <div className="col-span-1 text-center">Status</div>
               <div className="col-span-1 text-right">Spend</div>
               <div className="col-span-1 text-right">Revenue</div>
               <div className="col-span-1 text-right">ROAS</div>
               <div className="col-span-1 text-right">CTR</div>
               <div className="col-span-1 text-right">Conv.</div>
-              <div className="col-span-1 text-center">Actions</div>
+              <div className="col-span-2 text-center">Actions</div>
             </div>
           </div>
           
@@ -596,7 +596,7 @@ export function CampaignHierarchyView({ campaigns }: CampaignHierarchyViewProps)
                   <div className="bg-white dark:bg-gray-900 hover:bg-blue-50 dark:hover:bg-blue-950/20 transition-all duration-200 border-l-4 border-l-blue-500">
                     <div className="grid grid-cols-12 gap-4 items-center px-6 py-4">
                       {/* Campaign Name & Controls */}
-                      <div className="col-span-5 flex items-center gap-3">
+                      <div className="col-span-4 flex items-center gap-3">
                         <Button
                           variant="ghost"
                           size="sm"
@@ -810,7 +810,16 @@ export function CampaignHierarchyView({ campaigns }: CampaignHierarchyViewProps)
                       </div>
 
                       {/* Actions */}
-                      <div className="col-span-1 text-center">
+                      <div className="col-span-2 flex items-center justify-center gap-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => setSelectedCampaignForAnalytics(campaign)}
+                          className="text-xs px-3 py-1 h-7 border-blue-200 text-blue-600 hover:bg-blue-50 hover:border-blue-300"
+                        >
+                          <BarChart3 className="h-3 w-3 mr-1" />
+                          Analyze
+                        </Button>
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
                             <Button variant="ghost" size="sm" className="h-7 w-7 p-0 hover:bg-gray-100 dark:hover:bg-gray-800">
@@ -820,6 +829,7 @@ export function CampaignHierarchyView({ campaigns }: CampaignHierarchyViewProps)
                           <DropdownMenuContent align="end">
                             <DropdownMenuItem
                               onClick={() => setSelectedCampaignForAnalytics(campaign)}
+                              className="font-medium text-blue-600 hover:text-blue-700 hover:bg-blue-50"
                             >
                               <BarChart3 className="h-4 w-4 mr-2" />
                               Analyze Campaign
@@ -1014,9 +1024,10 @@ export function CampaignHierarchyView({ campaigns }: CampaignHierarchyViewProps)
                                       </div>
 
                                       {/* Actions */}
-                                      <div className="col-span-1 text-center">
-                                        <Button variant="ghost" size="sm" className="h-6 px-2 text-xs hover:bg-gray-100 dark:hover:bg-gray-600">
-                                          View
+                                      <div className="col-span-2 text-center">
+                                        <Button variant="ghost" size="sm" className="h-7 px-3 py-1 text-xs hover:bg-orange-50 dark:hover:bg-orange-900/20 border border-transparent hover:border-orange-200">
+                                          <Eye className="h-3 w-3 mr-1" />
+                                          View Details
                                         </Button>
                                       </div>
                                     </div>
