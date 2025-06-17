@@ -1,6 +1,7 @@
 "use client"
 
 import React, { useState, useEffect } from 'react'
+import { CredentialManager } from "@/lib/credential-manager"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -153,13 +154,11 @@ export function CampaignDetailAnalytics({ campaign, onBack }: CampaignDetailAnal
       try {
         setLoading(true)
         
-        // Get credentials from localStorage
-        const credentialsStr = localStorage.getItem('metaCredentials')
-        if (!credentialsStr) {
-          throw new Error('No credentials found')
+        // Get credentials using CredentialManager
+        const credentials = await CredentialManager.load()
+        if (!credentials) {
+          throw new Error('No credentials found. Please configure your Meta API credentials.')
         }
-        
-        const credentials = JSON.parse(credentialsStr)
         
         // Fetch ad sets for the campaign
         const response = await fetch('/api/campaign-details', {
@@ -177,6 +176,11 @@ export function CampaignDetailAnalytics({ campaign, onBack }: CampaignDetailAnal
         }
 
         const data = await response.json()
+        
+        if (!data.success && data.error) {
+          throw new Error(data.error)
+        }
+        
         setAdSets(data.adsets || [])
       } catch (err) {
         console.error('Error fetching campaign details:', err)
