@@ -318,21 +318,40 @@ export function CampaignHierarchyView({ campaigns }: CampaignHierarchyViewProps)
   })
 
   return (
-    <div className="space-y-4">
-      {/* Header */}
-      <div className="flex items-center justify-between gap-4">
-        <div className="flex items-center gap-2 flex-1">
-          <div className="relative flex-1 max-w-sm">
-            <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+    <div className="space-y-6">
+      {/* Enhanced Header */}
+      <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/20 dark:to-indigo-950/20 p-6 rounded-lg border">
+        <div className="flex items-center justify-between gap-4 mb-4">
+          <div>
+            <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">Campaign Hierarchy</h2>
+            <p className="text-sm text-gray-600 dark:text-gray-400">
+              Expand campaigns to see ad sets and individual ads • {filteredCampaigns.length} campaigns shown
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" className="bg-white dark:bg-gray-800">
+              <Download className="h-4 w-4 mr-1" />
+              Export
+            </Button>
+            <Button variant="outline" size="sm" className="bg-white dark:bg-gray-800">
+              <Filter className="h-4 w-4 mr-1" />
+              Filters
+            </Button>
+          </div>
+        </div>
+        
+        <div className="flex items-center gap-4">
+          <div className="relative flex-1 max-w-md">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
             <Input
               placeholder="Search campaigns, ad sets, or ads..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-8"
+              className="pl-10 bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700"
             />
           </div>
           <select
-            className="px-3 py-2 rounded-md border text-sm"
+            className="px-4 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm font-medium min-w-[120px]"
             value={filterStatus}
             onChange={(e) => setFilterStatus(e.target.value)}
           >
@@ -341,22 +360,26 @@ export function CampaignHierarchyView({ campaigns }: CampaignHierarchyViewProps)
             <option value="PAUSED">Paused</option>
           </select>
         </div>
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm">
-            <Download className="h-4 w-4 mr-1" />
-            Export
-          </Button>
-          <Button variant="outline" size="sm">
-            <Filter className="h-4 w-4 mr-1" />
-            Filters
-          </Button>
-        </div>
       </div>
 
-      {/* Campaign Hierarchy */}
-      <Card>
+      {/* Enhanced Campaign Hierarchy */}
+      <Card className="shadow-lg border-0 bg-white dark:bg-gray-900">
         <CardContent className="p-0">
-          <div className="divide-y">
+          {/* Table Header */}
+          <div className="bg-gray-50 dark:bg-gray-800 px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+            <div className="grid grid-cols-12 gap-4 text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
+              <div className="col-span-5">Campaign / Ad Set / Ad</div>
+              <div className="col-span-1 text-center">Status</div>
+              <div className="col-span-1 text-right">Spend</div>
+              <div className="col-span-1 text-right">Revenue</div>
+              <div className="col-span-1 text-right">ROAS</div>
+              <div className="col-span-1 text-right">CTR</div>
+              <div className="col-span-1 text-right">Conv.</div>
+              <div className="col-span-1 text-center">Actions</div>
+            </div>
+          </div>
+          
+          <div className="divide-y divide-gray-100 dark:divide-gray-800">
             {filteredCampaigns.map((campaign) => {
               const isExpanded = expandedCampaigns.has(campaign.id)
               const isLoading = loadingCampaigns.has(campaign.id)
@@ -364,52 +387,72 @@ export function CampaignHierarchyView({ campaigns }: CampaignHierarchyViewProps)
 
               return (
                 <div key={campaign.id}>
-                  {/* Campaign Row */}
-                  <div className="flex items-center gap-3 p-4 hover:bg-muted/50 transition-colors">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="p-1 h-6 w-6"
-                      onClick={() => toggleCampaign(campaign.id)}
-                      disabled={isLoading}
-                    >
-                      {isLoading ? (
-                        <div className="animate-spin h-4 w-4 border-2 border-primary border-t-transparent rounded-full" />
-                      ) : isExpanded ? (
-                        <ChevronDown className="h-4 w-4" />
-                      ) : (
-                        <ChevronRight className="h-4 w-4" />
-                      )}
-                    </Button>
-                    
-                    {isExpanded ? (
-                      <FolderOpen className="h-4 w-4 text-blue-600" />
-                    ) : (
-                      <Folder className="h-4 w-4 text-blue-600" />
-                    )}
+                  {/* Enhanced Campaign Row */}
+                  <div className="bg-white dark:bg-gray-900 hover:bg-blue-50 dark:hover:bg-blue-950/20 transition-all duration-200 border-l-4 border-l-blue-500">
+                    <div className="grid grid-cols-12 gap-4 items-center px-6 py-4">
+                      {/* Campaign Name & Controls */}
+                      <div className="col-span-5 flex items-center gap-3">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="p-1 h-7 w-7 hover:bg-blue-100 dark:hover:bg-blue-900"
+                          onClick={() => toggleCampaign(campaign.id)}
+                          disabled={isLoading}
+                        >
+                          {isLoading ? (
+                            <div className="animate-spin h-4 w-4 border-2 border-blue-500 border-t-transparent rounded-full" />
+                          ) : isExpanded ? (
+                            <ChevronDown className="h-4 w-4 text-blue-600" />
+                          ) : (
+                            <ChevronRight className="h-4 w-4 text-blue-600" />
+                          )}
+                        </Button>
+                        
+                        <div className="flex items-center gap-3">
+                          {isExpanded ? (
+                            <FolderOpen className="h-5 w-5 text-blue-600" />
+                          ) : (
+                            <Folder className="h-5 w-5 text-blue-600" />
+                          )}
+                          
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <span className="font-semibold text-gray-900 dark:text-gray-100 text-sm">
+                                {campaign.name}
+                              </span>
+                              {campaign.objective && (
+                                <span className="text-xs text-gray-500 bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded">
+                                  {getObjectiveIcon(campaign.objective)}
+                                </span>
+                              )}
+                            </div>
+                            <div className="text-xs text-gray-500 mt-1">
+                              Campaign • {formatNumber(campaign.impressions)} impressions
+                            </div>
+                          </div>
+                        </div>
+                      </div>
 
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2">
-                        <span className="font-medium">{campaign.name}</span>
-                        <Badge variant="secondary" className={`text-xs ${getStatusColor(campaign.status)}`}>
+                      {/* Status */}
+                      <div className="col-span-1 text-center">
+                        <Badge variant="secondary" className={`text-xs font-medium ${getStatusColor(campaign.status)}`}>
                           {campaign.status}
                         </Badge>
-                        {campaign.objective && getObjectiveIcon(campaign.objective)}
                       </div>
-                    </div>
 
-                    <div className="flex items-center gap-6 text-sm">
-                      <div className="text-right">
-                        <p className="text-muted-foreground">Spend</p>
-                        <p className="font-medium">{formatCurrency(campaign.spend)}</p>
+                      {/* Metrics */}
+                      <div className="col-span-1 text-right">
+                        <p className="font-semibold text-gray-900 dark:text-gray-100 text-sm">
+                          {formatCurrency(campaign.spend)}
+                        </p>
                       </div>
-                      <div className="text-right">
-                        <p className="text-muted-foreground">Revenue</p>
-                        <p className="font-medium">{formatCurrency(campaign.revenue)}</p>
+                      <div className="col-span-1 text-right">
+                        <p className="font-semibold text-green-600 text-sm">
+                          {formatCurrency(campaign.revenue)}
+                        </p>
                       </div>
-                      <div className="text-right">
-                        <p className="text-muted-foreground">ROAS</p>
-                        <p className={`font-medium ${
+                      <div className="col-span-1 text-right">
+                        <p className={`font-bold text-sm ${
                           campaign.roas >= 2 ? 'text-green-600' : 
                           campaign.roas >= 1 ? 'text-yellow-600' : 
                           'text-red-600'
@@ -417,143 +460,221 @@ export function CampaignHierarchyView({ campaigns }: CampaignHierarchyViewProps)
                           {campaign.roas.toFixed(2)}x
                         </p>
                       </div>
-                      <div className="text-right">
-                        <p className="text-muted-foreground">CTR</p>
-                        <p className="font-medium">{campaign.ctr.toFixed(2)}%</p>
+                      <div className="col-span-1 text-right">
+                        <p className="font-medium text-gray-700 dark:text-gray-300 text-sm">
+                          {campaign.ctr.toFixed(2)}%
+                        </p>
+                      </div>
+                      <div className="col-span-1 text-right">
+                        <p className="font-medium text-gray-700 dark:text-gray-300 text-sm">
+                          {formatNumber(campaign.conversions)}
+                        </p>
+                      </div>
+
+                      {/* Actions */}
+                      <div className="col-span-1 text-center">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="sm" className="h-7 w-7 p-0 hover:bg-gray-100 dark:hover:bg-gray-800">
+                              <MoreVertical className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem>
+                              <PlayCircle className="h-4 w-4 mr-2" />
+                              Activate
+                            </DropdownMenuItem>
+                            <DropdownMenuItem>
+                              <PauseCircle className="h-4 w-4 mr-2" />
+                              Pause
+                            </DropdownMenuItem>
+                            <DropdownMenuItem>
+                              <Copy className="h-4 w-4 mr-2" />
+                              Duplicate
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem>
+                              <Settings className="h-4 w-4 mr-2" />
+                              Settings
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </div>
                     </div>
-
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="sm">
-                          <MoreVertical className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem>
-                          <PlayCircle className="h-4 w-4 mr-2" />
-                          Activate
-                        </DropdownMenuItem>
-                        <DropdownMenuItem>
-                          <PauseCircle className="h-4 w-4 mr-2" />
-                          Pause
-                        </DropdownMenuItem>
-                        <DropdownMenuItem>
-                          <Copy className="h-4 w-4 mr-2" />
-                          Duplicate
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem>
-                          <Settings className="h-4 w-4 mr-2" />
-                          Settings
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
                   </div>
 
-                  {/* Ad Sets */}
+                  {/* Enhanced Ad Sets */}
                   {isExpanded && campaignDetails.adsets && (
-                    <div className="pl-8 bg-muted/20">
+                    <div className="bg-gray-50 dark:bg-gray-800/50">
                       {campaignDetails.adsets.map((adSet) => {
                         const isAdSetExpanded = expandedAdSets.has(adSet.id)
                         const isAdSetLoading = loadingAdSets.has(adSet.id)
 
                         return (
                           <div key={adSet.id}>
-                            {/* Ad Set Row */}
-                            <div className="flex items-center gap-3 p-3 border-t hover:bg-muted/50 transition-colors">
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="p-1 h-6 w-6"
-                                onClick={() => toggleAdSet(adSet.id, campaign.id)}
-                                disabled={isAdSetLoading}
-                              >
-                                {isAdSetLoading ? (
-                                  <div className="animate-spin h-4 w-4 border-2 border-primary border-t-transparent rounded-full" />
-                                ) : isAdSetExpanded ? (
-                                  <ChevronDown className="h-4 w-4" />
-                                ) : (
-                                  <ChevronRight className="h-4 w-4" />
-                                )}
-                              </Button>
-                              
-                              <FileText className="h-4 w-4 text-purple-600" />
+                            {/* Enhanced Ad Set Row */}
+                            <div className="bg-white dark:bg-gray-800 hover:bg-purple-50 dark:hover:bg-purple-950/20 transition-all duration-200 border-l-4 border-l-purple-400 ml-8 my-1">
+                              <div className="grid grid-cols-12 gap-4 items-center px-6 py-3">
+                                {/* Ad Set Name & Controls */}
+                                <div className="col-span-5 flex items-center gap-3">
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="p-1 h-6 w-6 hover:bg-purple-100 dark:hover:bg-purple-900"
+                                    onClick={() => toggleAdSet(adSet.id, campaign.id)}
+                                    disabled={isAdSetLoading}
+                                  >
+                                    {isAdSetLoading ? (
+                                      <div className="animate-spin h-3 w-3 border-2 border-purple-500 border-t-transparent rounded-full" />
+                                    ) : isAdSetExpanded ? (
+                                      <ChevronDown className="h-3 w-3 text-purple-600" />
+                                    ) : (
+                                      <ChevronRight className="h-3 w-3 text-purple-600" />
+                                    )}
+                                  </Button>
+                                  
+                                  <div className="flex items-center gap-2">
+                                    <FileText className="h-4 w-4 text-purple-600" />
+                                    <div>
+                                      <div className="flex items-center gap-2">
+                                        <span className="font-medium text-gray-800 dark:text-gray-200 text-sm">
+                                          {adSet.name}
+                                        </span>
+                                        {adSet.daily_budget && (
+                                          <span className="text-xs text-gray-500 bg-purple-100 dark:bg-purple-900/30 px-2 py-1 rounded">
+                                            ${adSet.daily_budget}/day
+                                          </span>
+                                        )}
+                                      </div>
+                                      <div className="text-xs text-gray-500 mt-0.5">
+                                        Ad Set • {formatNumber(adSet.insights?.impressions || 0)} impressions
+                                      </div>
+                                    </div>
+                                  </div>
+                                </div>
 
-                              <div className="flex-1">
-                                <div className="flex items-center gap-2">
-                                  <span className="text-sm">{adSet.name}</span>
+                                {/* Status */}
+                                <div className="col-span-1 text-center">
                                   <Badge variant="secondary" className={`text-xs ${getStatusColor(adSet.effective_status)}`}>
                                     {adSet.effective_status}
                                   </Badge>
-                                  {adSet.daily_budget && (
-                                    <span className="text-xs text-muted-foreground">
-                                      Daily: {formatCurrency(adSet.daily_budget)}
-                                    </span>
-                                  )}
+                                </div>
+
+                                {/* Metrics */}
+                                <div className="col-span-1 text-right">
+                                  <p className="font-medium text-gray-800 dark:text-gray-200 text-sm">
+                                    {formatCurrency(adSet.insights?.spend || 0)}
+                                  </p>
+                                </div>
+                                <div className="col-span-1 text-right">
+                                  <p className="font-medium text-green-600 text-sm">
+                                    {formatCurrency(adSet.insights?.revenue || 0)}
+                                  </p>
+                                </div>
+                                <div className="col-span-1 text-right">
+                                  <p className="font-medium text-gray-600 dark:text-gray-400 text-sm">-</p>
+                                </div>
+                                <div className="col-span-1 text-right">
+                                  <p className="font-medium text-gray-700 dark:text-gray-300 text-sm">
+                                    {(adSet.insights?.ctr || 0).toFixed(2)}%
+                                  </p>
+                                </div>
+                                <div className="col-span-1 text-right">
+                                  <p className="font-medium text-gray-700 dark:text-gray-300 text-sm">
+                                    {formatNumber(adSet.insights?.conversions || 0)}
+                                  </p>
+                                </div>
+
+                                {/* Actions */}
+                                <div className="col-span-1 text-center">
+                                  <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                      <Button variant="ghost" size="sm" className="h-6 w-6 p-0 hover:bg-gray-100 dark:hover:bg-gray-700">
+                                        <MoreVertical className="h-3 w-3" />
+                                      </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end">
+                                      <DropdownMenuItem>Edit</DropdownMenuItem>
+                                      <DropdownMenuItem>Duplicate</DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                  </DropdownMenu>
                                 </div>
                               </div>
-
-                              <div className="flex items-center gap-4 text-xs">
-                                <div className="text-right">
-                                  <p className="text-muted-foreground">Spend</p>
-                                  <p className="font-medium">{formatCurrency(adSet.insights?.spend || 0)}</p>
-                                </div>
-                                <div className="text-right">
-                                  <p className="text-muted-foreground">CTR</p>
-                                  <p className="font-medium">{(adSet.insights?.ctr || 0).toFixed(2)}%</p>
-                                </div>
-                              </div>
-
-                              <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                  <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
-                                    <MoreVertical className="h-3 w-3" />
-                                  </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end">
-                                  <DropdownMenuItem>Edit</DropdownMenuItem>
-                                  <DropdownMenuItem>Duplicate</DropdownMenuItem>
-                                </DropdownMenuContent>
-                              </DropdownMenu>
                             </div>
 
-                            {/* Ads */}
+                            {/* Enhanced Individual Ads */}
                             {isAdSetExpanded && adSet.ads && (
-                              <div className="pl-8 bg-muted/10">
+                              <div className="bg-gray-100 dark:bg-gray-900/50 ml-16">
                                 {adSet.ads.map((ad) => (
-                                  <div key={ad.id} className="flex items-center gap-3 p-2 border-t hover:bg-muted/50 transition-colors">
-                                    <div className="w-6" /> {/* Spacer */}
-                                    
-                                    {ad.creative?.video_url ? (
-                                      <PlayCircle className="h-4 w-4 text-green-600" />
-                                    ) : (
-                                      <Image className="h-4 w-4 text-orange-600" />
-                                    )}
+                                  <div key={ad.id} className="bg-white dark:bg-gray-700 hover:bg-orange-50 dark:hover:bg-orange-950/20 transition-all duration-200 border-l-4 border-l-orange-400 my-1 mx-2">
+                                    <div className="grid grid-cols-12 gap-4 items-center px-4 py-2">
+                                      {/* Ad Name & Creative */}
+                                      <div className="col-span-5 flex items-center gap-2">
+                                        <div className="w-4" /> {/* Spacer for alignment */}
+                                        
+                                        {ad.creative?.video_url ? (
+                                          <div className="flex items-center gap-1 bg-green-100 dark:bg-green-900/30 px-2 py-1 rounded">
+                                            <PlayCircle className="h-3 w-3 text-green-600" />
+                                            <span className="text-xs text-green-700 dark:text-green-300">Video</span>
+                                          </div>
+                                        ) : (
+                                          <div className="flex items-center gap-1 bg-orange-100 dark:bg-orange-900/30 px-2 py-1 rounded">
+                                            <Image className="h-3 w-3 text-orange-600" />
+                                            <span className="text-xs text-orange-700 dark:text-orange-300">Image</span>
+                                          </div>
+                                        )}
 
-                                    <div className="flex-1">
-                                      <div className="flex items-center gap-2">
-                                        <span className="text-xs">{ad.name}</span>
+                                        <div>
+                                          <div className="flex items-center gap-2">
+                                            <span className="font-medium text-gray-700 dark:text-gray-300 text-xs">
+                                              {ad.name}
+                                            </span>
+                                          </div>
+                                          <div className="text-xs text-gray-500 mt-0.5">
+                                            Ad • {ad.creative?.call_to_action_type || 'No CTA'}
+                                          </div>
+                                        </div>
+                                      </div>
+
+                                      {/* Status */}
+                                      <div className="col-span-1 text-center">
                                         <Badge variant="secondary" className={`text-xs ${getStatusColor(ad.effective_status)}`}>
                                           {ad.effective_status}
                                         </Badge>
                                       </div>
-                                    </div>
 
-                                    <div className="flex items-center gap-3 text-xs">
-                                      <div className="text-right">
-                                        <p className="text-muted-foreground">Impressions</p>
-                                        <p className="font-medium">{formatNumber(ad.insights?.impressions || 0)}</p>
+                                      {/* Metrics */}
+                                      <div className="col-span-1 text-right">
+                                        <p className="font-medium text-gray-700 dark:text-gray-300 text-xs">
+                                          {formatCurrency(ad.insights?.spend || 0)}
+                                        </p>
                                       </div>
-                                      <div className="text-right">
-                                        <p className="text-muted-foreground">Clicks</p>
-                                        <p className="font-medium">{formatNumber(ad.insights?.clicks || 0)}</p>
+                                      <div className="col-span-1 text-right">
+                                        <p className="font-medium text-green-600 text-xs">
+                                          {formatCurrency(ad.insights?.revenue || 0)}
+                                        </p>
+                                      </div>
+                                      <div className="col-span-1 text-right">
+                                        <p className="font-medium text-gray-600 dark:text-gray-400 text-xs">-</p>
+                                      </div>
+                                      <div className="col-span-1 text-right">
+                                        <p className="font-medium text-gray-700 dark:text-gray-300 text-xs">
+                                          {(ad.insights?.ctr || 0).toFixed(2)}%
+                                        </p>
+                                      </div>
+                                      <div className="col-span-1 text-right">
+                                        <p className="font-medium text-gray-700 dark:text-gray-300 text-xs">
+                                          {formatNumber(ad.insights?.conversions || 0)}
+                                        </p>
+                                      </div>
+
+                                      {/* Actions */}
+                                      <div className="col-span-1 text-center">
+                                        <Button variant="ghost" size="sm" className="h-6 px-2 text-xs hover:bg-gray-100 dark:hover:bg-gray-600">
+                                          View
+                                        </Button>
                                       </div>
                                     </div>
-
-                                    <Button variant="ghost" size="sm" className="h-6 px-2 text-xs">
-                                      View
-                                    </Button>
                                   </div>
                                 ))}
                               </div>
