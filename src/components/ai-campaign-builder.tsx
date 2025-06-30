@@ -30,7 +30,7 @@ export function AICampaignBuilder({ onCampaignCreate }: AICampaignBuilderProps) 
   const [predictions, setPredictions] = useState<any>(null)
   const [isProcessing, setIsProcessing] = useState(false)
 
-  const analyzesBusiness = async () => {
+  const analyzeBusiness = async () => {
     setIsProcessing(true)
     
     // Simulate AI analysis
@@ -143,7 +143,7 @@ export function AICampaignBuilder({ onCampaignCreate }: AICampaignBuilderProps) 
             <CheckCircle className="h-4 w-4 mr-2" />
             Review
           </TabsTrigger>
-        </Tabs>
+        </TabsList>
 
         <TabsContent value="analysis" className="space-y-4">
           <Card>
@@ -157,7 +157,7 @@ export function AICampaignBuilder({ onCampaignCreate }: AICampaignBuilderProps) 
                   <p className="text-muted-foreground">
                     Our AI will analyze your business and market to create the perfect campaign strategy
                   </p>
-                  <Button onClick={analyzesBusiness} disabled={isProcessing}>
+                  <Button onClick={analyzeBusiness} disabled={isProcessing}>
                     {isProcessing ? 'Analyzing...' : 'Start AI Analysis'}
                   </Button>
                 </div>

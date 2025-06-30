@@ -36,7 +36,7 @@ const navigation = [
   {
     name: "AI Tools",
     items: [
-      { name: "AI Lab", href: "/dashboard/ai-lab", icon: Brain, badge: "NEW" },
+      { name: "AI Lab", href: "/dashboard/ai-lab", icon: Brain, badge: "NEW" } as any,
       { name: "Agent", href: "/dashboard/agent", icon: Brain },
     ]
   },
