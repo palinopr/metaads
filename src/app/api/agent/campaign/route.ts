@@ -72,7 +72,7 @@ export async function POST(req: NextRequest) {
 
     // Select AI model based on provider
     const model = AI_PROVIDER === 'openai' 
-      ? openai('gpt-4-turbo-preview')
+      ? openai('gpt-3.5-turbo')
       : anthropic('claude-3-sonnet-20240229')
 
     // Check if client accepts streaming
@@ -113,10 +113,12 @@ export async function POST(req: NextRequest) {
 
   } catch (error) {
     console.error('Agent error:', error)
+    console.error('AI Provider:', AI_PROVIDER)
+    console.error('Has OpenAI Key:', !!process.env.OPENAI_API_KEY)
     
     // Provide helpful error message
     const errorMessage = error instanceof Error ? error.message : 'Unknown error'
-    const isApiKeyError = errorMessage.includes('API key') || errorMessage.includes('authentication')
+    const isApiKeyError = errorMessage.includes('API key') || errorMessage.includes('authentication') || errorMessage.includes('Unauthorized')
     
     if (isApiKeyError) {
       return Response.json({
