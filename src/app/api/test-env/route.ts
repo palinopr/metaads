@@ -19,6 +19,7 @@ export async function GET() {
       connection: "PENDING",
       adminUser: null as any,
       passwordTest: null as any,
+      error: null as string | null,
     },
     timestamp: new Date().toISOString()
   }
