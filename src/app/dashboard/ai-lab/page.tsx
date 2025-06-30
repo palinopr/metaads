@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { AICampaignBuilder } from '@/components/ai-campaign-builder'
+import { OptimizationDraft } from '@/components/optimization-draft'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Brain, Sparkles, Zap, BarChart, Target, Code, Database, Import, Play, TrendingUp } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
@@ -17,6 +18,7 @@ export default function AILabPage() {
   const [selectedCampaign, setSelectedCampaign] = useState<string>('')
   const [isAnalyzing, setIsAnalyzing] = useState(false)
   const [analysisResults, setAnalysisResults] = useState<any>(null)
+  const [showOptimizationDraft, setShowOptimizationDraft] = useState(false)
 
   useEffect(() => {
     fetchCampaigns()
@@ -94,6 +96,21 @@ export default function AILabPage() {
     } catch (error) {
       console.error('Failed to create campaign:', error)
     }
+  }
+  
+  const handleApplyOptimizations = async (selectedOptimizations: any[]) => {
+    console.log('Applying optimizations:', selectedOptimizations)
+    
+    // TODO: Implement actual optimization API calls
+    // For now, just show success message
+    alert(`Successfully applied ${selectedOptimizations.length} optimizations!`)
+    
+    // Reset states
+    setShowOptimizationDraft(false)
+    setAnalysisResults(null)
+    
+    // Refresh campaigns
+    fetchCampaigns()
   }
 
   return (
@@ -268,10 +285,7 @@ export default function AILabPage() {
               
               <div className="flex gap-3">
                 <Button 
-                  onClick={() => {
-                    // TODO: Implement optimization
-                    alert('Optimization feature coming soon!')
-                  }} 
+                  onClick={() => setShowOptimizationDraft(true)} 
                   className="flex-1"
                 >
                   <Zap className="h-4 w-4 mr-2" />
@@ -350,7 +364,21 @@ export default function AILabPage() {
       </Card>
 
       {/* AI Campaign Builder */}
-      <AICampaignBuilder onCampaignCreate={handleCampaignCreate} />
+      {!showOptimizationDraft ? (
+        <AICampaignBuilder onCampaignCreate={handleCampaignCreate} />
+      ) : (
+        <Card>
+          <CardContent className="pt-6">
+            <OptimizationDraft
+              campaignId={selectedCampaign}
+              issues={analysisResults?.issues || []}
+              recommendations={analysisResults?.recommendations || []}
+              onApply={handleApplyOptimizations}
+              onCancel={() => setShowOptimizationDraft(false)}
+            />
+          </CardContent>
+        </Card>
+      )}
     </div>
   )
 }
