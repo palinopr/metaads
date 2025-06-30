@@ -129,7 +129,7 @@ export default function TestAuthPage() {
               onClick={async () => {
                 const res = await fetch('/api/auth/providers')
                 const providers = await res.json()
-                setDebugInfo(prev => ({ ...prev, providers }))
+                setDebugInfo((prev: any) => ({ ...prev, providers }))
               }}
               size="sm"
               variant="outline"
@@ -144,7 +144,7 @@ export default function TestAuthPage() {
               onClick={async () => {
                 const res = await fetch('/api/auth/session')
                 const sessionData = await res.json()
-                setDebugInfo(prev => ({ ...prev, sessionData }))
+                setDebugInfo((prev: any) => ({ ...prev, sessionData }))
               }}
               size="sm"
               variant="outline"
