@@ -55,7 +55,7 @@ export function DashboardSidebar() {
   const { data: session } = useSession()
   
   // Check if user is admin
-  const adminEmails = process.env.NEXT_PUBLIC_ADMIN_EMAILS?.split(",") || ["jaime@outletmedia.com"]
+  const adminEmails = process.env.NEXT_PUBLIC_ADMIN_EMAILS?.split(",") || ["jaime@outletmedia.net"]
   const isAdmin = session?.user?.email && adminEmails.includes(session.user.email)
 
   return (

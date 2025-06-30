@@ -44,7 +44,7 @@ agentConfigs.set(defaultAgent.id, defaultAgent)
 async function isAdmin(email: string): Promise<boolean> {
   // For demo purposes, check if email is admin
   // In production, check user role from database
-  const adminEmails = process.env.ADMIN_EMAILS?.split(",") || ["jaime@outletmedia.com"]
+  const adminEmails = process.env.ADMIN_EMAILS?.split(",") || ["jaime@outletmedia.net"]
   return adminEmails.includes(email)
 }
 

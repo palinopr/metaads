@@ -13,7 +13,7 @@ export default withAuth(
       const token = (req as any).nextauth?.token
       
       // Check if user email is in admin list
-      const adminEmails = process.env.ADMIN_EMAILS?.split(",") || ["jaime@outletmedia.com"]
+      const adminEmails = process.env.ADMIN_EMAILS?.split(",") || ["jaime@outletmedia.net"]
       const userEmail = token?.email as string
       
       if (!userEmail || !adminEmails.includes(userEmail)) {
