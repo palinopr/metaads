@@ -1,60 +1,55 @@
 import { NextAuthOptions } from "next-auth"
-import FacebookProvider from "next-auth/providers/facebook"
+import CredentialsProvider from "next-auth/providers/credentials"
 import { DrizzleAdapter } from "@auth/drizzle-adapter"
 import { db } from "@/db/drizzle"
+import { users } from "@/db/schema"
+import { eq } from "drizzle-orm"
+import bcrypt from "bcryptjs"
 
 export const authOptions: NextAuthOptions = {
   adapter: DrizzleAdapter(db),
   providers: [
-    FacebookProvider({
-      clientId: process.env.FACEBOOK_APP_ID!,
-      clientSecret: process.env.FACEBOOK_APP_SECRET!,
-      authorization: {
-        url: "https://www.facebook.com/v18.0/dialog/oauth",
-        params: {
-          scope: "public_profile email",
-          auth_type: "rerequest",
-          display: "popup",
-        },
+    CredentialsProvider({
+      name: "credentials",
+      credentials: {
+        email: { label: "Email", type: "email", placeholder: "email@example.com" },
+        password: { label: "Password", type: "password" }
       },
-      token: {
-        url: "https://graph.facebook.com/v18.0/oauth/access_token",
-        params: {
-          client_id: process.env.FACEBOOK_APP_ID!,
-          client_secret: process.env.FACEBOOK_APP_SECRET!,
-        },
-      },
-      userinfo: {
-        url: "https://graph.facebook.com/v18.0/me",
-        params: {
-          fields: "id,name,email,picture.width(250).height(250)",
-        },
-        async request({ tokens, provider }) {
-          const response = await fetch(
-            `https://graph.facebook.com/v18.0/me?fields=id,name,email,picture.width(250).height(250)&access_token=${tokens.access_token}`
-          );
-          return await response.json();
-        },
-      },
-      profile(profile) {
+      async authorize(credentials) {
+        if (!credentials?.email || !credentials?.password) {
+          throw new Error("Invalid credentials")
+        }
+
+        const userResults = await db.select().from(users).where(eq(users.email, credentials.email))
+        const user = userResults[0]
+
+        if (!user || !user.password) {
+          throw new Error("User not found")
+        }
+
+        const isValid = await bcrypt.compare(credentials.password, user.password)
+
+        if (!isValid) {
+          throw new Error("Invalid password")
+        }
+
         return {
-          id: profile.id,
-          name: profile.name,
-          email: profile.email,
-          image: profile.picture?.data?.url || null,
-        };
-      },
-    }),
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          image: user.image,
+        }
+      }
+    })
   ],
-  debug: true, // Enable debug mode
   callbacks: {
-    async session({ session, token, user }) {
-      if (session.user) {
-        session.user.id = user.id
+    async session({ session, token }) {
+      if (token && session.user) {
+        session.user.id = token.id as string
       }
       return session
     },
-    async jwt({ token, user, account, profile }) {
+    async jwt({ token, user }) {
       if (user) {
         token.id = user.id
       }
