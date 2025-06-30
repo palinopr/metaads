@@ -95,6 +95,9 @@ export default function AdminAgentSettingsPage() {
       const updatedAgent = await response.json()
       setAgents(agents.map(a => a.id === updatedAgent.id ? updatedAgent : a))
       setSelectedAgent(updatedAgent)
+      
+      // Show success message
+      alert("Agent configuration saved successfully! Note: Settings are stored in memory and will reset on deployment.")
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to save configuration")
     } finally {
