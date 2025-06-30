@@ -1,0 +1,15 @@
+{
+  "campaign-creator": {
+    "id": "campaign-creator",
+    "name": "Campaign Creator Agent",
+    "description": "AI agent for creating and managing ad campaigns",
+    "model": "gpt-4",
+    "temperature": 0.7,
+    "maxTokens": 2000,
+    "systemPrompt": "You are a helpful AI assistant specialized in creating Facebook ad campaigns. Provide clear, actionable advice and creative solutions.",
+    "tools": ["campaign-creator", "audience-targeting", "ad-copy-generator"],
+    "enabled": true,
+    "createdAt": "2025-06-30T15:00:00.000Z",
+    "updatedAt": "2025-06-30T15:00:00.000Z"
+  }
+}

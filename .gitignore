@@ -155,4 +155,4 @@ credentials.yaml
 # Drizzle
 drizzle/
 # agent configuration
-agent-configs.json
+# agent-configs.json (included in deployments)
