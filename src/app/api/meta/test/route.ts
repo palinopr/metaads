@@ -36,7 +36,8 @@ export async function GET() {
         metaUserId: connection.meta_user_id
       },
       tests: {} as any,
-      errors: [] as any[]
+      errors: [] as any[],
+      summary: {} as any
     }
     
     // Test 1: Verify token and get user info
