@@ -122,3 +122,51 @@ export async function GET(request: Request) {
     )
   }
 }
+
+export async function POST(req: Request) {
+  try {
+    const session = await getServerSession(authOptions)
+    if (!session?.user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const body = await req.json()
+    const { name, objective, budget, duration, audiences, creatives, aiGenerated, adAccountId } = body
+
+    // TODO: Create campaign in Meta Ads API
+    // For now, return mock data with AI-generated fields
+    const mockCampaign = {
+      id: `camp_${Date.now()}`,
+      campaignId: `camp_${Date.now()}`,
+      name,
+      objective,
+      budget,
+      duration,
+      audiences,
+      creatives,
+      aiGenerated: aiGenerated || false,
+      status: 'ACTIVE',
+      created_time: new Date().toISOString(),
+      insights: {
+        impressions: 0,
+        clicks: 0,
+        spend: 0,
+        ctr: 0,
+        cpc: 0,
+        conversions: 0
+      }
+    }
+
+    return NextResponse.json({ 
+      success: true,
+      campaign: mockCampaign,
+      campaignId: mockCampaign.id
+    })
+  } catch (error) {
+    console.error('Campaign creation error:', error)
+    return NextResponse.json(
+      { error: 'Failed to create campaign' },
+      { status: 500 }
+    )
+  }
+}

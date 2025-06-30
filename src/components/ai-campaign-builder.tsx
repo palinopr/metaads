@@ -33,8 +33,35 @@ export function AICampaignBuilder({ onCampaignCreate }: AICampaignBuilderProps) 
   const analyzeBusiness = async () => {
     setIsProcessing(true)
     
-    // Simulate AI analysis
-    setTimeout(() => {
+    try {
+      const response = await fetch('/api/ai/analyze-business', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          // You can pass additional context here
+          userType: 'advertiser',
+          goals: ['increase_sales', 'brand_awareness']
+        })
+      })
+      
+      if (response.ok) {
+        const data = await response.json()
+        setBusinessInfo(data.businessInfo)
+        setStage('strategy')
+      } else {
+        // Fallback to default
+        setBusinessInfo({
+          industry: 'E-commerce',
+          productType: 'Fashion Accessories',
+          targetMarket: 'Young professionals',
+          competitiveLandscape: 'Moderate competition',
+          uniqueValue: 'Sustainable materials, modern design'
+        })
+        setStage('strategy')
+      }
+    } catch (error) {
+      console.error('Analysis failed:', error)
+      // Use fallback data
       setBusinessInfo({
         industry: 'E-commerce',
         productType: 'Fashion Accessories',
@@ -43,8 +70,9 @@ export function AICampaignBuilder({ onCampaignCreate }: AICampaignBuilderProps) 
         uniqueValue: 'Sustainable materials, modern design'
       })
       setStage('strategy')
+    } finally {
       setIsProcessing(false)
-    }, 2000)
+    }
   }
 
   const generateStrategy = async () => {
@@ -354,10 +382,10 @@ export function AICampaignBuilder({ onCampaignCreate }: AICampaignBuilderProps) 
                 <div className="p-4 bg-muted rounded-lg space-y-2">
                   <h4 className="font-semibold">Summary</h4>
                   <ul className="space-y-1 text-sm">
-                    <li>• Objective: {strategy?.primaryObjective}</li>
-                    <li>• Budget: ${strategy?.recommendedBudget?.daily}/day</li>
-                    <li>• Duration: {strategy?.duration?.days} days</li>
-                    <li>• Audiences: {strategy?.audiences?.length} targeted segments</li>
+                    <li>• Objective: {strategy?.primaryObjective || 'Not set'}</li>
+                    <li>• Budget: ${strategy?.recommendedBudget?.daily || 0}/day</li>
+                    <li>• Duration: {strategy?.duration?.days || 0} days</li>
+                    <li>• Audiences: {strategy?.audiences?.length || 0} targeted segments</li>
                     <li>• Creatives: {creatives.filter(c => c.selected).length} ad variations</li>
                   </ul>
                 </div>

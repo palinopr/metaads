@@ -28,7 +28,8 @@ import {
   Play,
   MoreHorizontal,
   RefreshCw,
-  BarChart3
+  BarChart3,
+  Brain
 } from "lucide-react"
 import {
   DropdownMenu,
@@ -144,6 +145,10 @@ export default function CampaignsPage() {
           <Button variant="outline" onClick={fetchCampaigns}>
             <RefreshCw className="mr-2 h-4 w-4" />
             Refresh
+          </Button>
+          <Button variant="outline" onClick={() => router.push('/dashboard/ai-lab')}>
+            <Brain className="mr-2 h-4 w-4" />
+            AI Lab
           </Button>
           <Button asChild>
             <Link href="/dashboard/campaigns/create">
@@ -291,9 +296,23 @@ export default function CampaignsPage() {
                         <DropdownMenuContent align="end">
                           <DropdownMenuLabel>Actions</DropdownMenuLabel>
                           <DropdownMenuSeparator />
-                          <DropdownMenuItem disabled>
+                          <DropdownMenuItem 
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              router.push(`/dashboard/campaigns/${campaign.id}/adsets`)
+                            }}
+                          >
                             <TrendingUp className="mr-2 h-4 w-4" />
                             View Details
+                          </DropdownMenuItem>
+                          <DropdownMenuItem 
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              router.push(`/dashboard/ai-lab?campaign=${campaign.id}`)
+                            }}
+                          >
+                            <Brain className="mr-2 h-4 w-4" />
+                            AI Optimize
                           </DropdownMenuItem>
                           <DropdownMenuItem disabled>
                             {campaign.effective_status === "ACTIVE" ? (

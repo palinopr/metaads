@@ -1,14 +1,94 @@
 "use client"
 
+import { useState, useEffect } from 'react'
 import { AICampaignBuilder } from '@/components/ai-campaign-builder'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Brain, Sparkles, Zap, BarChart, Target, Code, Database } from 'lucide-react'
+import { Brain, Sparkles, Zap, BarChart, Target, Code, Database, Import, Play, TrendingUp } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { useRouter } from 'next/navigation'
+import { useSession } from 'next-auth/react'
 
 export default function AILabPage() {
-  const handleCampaignCreate = (campaign: any) => {
+  const router = useRouter()
+  const { data: session } = useSession()
+  const [campaigns, setCampaigns] = useState<any[]>([])
+  const [selectedCampaign, setSelectedCampaign] = useState<string>('')
+  const [isAnalyzing, setIsAnalyzing] = useState(false)
+  const [analysisResults, setAnalysisResults] = useState<any>(null)
+
+  useEffect(() => {
+    fetchCampaigns()
+    
+    // Check if campaign is passed as query parameter
+    const searchParams = new URLSearchParams(window.location.search)
+    const campaignId = searchParams.get('campaign')
+    if (campaignId) {
+      setSelectedCampaign(campaignId)
+    }
+  }, [])
+
+  const fetchCampaigns = async () => {
+    try {
+      const response = await fetch('/api/campaigns')
+      if (response.ok) {
+        const data = await response.json()
+        setCampaigns(data.campaigns || [])
+      }
+    } catch (error) {
+      console.error('Failed to fetch campaigns:', error)
+    }
+  }
+
+  const analyzeCampaign = async () => {
+    if (!selectedCampaign) return
+    
+    setIsAnalyzing(true)
+    try {
+      const response = await fetch('/api/ai/analyze-campaign', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ campaignId: selectedCampaign })
+      })
+      
+      if (response.ok) {
+        const data = await response.json()
+        setAnalysisResults(data)
+      }
+    } catch (error) {
+      console.error('Analysis failed:', error)
+    } finally {
+      setIsAnalyzing(false)
+    }
+  }
+
+  const handleCampaignCreate = async (campaign: any) => {
     console.log('Creating campaign:', campaign)
-    // TODO: Implement actual campaign creation
+    
+    // Create actual campaign
+    try {
+      const response = await fetch('/api/campaigns', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: `AI Campaign - ${new Date().toLocaleDateString()}`,
+          objective: campaign.strategy.primaryObjective,
+          budget: campaign.strategy.recommendedBudget.daily,
+          duration: campaign.strategy.duration.days,
+          audiences: campaign.strategy.audiences,
+          creatives: campaign.creatives,
+          aiGenerated: true
+        })
+      })
+      
+      if (response.ok) {
+        const data = await response.json()
+        router.push(`/dashboard/campaigns/${data.campaignId}`)
+      }
+    } catch (error) {
+      console.error('Failed to create campaign:', error)
+    }
   }
 
   return (
@@ -77,6 +157,70 @@ export default function AILabPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Campaign Analysis Section */}
+      <Card className="border-2">
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle className="flex items-center gap-2">
+              <TrendingUp className="h-5 w-5" />
+              Analyze Existing Campaign
+            </CardTitle>
+            <Badge>Quick Start</Badge>
+          </div>
+          <CardDescription>
+            Import and analyze your existing campaigns to get AI-powered optimization suggestions
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex gap-4">
+            <Select value={selectedCampaign} onValueChange={setSelectedCampaign}>
+              <SelectTrigger className="flex-1">
+                <SelectValue placeholder="Select a campaign to analyze" />
+              </SelectTrigger>
+              <SelectContent>
+                {campaigns.length === 0 ? (
+                  <SelectItem value="none" disabled>No campaigns found</SelectItem>
+                ) : (
+                  campaigns.map((campaign) => (
+                    <SelectItem key={campaign.id} value={campaign.id}>
+                      {campaign.name} - ${campaign.budget_settings?.daily_budget || 0}/day
+                    </SelectItem>
+                  ))
+                )}
+              </SelectContent>
+            </Select>
+            <Button 
+              onClick={analyzeCampaign} 
+              disabled={!selectedCampaign || isAnalyzing}
+              className="gap-2"
+            >
+              <Brain className="h-4 w-4" />
+              {isAnalyzing ? 'Analyzing...' : 'Analyze'}
+            </Button>
+          </div>
+          
+          {analysisResults && (
+            <div className="mt-6 space-y-4">
+              <div className="p-4 bg-muted rounded-lg">
+                <h4 className="font-semibold mb-2">AI Analysis Results</h4>
+                <div className="space-y-2 text-sm">
+                  <p><strong>Performance Score:</strong> {analysisResults.score}/10</p>
+                  <p><strong>Optimization Potential:</strong> {analysisResults.potential}%</p>
+                  <p><strong>Key Issues:</strong> {analysisResults.issues?.join(', ')}</p>
+                </div>
+              </div>
+              <Button 
+                onClick={() => setAnalysisResults(null)} 
+                variant="outline" 
+                className="w-full"
+              >
+                Optimize This Campaign
+              </Button>
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Technical Details */}
       <Card className="border-primary/20">
