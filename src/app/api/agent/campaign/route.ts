@@ -4,6 +4,7 @@ import { authOptions } from '@/lib/auth'
 import { anthropic } from '@ai-sdk/anthropic'
 import { openai } from '@ai-sdk/openai'
 import { streamText, generateText } from 'ai'
+import { IntelligentAgent } from '@/lib/ai/agent-system'
 
 // Choose which AI provider to use - force OpenAI for now
 const AI_PROVIDER = 'openai' // Always use OpenAI
@@ -59,6 +60,24 @@ export async function POST(req: NextRequest) {
 
     const body: AgentRequest = await req.json()
     const { message, threadId = `thread_${Date.now()}`, context } = body
+    
+    // Check if using intelligent agent mode
+    const useIntelligentAgent = req.headers.get('x-agent-mode') === 'intelligent'
+    
+    if (useIntelligentAgent) {
+      const agent = new IntelligentAgent()
+      const result = await agent.process(message, context)
+      
+      return Response.json({
+        success: true,
+        message: result.message,
+        threadId,
+        suggestedActions: result.actions,
+        toolsUsed: result.toolsUsed,
+        visualizations: result.visualizations,
+        requiresApproval: false
+      })
+    }
 
     // Build conversation history
     const messages = [

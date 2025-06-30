@@ -12,7 +12,8 @@ import {
   DollarSign,
   Settings,
   HelpCircle,
-  Shield
+  Shield,
+  Brain
 } from "lucide-react"
 
 const navigation = [
@@ -30,6 +31,13 @@ const navigation = [
     items: [
       { name: "Reporting", href: "/dashboard/reporting", icon: BarChart3, disabled: true },
       { name: "Analytics", href: "/dashboard/analytics", icon: BarChart3, disabled: true },
+    ]
+  },
+  {
+    name: "AI Tools",
+    items: [
+      { name: "AI Lab", href: "/dashboard/ai-lab", icon: Brain, badge: "NEW" },
+      { name: "Agent", href: "/dashboard/agent", icon: Brain },
     ]
   },
   {
@@ -94,7 +102,12 @@ export function DashboardSidebar() {
                         onClick={item.disabled ? (e) => e.preventDefault() : undefined}
                       >
                         <item.icon className="h-4 w-4" />
-                        {item.name}
+                        <span className="flex-1">{item.name}</span>
+                        {(item as any).badge && (
+                          <span className="ml-auto text-xs bg-primary text-primary-foreground px-1.5 py-0.5 rounded-full">
+                            {(item as any).badge}
+                          </span>
+                        )}
                       </Link>
                     </li>
                   )
