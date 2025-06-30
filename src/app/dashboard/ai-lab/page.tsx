@@ -55,9 +55,14 @@ export default function AILabPage() {
       if (response.ok) {
         const data = await response.json()
         setAnalysisResults(data)
+      } else {
+        console.error('Analysis failed:', await response.text())
+        // Show some feedback to user
+        alert('Failed to analyze campaign. Please try again.')
       }
     } catch (error) {
       console.error('Analysis failed:', error)
+      alert('Error analyzing campaign. Please check your connection.')
     } finally {
       setIsAnalyzing(false)
     }
@@ -200,23 +205,85 @@ export default function AILabPage() {
             </Button>
           </div>
           
-          {analysisResults && (
+          {isAnalyzing && (
+            <div className="mt-6 p-8 bg-muted rounded-lg text-center">
+              <Brain className="h-12 w-12 mx-auto mb-4 text-primary animate-pulse" />
+              <p className="text-lg font-medium">Analyzing Campaign...</p>
+              <p className="text-sm text-muted-foreground mt-2">
+                Our AI is examining performance data and identifying optimization opportunities
+              </p>
+            </div>
+          )}
+          
+          {analysisResults && !isAnalyzing && (
             <div className="mt-6 space-y-4">
               <div className="p-4 bg-muted rounded-lg">
-                <h4 className="font-semibold mb-2">AI Analysis Results</h4>
-                <div className="space-y-2 text-sm">
-                  <p><strong>Performance Score:</strong> {analysisResults.score}/10</p>
-                  <p><strong>Optimization Potential:</strong> {analysisResults.potential}%</p>
-                  <p><strong>Key Issues:</strong> {analysisResults.issues?.join(', ')}</p>
+                <h4 className="font-semibold mb-3 flex items-center gap-2">
+                  <TrendingUp className="h-5 w-5 text-primary" />
+                  AI Analysis Results
+                </h4>
+                <div className="grid grid-cols-3 gap-4 mb-4">
+                  <div className="text-center p-3 bg-background rounded-lg">
+                    <p className="text-sm text-muted-foreground">Performance</p>
+                    <p className="text-2xl font-bold text-primary">{analysisResults.score}/10</p>
+                  </div>
+                  <div className="text-center p-3 bg-background rounded-lg">
+                    <p className="text-sm text-muted-foreground">Potential</p>
+                    <p className="text-2xl font-bold text-green-600">+{analysisResults.potential}%</p>
+                  </div>
+                  <div className="text-center p-3 bg-background rounded-lg">
+                    <p className="text-sm text-muted-foreground">Issues</p>
+                    <p className="text-2xl font-bold text-orange-600">{analysisResults.issues?.length || 0}</p>
+                  </div>
                 </div>
+                
+                {analysisResults.issues && analysisResults.issues.length > 0 && (
+                  <div className="mt-4">
+                    <h5 className="font-medium mb-2">Key Issues Detected:</h5>
+                    <ul className="space-y-1">
+                      {analysisResults.issues.map((issue: string, i: number) => (
+                        <li key={i} className="text-sm text-muted-foreground flex items-start gap-2">
+                          <span className="text-orange-500 mt-1">•</span>
+                          {issue}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                
+                {analysisResults.recommendations && analysisResults.recommendations.length > 0 && (
+                  <div className="mt-4">
+                    <h5 className="font-medium mb-2">AI Recommendations:</h5>
+                    <ul className="space-y-1">
+                      {analysisResults.recommendations.map((rec: string, i: number) => (
+                        <li key={i} className="text-sm text-muted-foreground flex items-start gap-2">
+                          <span className="text-green-500 mt-1">→</span>
+                          {rec}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
               </div>
-              <Button 
-                onClick={() => setAnalysisResults(null)} 
-                variant="outline" 
-                className="w-full"
-              >
-                Optimize This Campaign
-              </Button>
+              
+              <div className="flex gap-3">
+                <Button 
+                  onClick={() => {
+                    // TODO: Implement optimization
+                    alert('Optimization feature coming soon!')
+                  }} 
+                  className="flex-1"
+                >
+                  <Zap className="h-4 w-4 mr-2" />
+                  Apply AI Optimizations
+                </Button>
+                <Button 
+                  onClick={() => setAnalysisResults(null)} 
+                  variant="outline"
+                >
+                  Clear Results
+                </Button>
+              </div>
             </div>
           )}
         </CardContent>
