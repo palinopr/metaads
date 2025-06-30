@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Meta Ads API Test Tool</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background-color: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        h1, h2 {
+            color: #333;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-right: 10px;
+            margin-bottom: 10px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        .secondary {
+            background-color: #6c757d;
+        }
+        .secondary:hover {
+            background-color: #545b62;
+        }
+        .success {
+            background-color: #28a745;
+        }
+        .success:hover {
+            background-color: #218838;
+        }
+        input {
+            padding: 8px;
+            margin: 5px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            width: 300px;
+        }
+        pre {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 4px;
+            overflow-x: auto;
+            border: 1px solid #dee2e6;
+        }
+        .error {
+            color: #dc3545;
+            background-color: #f8d7da;
+            padding: 10px;
+            border-radius: 4px;
+            margin-top: 10px;
+        }
+        .success-msg {
+            color: #155724;
+            background-color: #d4edda;
+            padding: 10px;
+            border-radius: 4px;
+            margin-top: 10px;
+        }
+        .info {
+            color: #004085;
+            background-color: #d1ecf1;
+            padding: 10px;
+            border-radius: 4px;
+            margin-top: 10px;
+        }
+        .section {
+            margin-bottom: 30px;
+        }
+        label {
+            display: inline-block;
+            width: 150px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <h1>Meta Ads API Test Tool</h1>
+    
+    <div class="container">
+        <h2>Configuration</h2>
+        <div class="section">
+            <label>API Base URL:</label>
+            <input type="text" id="baseUrl" value="http://localhost:3000" />
+            <br>
+            <label>Test Auth Token:</label>
+            <input type="text" id="authToken" value="test-bypass-token" />
+            <br>
+            <label>Test Email:</label>
+            <input type="text" id="testEmail" value="jaime@outletmedia.net" />
+        </div>
+    </div>
+
+    <div class="container">
+        <h2>Debug Endpoints</h2>
+        <div class="section">
+            <button onclick="testDebugApi()">Test Debug API</button>
+            <button onclick="testSessionApi()">Test Session API</button>
+            <button onclick="testAdminDebug()">Test Admin Debug</button>
+            <button onclick="createTestSession()">Create Test Session</button>
+            <button onclick="testAdminCheck()">Test Admin Check</button>
+        </div>
+    </div>
+
+    <div class="container">
+        <h2>Quick Actions</h2>
+        <div class="section">
+            <button class="success" onclick="testWithBypass()">Test with Auth Bypass</button>
+            <button class="secondary" onclick="clearResults()">Clear Results</button>
+        </div>
+    </div>
+
+    <div class="container">
+        <h2>Results</h2>
+        <div id="results"></div>
+    </div>
+
+    <script>
+        const getConfig = () => ({
+            baseUrl: document.getElementById('baseUrl').value,
+            authToken: document.getElementById('authToken').value,
+            testEmail: document.getElementById('testEmail').value
+        });
+
+        const showResult = (title, data, isError = false) => {
+            const results = document.getElementById('results');
+            const div = document.createElement('div');
+            div.className = 'section';
+            div.innerHTML = `
+                <h3>${title}</h3>
+                ${isError ? '<div class="error">Error occurred</div>' : ''}
+                <pre>${JSON.stringify(data, null, 2)}</pre>
+            `;
+            results.insertBefore(div, results.firstChild);
+        };
+
+        const clearResults = () => {
+            document.getElementById('results').innerHTML = '';
+        };
+
+        async function testDebugApi() {
+            const config = getConfig();
+            try {
+                const response = await fetch(`${config.baseUrl}/api/test/debug`, {
+                    headers: {
+                        'X-Test-Auth-Token': config.authToken
+                    }
+                });
+                const data = await response.json();
+                showResult('Debug API Response', data);
+            } catch (error) {
+                showResult('Debug API Error', { error: error.message }, true);
+            }
+        }
+
+        async function testSessionApi() {
+            const config = getConfig();
+            try {
+                const response = await fetch(`${config.baseUrl}/api/test/session`, {
+                    headers: {
+                        'X-Test-Auth-Token': config.authToken
+                    }
+                });
+                const data = await response.json();
+                showResult('Session API Response', data);
+            } catch (error) {
+                showResult('Session API Error', { error: error.message }, true);
+            }
+        }
+
+        async function testAdminDebug() {
+            const config = getConfig();
+            try {
+                const response = await fetch(`${config.baseUrl}/api/admin/debug-override`, {
+                    headers: {
+                        'X-Test-Auth-Token': config.authToken
+                    }
+                });
+                const data = await response.json();
+                showResult('Admin Debug Response', data);
+            } catch (error) {
+                showResult('Admin Debug Error', { error: error.message }, true);
+            }
+        }
+
+        async function createTestSession() {
+            const config = getConfig();
+            try {
+                const response = await fetch(`${config.baseUrl}/api/test/session`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        email: config.testEmail,
+                        name: 'Test User'
+                    })
+                });
+                const data = await response.json();
+                showResult('Create Session Response', data);
+                
+                if (data.success) {
+                    const info = document.createElement('div');
+                    info.className = 'success-msg';
+                    info.innerHTML = `Session created! Token: ${data.session.token}`;
+                    document.getElementById('results').insertBefore(info, document.getElementById('results').firstChild);
+                }
+            } catch (error) {
+                showResult('Create Session Error', { error: error.message }, true);
+            }
+        }
+
+        async function testAdminCheck() {
+            const config = getConfig();
+            try {
+                const response = await fetch(`${config.baseUrl}/api/test/debug`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        action: 'test-admin-check',
+                        email: config.testEmail
+                    })
+                });
+                const data = await response.json();
+                showResult('Admin Check Response', data);
+            } catch (error) {
+                showResult('Admin Check Error', { error: error.message }, true);
+            }
+        }
+
+        async function testWithBypass() {
+            const config = getConfig();
+            try {
+                // Test multiple endpoints with bypass
+                const endpoints = [
+                    '/api/test/session?test-auth-token=' + config.authToken,
+                    '/api/test/debug',
+                    '/api/admin/debug-override'
+                ];
+                
+                for (const endpoint of endpoints) {
+                    const response = await fetch(`${config.baseUrl}${endpoint}`, {
+                        headers: {
+                            'X-Test-Auth-Token': config.authToken
+                        }
+                    });
+                    const data = await response.json();
+                    showResult(`Bypass Test: ${endpoint}`, data);
+                }
+            } catch (error) {
+                showResult('Bypass Test Error', { error: error.message }, true);
+            }
+        }
+
+        // Add keyboard shortcuts
+        document.addEventListener('keydown', (e) => {
+            if (e.ctrlKey || e.metaKey) {
+                switch(e.key) {
+                    case 'Enter':
+                        testDebugApi();
+                        break;
+                    case 'k':
+                        clearResults();
+                        e.preventDefault();
+                        break;
+                }
+            }
+        });
+    </script>
+</body>
+</html>

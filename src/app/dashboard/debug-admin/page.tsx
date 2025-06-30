@@ -5,8 +5,9 @@ import { useSession } from "next-auth/react"
 export default function DebugAdminPage() {
   const { data: session } = useSession()
   
-  const adminEmails = process.env.NEXT_PUBLIC_ADMIN_EMAILS?.split(",") || ["jaime@outletmedia.com"]
-  const isAdmin = session?.user?.email && adminEmails.includes(session.user.email)
+  // Direct hardcoded check for debugging
+  const isAdmin = session?.user?.email === "jaime@outletmedia.net"
+  const adminEmails = ["jaime@outletmedia.net"]
   
   return (
     <div className="p-6 space-y-4">

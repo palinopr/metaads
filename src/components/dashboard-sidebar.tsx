@@ -59,6 +59,13 @@ export function DashboardSidebar() {
 
   return (
     <div className="w-56 bg-card border-r h-full overflow-y-auto">
+      {/* Debug: Show admin status */}
+      {session?.user?.email && (
+        <div className="px-4 py-2 bg-muted text-xs">
+          Email: {session.user.email}<br/>
+          Admin: {isAdmin ? "YES" : "NO"}
+        </div>
+      )}
       <div className="py-3">
         {navigation.map((group) => (
           <div key={group.name} className="mb-6">
