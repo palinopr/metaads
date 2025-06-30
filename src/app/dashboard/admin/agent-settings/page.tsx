@@ -36,12 +36,14 @@ export default function AdminAgentSettingsPage() {
   const [isSaving, setIsSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [newToolName, setNewToolName] = useState("")
+  const [apiKeyStatus, setApiKeyStatus] = useState<{openai?: string, anthropic?: string}>({})
 
   useEffect(() => {
     if (status === "unauthenticated") {
       router.push("/sign-in")
     } else if (status === "authenticated") {
       fetchAgents()
+      fetchApiKeys()
     }
   }, [status, router])
 
@@ -140,6 +142,62 @@ export default function AdminAgentSettingsPage() {
       ...selectedAgent,
       tools: selectedAgent.tools.filter((_, index) => index !== toolIndex)
     })
+  }
+
+  const fetchApiKeys = async () => {
+    try {
+      const response = await fetch("/api/admin/api-keys")
+      if (response.ok) {
+        const data = await response.json()
+        setApiKeyStatus(data.apiKeys || {})
+      }
+    } catch (err) {
+      console.error("Failed to fetch API keys:", err)
+    }
+  }
+
+  const handleSaveApiKey = async (provider: string, apiKey: string) => {
+    if (!apiKey.trim()) {
+      alert("Please enter an API key")
+      return
+    }
+
+    try {
+      const response = await fetch("/api/admin/api-keys", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ provider, apiKey }),
+      })
+
+      if (!response.ok) {
+        throw new Error("Failed to save API key")
+      }
+
+      const data = await response.json()
+      
+      // Update the status display
+      setApiKeyStatus(prev => ({
+        ...prev,
+        [provider]: data.masked
+      }))
+
+      // Clear the input
+      const inputId = provider === "openai" ? "openai-key" : "anthropic-key"
+      const input = document.getElementById(inputId) as HTMLInputElement
+      if (input) input.value = ""
+
+      // Show success message
+      alert(`${provider === "openai" ? "OpenAI" : "Anthropic"} API key saved successfully!`)
+      
+      // If using Vercel, show instructions
+      if (data.instructions) {
+        console.log("To apply in production:", data.instructions.vercel)
+      }
+    } catch (err) {
+      alert(`Failed to save API key: ${err instanceof Error ? err.message : "Unknown error"}`)
+    }
   }
 
   if (status === "loading" || isLoading) {
@@ -248,10 +306,11 @@ export default function AdminAgentSettingsPage() {
               </CardHeader>
               <CardContent>
                 <Tabs defaultValue="general" className="w-full">
-                  <TabsList className="grid w-full grid-cols-3">
+                  <TabsList className="grid w-full grid-cols-4">
                     <TabsTrigger value="general">General</TabsTrigger>
                     <TabsTrigger value="model">Model Settings</TabsTrigger>
                     <TabsTrigger value="tools">Tools</TabsTrigger>
+                    <TabsTrigger value="api-keys">API Keys</TabsTrigger>
                   </TabsList>
 
                   <TabsContent value="general" className="space-y-4">
@@ -407,6 +466,86 @@ export default function AdminAgentSettingsPage() {
                         <Plus className="h-4 w-4 mr-2" />
                         Add Tool
                       </Button>
+                    </div>
+                  </TabsContent>
+
+                  <TabsContent value="api-keys" className="space-y-4">
+                    <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
+                      <div className="flex items-start gap-2">
+                        <AlertCircle className="h-5 w-5 text-yellow-600 mt-0.5" />
+                        <div className="text-sm">
+                          <p className="font-medium text-yellow-800">API Keys Required</p>
+                          <p className="text-yellow-700 mt-1">
+                            Add your API keys to enable AI agents. Keys are stored securely as environment variables.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="space-y-4">
+                      <div>
+                        <Label htmlFor="openai-key">OpenAI API Key</Label>
+                        <div className="flex gap-2 mt-1">
+                          <Input
+                            id="openai-key"
+                            type="password"
+                            placeholder="sk-..."
+                            className="font-mono"
+                          />
+                          <Button
+                            onClick={() => {
+                              const input = document.getElementById("openai-key") as HTMLInputElement
+                              if (input) handleSaveApiKey("openai", input.value)
+                            }}
+                          >
+                            Save
+                          </Button>
+                        </div>
+                        <p className="text-sm text-gray-500 mt-1">
+                          For GPT-4, GPT-4 Turbo, and GPT-3.5 Turbo models
+                        </p>
+                      </div>
+
+                      <div>
+                        <Label htmlFor="anthropic-key">Anthropic API Key</Label>
+                        <div className="flex gap-2 mt-1">
+                          <Input
+                            id="anthropic-key"
+                            type="password"
+                            placeholder="sk-ant-..."
+                            className="font-mono"
+                          />
+                          <Button
+                            onClick={() => {
+                              const input = document.getElementById("anthropic-key") as HTMLInputElement
+                              if (input) handleSaveApiKey("anthropic", input.value)
+                            }}
+                          >
+                            Save
+                          </Button>
+                        </div>
+                        <p className="text-sm text-gray-500 mt-1">
+                          For Claude 3 models
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="mt-6 p-4 bg-gray-50 rounded-lg">
+                      <h4 className="font-medium mb-2">Current API Keys</h4>
+                      <div className="space-y-2 text-sm">
+                        <div className="flex justify-between">
+                          <span>OpenAI:</span>
+                          <span className="font-mono text-gray-600" id="openai-status">
+                            {apiKeyStatus.openai || "Not configured"}
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Anthropic:</span>
+                          <span className="font-mono text-gray-600" id="anthropic-status">
+                            {apiKeyStatus.anthropic || "Not configured"}
+                          </span>
+                        </div>
+                      </div>
                     </div>
                   </TabsContent>
                 </Tabs>
