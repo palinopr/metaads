@@ -54,9 +54,8 @@ export function DashboardSidebar() {
   const pathname = usePathname()
   const { data: session } = useSession()
   
-  // Check if user is admin
-  const adminEmails = process.env.NEXT_PUBLIC_ADMIN_EMAILS?.split(",") || ["jaime@outletmedia.net"]
-  const isAdmin = session?.user?.email && adminEmails.includes(session.user.email)
+  // Check if user is admin - direct check for now
+  const isAdmin = session?.user?.email === "jaime@outletmedia.net"
 
   return (
     <div className="w-56 bg-card border-r h-full overflow-y-auto">

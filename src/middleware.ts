@@ -13,10 +13,12 @@ export default withAuth(
       const token = (req as any).nextauth?.token
       
       // Check if user email is in admin list
-      const adminEmails = process.env.ADMIN_EMAILS?.split(",") || ["jaime@outletmedia.net"]
       const userEmail = token?.email as string
       
-      if (!userEmail || !adminEmails.includes(userEmail)) {
+      // Direct check for admin access
+      const isAdmin = userEmail === "jaime@outletmedia.net"
+      
+      if (!userEmail || !isAdmin) {
         // Redirect to dashboard if not admin
         if (req.nextUrl.pathname.startsWith("/dashboard/admin")) {
           return NextResponse.redirect(new URL("/dashboard", req.url))
