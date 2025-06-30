@@ -9,13 +9,9 @@ export const authOptions: NextAuthOptions = {
     FacebookProvider({
       clientId: process.env.FACEBOOK_APP_ID!,
       clientSecret: process.env.FACEBOOK_APP_SECRET!,
-      authorization: {
-        params: {
-          scope: 'email public_profile'
-        }
-      }
     }),
   ],
+  debug: true, // Enable debug mode
   callbacks: {
     async session({ session, token, user }) {
       if (session.user) {
