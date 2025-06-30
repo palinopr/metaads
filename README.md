@@ -1,52 +1,66 @@
 # MetaAds
 
-A Next.js application for managing Meta/Facebook advertising campaigns.
+A Next.js 15 application for managing Facebook advertising campaigns.
 
-## Setup
+## Tech Stack
 
-1. Install dependencies:
-```bash
-npm install
-```
+- **Framework**: Next.js 15 with App Router
+- **Authentication**: NextAuth.js with Facebook OAuth
+- **Database**: PostgreSQL with Drizzle ORM
+- **Storage/Backend**: Supabase
+- **Styling**: Tailwind CSS
+- **UI Components**: shadcn/ui
+- **Type Safety**: TypeScript
 
-2. Set up environment variables:
-```bash
-cp .env.example .env
-# Edit .env with your values
-```
+## Getting Started
 
-3. Set up database:
-```bash
-npm run db:push
-```
+1. Clone the repository
+2. Install dependencies:
+   ```bash
+   npm install
+   ```
 
-4. Run development server:
-```bash
-npm run dev
-```
+3. Copy `.env.example` to `.env` and fill in your credentials:
+   ```bash
+   cp .env.example .env
+   ```
 
-## Deployment on Railway
+4. Set up your database:
+   ```bash
+   npm run db:push
+   ```
 
-This project is configured to deploy on Railway using Nixpacks.
+5. Run the development server:
+   ```bash
+   npm run dev
+   ```
 
-1. Push to GitHub
-2. Connect Railway to your GitHub repo
-3. Railway will automatically detect the configuration from `railway.toml`
-4. Add environment variables in Railway dashboard
-5. Deploy!
+6. Open [http://localhost:3000](http://localhost:3000)
+
+## Environment Variables
+
+See `.env.example` for all required environment variables.
 
 ## Project Structure
 
 ```
-metaads/
-├── src/
-│   ├── app/          # Next.js app directory
-│   ├── components/   # React components
-│   ├── lib/          # Utility functions
-│   └── middleware.ts # Next.js middleware
-├── prisma/           # Database schema
-├── public/           # Static assets
-├── package.json      # Dependencies
-├── next.config.mjs   # Next.js config
-└── railway.toml      # Railway config
+src/
+├── app/              # Next.js App Router pages
+├── components/       # React components
+│   └── ui/          # shadcn/ui components
+├── db/              # Database schema and client
+├── lib/             # Utility functions and configurations
+│   ├── auth.ts      # NextAuth configuration
+│   └── supabase/    # Supabase client setup
+├── hooks/           # Custom React hooks
+└── types/           # TypeScript type definitions
 ```
+
+## Features
+
+- Facebook OAuth authentication
+- Protected dashboard routes
+- Database integration with Drizzle ORM
+- Supabase backend integration
+- Dark mode support
+- Responsive design

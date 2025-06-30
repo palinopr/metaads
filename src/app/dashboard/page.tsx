@@ -1,44 +1,56 @@
-import { auth } from "@/lib/auth";
-import { redirect } from "next/navigation";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { DashboardHeader } from "@/components/dashboard-header";
-import { CampaignsList } from "@/components/campaigns-list";
-import { MetricsOverview } from "@/components/metrics-overview";
+import { getServerSession } from "next-auth"
+import { authOptions } from "@/lib/auth"
+import { redirect } from "next/navigation"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 
 export default async function DashboardPage() {
-  const session = await auth();
-  
+  const session = await getServerSession(authOptions)
+
   if (!session) {
-    redirect("/auth/signin");
+    redirect("/sign-in")
   }
 
   return (
-    <div className="flex min-h-screen flex-col">
-      <DashboardHeader />
+    <div className="container mx-auto py-10">
+      <h1 className="text-3xl font-bold mb-8">Dashboard</h1>
       
-      <main className="flex-1 space-y-4 p-8 pt-6">
-        <div className="flex items-center justify-between space-y-2">
-          <h2 className="text-3xl font-bold tracking-tight">Dashboard</h2>
-        </div>
-        
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          <MetricsOverview />
-        </div>
-        
-        <div className="grid gap-4 md:grid-cols-1">
-          <Card>
-            <CardHeader>
-              <CardTitle>Active Campaigns</CardTitle>
-              <CardDescription>
-                Manage and monitor your Meta advertising campaigns
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <CampaignsList />
-            </CardContent>
-          </Card>
-        </div>
-      </main>
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <Card>
+          <CardHeader>
+            <CardTitle>Welcome back!</CardTitle>
+            <CardDescription>
+              {session.user?.email || "User"}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <p>You're successfully logged in with Facebook.</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Campaigns</CardTitle>
+            <CardDescription>
+              Manage your ad campaigns
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <p>No campaigns yet.</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Analytics</CardTitle>
+            <CardDescription>
+              View your performance metrics
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <p>Analytics coming soon.</p>
+          </CardContent>
+        </Card>
+      </div>
     </div>
-  );
+  )
 }
