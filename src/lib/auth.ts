@@ -16,28 +16,47 @@ export const authOptions: NextAuthOptions = {
         password: { label: "Password", type: "password" }
       },
       async authorize(credentials) {
+        console.log("[AUTH] Authorize function called")
+        console.log("[AUTH] Credentials received:", credentials?.email ? `Email: ${credentials.email}` : "No credentials")
+        
         if (!credentials?.email || !credentials?.password) {
+          console.log("[AUTH] Missing credentials")
           throw new Error("Invalid credentials")
         }
 
-        const userResults = await db.select().from(users).where(eq(users.email, credentials.email))
-        const user = userResults[0]
+        try {
+          console.log("[AUTH] Querying database for user:", credentials.email)
+          const userResults = await db.select().from(users).where(eq(users.email, credentials.email))
+          const user = userResults[0]
+          console.log("[AUTH] User found:", user ? `ID: ${user.id}` : "No user found")
 
-        if (!user || !user.password) {
-          throw new Error("User not found")
-        }
+          if (!user || !user.password) {
+            console.log("[AUTH] User not found or missing password")
+            throw new Error("User not found")
+          }
 
-        const isValid = await bcrypt.compare(credentials.password, user.password)
+          console.log("[AUTH] Comparing passwords...")
+          console.log("[AUTH] Password exists:", !!user.password)
+          console.log("[AUTH] Password length:", user.password?.length)
+          
+          const isValid = await bcrypt.compare(credentials.password, user.password)
+          console.log("[AUTH] Password validation result:", isValid)
 
-        if (!isValid) {
-          throw new Error("Invalid password")
-        }
+          if (!isValid) {
+            console.log("[AUTH] Invalid password")
+            throw new Error("Invalid password")
+          }
 
-        return {
-          id: user.id,
-          email: user.email,
-          name: user.name,
-          image: user.image,
+          console.log("[AUTH] Authentication successful for:", user.email)
+          return {
+            id: user.id,
+            email: user.email,
+            name: user.name,
+            image: user.image,
+          }
+        } catch (error) {
+          console.error("[AUTH] Error during authentication:", error)
+          throw error
         }
       }
     })
