@@ -42,6 +42,7 @@ const navigation = [
     items: [
       { name: "Billing", href: "/dashboard/billing", icon: DollarSign, disabled: true },
       { name: "Business Settings", href: "/dashboard/settings", icon: Settings, disabled: true },
+      { name: "API Debug", href: "/dashboard/debug", icon: Settings },
       { name: "Help Center", href: "/dashboard/help", icon: HelpCircle, disabled: true },
     ]
   }
