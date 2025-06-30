@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { DateRangeSelector } from "@/components/date-range-selector"
 import { useDateRange } from "@/contexts/date-range-context"
+import { AgentChat } from "@/components/agent-chat"
 import {
   Table,
   TableBody,
@@ -317,6 +318,9 @@ export default function CampaignsPage() {
           )}
         </CardContent>
       </Card>
+      
+      {/* AI Campaign Assistant */}
+      <AgentChat agentType="campaign" />
     </div>
   )
 }
