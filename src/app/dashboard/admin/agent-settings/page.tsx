@@ -97,7 +97,7 @@ export default function AdminAgentSettingsPage() {
       setSelectedAgent(updatedAgent)
       
       // Show success message
-      alert("Agent configuration saved successfully! Note: Settings are stored in memory and will reset on deployment.")
+      alert("Agent configuration saved successfully! Your settings are now persisted.")
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to save configuration")
     } finally {

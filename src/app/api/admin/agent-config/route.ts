@@ -4,45 +4,14 @@ import { authOptions } from "@/lib/auth"
 import { db } from "@/db/drizzle"
 import { users } from "@/db/schema"
 import { eq } from "drizzle-orm"
+import { AgentConfigStore } from "@/lib/agent-config-store"
 
-// Agent configuration interface
-interface AgentConfig {
-  id: string
-  name: string
-  description: string
-  model: string
-  temperature: number
-  maxTokens: number
-  systemPrompt: string
-  tools: string[]
-  enabled: boolean
-  createdAt: string
-  updatedAt: string
-}
+// Get singleton instance of agent config store
+const configStore = AgentConfigStore.getInstance()
 
-// In-memory storage for agent configurations (in production, this should be in database)
-const agentConfigs: Map<string, AgentConfig> = new Map()
-
-// Initialize with default agent configuration
-const defaultAgent: AgentConfig = {
-  id: "campaign-creator",
-  name: "Campaign Creator Agent",
-  description: "AI agent for creating and managing ad campaigns",
-  model: "gpt-4",
-  temperature: 0.7,
-  maxTokens: 2000,
-  systemPrompt: "You are an expert marketing agent that helps create effective ad campaigns.",
-  tools: ["campaign_analysis", "audience_targeting", "budget_optimization"],
-  enabled: true,
-  createdAt: new Date().toISOString(),
-  updatedAt: new Date().toISOString()
-}
-
-agentConfigs.set(defaultAgent.id, defaultAgent)
-
-// Check if user is admin (in production, add role field to users table)
+// Check if user is admin
 async function isAdmin(email: string): Promise<boolean> {
-  // Direct check for admin access
+  // Hardcoded admin check for now
   return email === "jaime@outletmedia.net"
 }
 
@@ -70,7 +39,7 @@ export async function GET(request: NextRequest) {
     const agentId = searchParams.get("id")
 
     if (agentId) {
-      const agent = agentConfigs.get(agentId)
+      const agent = await configStore.get(agentId)
       if (!agent) {
         return NextResponse.json(
           { error: "Agent not found" },
@@ -81,7 +50,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Return all agents
-    const agents = Array.from(agentConfigs.values())
+    const agents = await configStore.getAll()
     return NextResponse.json(agents)
   } catch (error) {
     console.error("Error fetching agent config:", error)
@@ -113,18 +82,9 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json()
     
-    // Validate required fields
-    if (!body.id || !body.name) {
-      return NextResponse.json(
-        { error: "Missing required fields: id, name" },
-        { status: 400 }
-      )
-    }
-
-    // Create new agent configuration
-    const newAgent: AgentConfig = {
-      id: body.id,
-      name: body.name,
+    const newAgent = await configStore.create({
+      id: body.id || `agent-${Date.now()}`,
+      name: body.name || "New Agent",
       description: body.description || "",
       model: body.model || "gpt-4",
       temperature: body.temperature || 0.7,
@@ -132,11 +92,7 @@ export async function POST(request: NextRequest) {
       systemPrompt: body.systemPrompt || "",
       tools: body.tools || [],
       enabled: body.enabled !== false,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    }
-
-    agentConfigs.set(newAgent.id, newAgent)
+    })
 
     return NextResponse.json(newAgent, { status: 201 })
   } catch (error) {
@@ -176,7 +132,7 @@ export async function PUT(request: NextRequest) {
       )
     }
 
-    const existingAgent = agentConfigs.get(body.id)
+    const existingAgent = await configStore.get(body.id)
     if (!existingAgent) {
       return NextResponse.json(
         { error: "Agent not found" },
@@ -184,21 +140,16 @@ export async function PUT(request: NextRequest) {
       )
     }
 
-    // Update agent configuration
-    const updatedAgent: AgentConfig = {
-      ...existingAgent,
-      name: body.name || existingAgent.name,
-      description: body.description !== undefined ? body.description : existingAgent.description,
-      model: body.model || existingAgent.model,
-      temperature: body.temperature !== undefined ? body.temperature : existingAgent.temperature,
-      maxTokens: body.maxTokens !== undefined ? body.maxTokens : existingAgent.maxTokens,
-      systemPrompt: body.systemPrompt !== undefined ? body.systemPrompt : existingAgent.systemPrompt,
-      tools: body.tools || existingAgent.tools,
-      enabled: body.enabled !== undefined ? body.enabled : existingAgent.enabled,
-      updatedAt: new Date().toISOString()
-    }
-
-    agentConfigs.set(body.id, updatedAgent)
+    const updatedAgent = await configStore.update(body.id, {
+      name: body.name,
+      description: body.description,
+      model: body.model,
+      temperature: body.temperature,
+      maxTokens: body.maxTokens,
+      systemPrompt: body.systemPrompt,
+      tools: body.tools,
+      enabled: body.enabled,
+    })
 
     return NextResponse.json(updatedAgent)
   } catch (error) {
@@ -231,7 +182,7 @@ export async function DELETE(request: NextRequest) {
 
     const { searchParams } = new URL(request.url)
     const agentId = searchParams.get("id")
-
+    
     if (!agentId) {
       return NextResponse.json(
         { error: "Agent ID is required" },
@@ -239,19 +190,9 @@ export async function DELETE(request: NextRequest) {
       )
     }
 
-    if (!agentConfigs.has(agentId)) {
-      return NextResponse.json(
-        { error: "Agent not found" },
-        { status: 404 }
-      )
-    }
+    await configStore.delete(agentId)
 
-    agentConfigs.delete(agentId)
-
-    return NextResponse.json(
-      { message: "Agent deleted successfully" },
-      { status: 200 }
-    )
+    return NextResponse.json({ success: true })
   } catch (error) {
     console.error("Error deleting agent config:", error)
     return NextResponse.json(
