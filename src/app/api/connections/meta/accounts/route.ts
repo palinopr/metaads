@@ -4,7 +4,9 @@ import { authOptions } from "@/lib/auth"
 import { db } from "@/db/drizzle"
 import { sql } from "drizzle-orm"
 
-export async function GET() {
+export async function GET(request: Request) {
+  const { searchParams } = new URL(request.url)
+  const forceRefresh = searchParams.get('refresh') === 'true'
   try {
     const session = await getServerSession(authOptions)
     
@@ -26,42 +28,64 @@ export async function GET() {
       return NextResponse.json({ error: "No Meta connection found" }, { status: 404 })
     }
     
-    // Check if we have cached accounts
-    const cachedAccounts = await db.execute(sql`
-      SELECT 
-        account_id,
-        name,
-        currency,
-        timezone_name,
-        is_selected
-      FROM meta_ad_accounts
-      WHERE user_id = ${session.user.id}
-      AND is_active = true
-      ORDER BY name
-    `)
-    
-    if (cachedAccounts.rows.length > 0) {
-      return NextResponse.json({ accounts: cachedAccounts.rows })
+    // Check if we have cached accounts (unless force refresh)
+    if (!forceRefresh) {
+      const cachedAccounts = await db.execute(sql`
+        SELECT 
+          account_id,
+          name,
+          currency,
+          timezone_name,
+          is_selected
+        FROM meta_ad_accounts
+        WHERE user_id = ${session.user.id}
+        AND is_active = true
+        ORDER BY name
+      `)
+      
+      if (cachedAccounts.rows.length > 0) {
+        return NextResponse.json({ 
+          accounts: cachedAccounts.rows,
+          cached: true,
+          total: cachedAccounts.rows.length
+        })
+      }
     }
     
-    // Fetch ad accounts from Meta API
-    const adAccountsUrl = `https://graph.facebook.com/v18.0/me/adaccounts?fields=id,account_id,name,currency,timezone_name,account_status&access_token=${connection.access_token}`
+    // Fetch all ad accounts from Meta API with pagination
+    let allAccounts: any[] = []
+    let nextPageUrl = `https://graph.facebook.com/v18.0/me/adaccounts?fields=id,account_id,name,currency,timezone_name,account_status&limit=100&access_token=${connection.access_token}`
     
-    const response = await fetch(adAccountsUrl)
-    const data = await response.json()
-    
-    if (!response.ok || data.error) {
-      console.error('Meta API error:', data.error)
-      return NextResponse.json(
-        { error: data.error?.message || "Failed to fetch ad accounts" },
-        { status: 400 }
-      )
+    // Fetch all pages of ad accounts
+    while (nextPageUrl) {
+      const response = await fetch(nextPageUrl)
+      const data = await response.json()
+      
+      if (!response.ok || data.error) {
+        console.error('Meta API error:', data.error)
+        return NextResponse.json(
+          { error: data.error?.message || "Failed to fetch ad accounts" },
+          { status: 400 }
+        )
+      }
+      
+      // Add accounts from this page
+      if (data.data && data.data.length > 0) {
+        allAccounts = [...allAccounts, ...data.data]
+      }
+      
+      // Check for next page
+      nextPageUrl = data.paging?.next || null
     }
+    
+    console.log(`Fetched ${allAccounts.length} total ad accounts`)
     
     // Filter active accounts only (account_status: 1 = ACTIVE)
-    const activeAccounts = (data.data || []).filter(
+    const activeAccounts = allAccounts.filter(
       (account: any) => account.account_status === 1
     )
+    
+    console.log(`Found ${activeAccounts.length} active ad accounts`)
     
     // Store accounts in database
     if (activeAccounts.length > 0) {
@@ -108,7 +132,11 @@ export async function GET() {
       is_selected: false
     }))
     
-    return NextResponse.json({ accounts })
+    return NextResponse.json({ 
+      accounts,
+      cached: false,
+      total: accounts.length
+    })
   } catch (error) {
     console.error('Error fetching Meta ad accounts:', error)
     return NextResponse.json(
