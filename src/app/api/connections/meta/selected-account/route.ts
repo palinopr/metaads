@@ -4,13 +4,16 @@ import { authOptions } from "@/lib/auth"
 import { db } from "@/db/drizzle"
 import { sql } from "drizzle-orm"
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
     const session = await getServerSession(authOptions)
     
     if (!session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
+    
+    const { searchParams } = new URL(request.url)
+    const datePreset = searchParams.get('date_preset') || 'last_30d'
     
     // Get selected ad account
     const result = await db.execute(sql`
@@ -47,11 +50,15 @@ export async function GET() {
       
       const attempts = [
         {
-          name: "last_30d",
+          name: datePreset,
+          url: `https://graph.facebook.com/v18.0/act_${account.account_id}/insights?fields=impressions,clicks,spend,ctr,cpm&date_preset=${datePreset}&access_token=${account.access_token}`
+        },
+        {
+          name: "fallback_30d",
           url: `https://graph.facebook.com/v18.0/act_${account.account_id}/insights?fields=impressions,clicks,spend,ctr,cpm&date_preset=last_30d&access_token=${account.access_token}`
         },
         {
-          name: "last_7d", 
+          name: "fallback_7d", 
           url: `https://graph.facebook.com/v18.0/act_${account.account_id}/insights?fields=impressions,clicks,spend&date_preset=last_7d&access_token=${account.access_token}`
         },
         {

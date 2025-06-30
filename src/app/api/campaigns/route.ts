@@ -35,12 +35,13 @@ export async function GET(request: Request) {
     const account = result.rows[0]
     const { searchParams } = new URL(request.url)
     const limit = searchParams.get('limit') || '50'
+    const datePreset = searchParams.get('date_preset') || 'last_30d'
     
     try {
       // Fetch campaigns from Meta API
       console.log(`[Campaigns] Fetching campaigns for account ${account.account_id}`)
       
-      const campaignsUrl = `https://graph.facebook.com/v18.0/act_${account.account_id}/campaigns?fields=id,name,status,objective,created_time,updated_time,daily_budget,lifetime_budget,budget_remaining,effective_status,insights{impressions,clicks,spend,ctr,cpm,reach}&limit=${limit}&access_token=${account.access_token}`
+      const campaignsUrl = `https://graph.facebook.com/v18.0/act_${account.account_id}/campaigns?fields=id,name,status,objective,created_time,updated_time,daily_budget,lifetime_budget,budget_remaining,effective_status,insights.date_preset(${datePreset}){impressions,clicks,spend,ctr,cpm,reach}&limit=${limit}&access_token=${account.access_token}`
       
       const response = await fetch(campaignsUrl)
       const data = await response.json()

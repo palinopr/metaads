@@ -9,19 +9,12 @@ import {
   Eye, 
   DollarSign,
   BarChart3,
-  Calendar,
   Download,
   Filter,
   Plus
 } from "lucide-react"
 import Link from "next/link"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
+import { DateRangeSelector, type DatePreset } from "@/components/date-range-selector"
 
 interface AccountStats {
   impressions: number
@@ -42,15 +35,15 @@ interface SelectedAccount {
 export default function DashboardPage() {
   const [selectedAccount, setSelectedAccount] = useState<SelectedAccount | null>(null)
   const [loading, setLoading] = useState(true)
-  const [dateRange, setDateRange] = useState("last_30_days")
+  const [dateRange, setDateRange] = useState<DatePreset>("last_30d")
 
   useEffect(() => {
     fetchSelectedAccount()
-  }, [])
+  }, [dateRange])
 
   const fetchSelectedAccount = async () => {
     try {
-      const response = await fetch("/api/connections/meta/selected-account")
+      const response = await fetch(`/api/connections/meta/selected-account?date_preset=${dateRange}`)
       const data = await response.json()
       if (data.account) {
         setSelectedAccount(data.account)
@@ -124,19 +117,7 @@ export default function DashboardPage() {
         <div className="flex items-center justify-between mb-4">
           <h1 className="text-2xl font-semibold">Ads Manager</h1>
           <div className="flex items-center gap-3">
-            <Select value={dateRange} onValueChange={setDateRange}>
-              <SelectTrigger className="w-[180px]">
-                <Calendar className="mr-2 h-4 w-4" />
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="today">Today</SelectItem>
-                <SelectItem value="yesterday">Yesterday</SelectItem>
-                <SelectItem value="last_7_days">Last 7 days</SelectItem>
-                <SelectItem value="last_30_days">Last 30 days</SelectItem>
-                <SelectItem value="this_month">This month</SelectItem>
-              </SelectContent>
-            </Select>
+            <DateRangeSelector value={dateRange} onChange={setDateRange} />
             <Button variant="outline">
               <Filter className="mr-2 h-4 w-4" />
               Filters
@@ -161,7 +142,13 @@ export default function DashboardPage() {
               {formatCurrency(stats.spend, selectedAccount.currency)}
             </div>
             <p className="text-xs text-muted-foreground mt-1">
-              Last 30 days
+              {dateRange === "today" ? "Today" : 
+               dateRange === "yesterday" ? "Yesterday" :
+               dateRange === "last_7d" ? "Last 7 days" :
+               dateRange === "last_14d" ? "Last 14 days" :
+               dateRange === "last_30d" ? "Last 30 days" :
+               dateRange === "this_month" ? "This month" :
+               dateRange === "last_month" ? "Last month" : "Lifetime"}
             </p>
           </CardContent>
         </Card>
