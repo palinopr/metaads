@@ -91,17 +91,15 @@ export default function CampaignsPage() {
   }
 
   const getStatusBadge = (status: string) => {
-    const variants: Record<string, any> = {
-      ACTIVE: { variant: "default", className: "bg-green-100 text-green-800" },
-      PAUSED: { variant: "secondary", className: "bg-yellow-100 text-yellow-800" },
-      DELETED: { variant: "destructive", className: "bg-red-100 text-red-800" },
-      ARCHIVED: { variant: "outline", className: "" }
+    const statusClasses = {
+      ACTIVE: "badge-active",
+      PAUSED: "badge-paused",
+      DELETED: "badge-error",
+      ARCHIVED: "bg-gray-100 text-gray-700 border-gray-200"
     }
     
-    const config = variants[status] || variants.PAUSED
-    
     return (
-      <Badge variant={config.variant} className={config.className}>
+      <Badge className={`${statusClasses[status as keyof typeof statusClasses] || statusClasses.PAUSED} border`}>
         {status}
       </Badge>
     )
@@ -130,12 +128,12 @@ export default function CampaignsPage() {
   }
 
   return (
-    <div className="p-8 space-y-6">
+    <div className="p-6 space-y-4">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Campaigns</h1>
-          <p className="text-muted-foreground mt-1">
+          <h1 className="h1">Campaigns</h1>
+          <p className="text-muted-foreground text-sm">
             Manage and monitor your advertising campaigns
           </p>
         </div>
@@ -156,11 +154,11 @@ export default function CampaignsPage() {
 
       {/* Summary Cards */}
       {summary && (
-        <div className="grid gap-4 md:grid-cols-4">
-          <Card>
+        <div className="grid gap-3 md:grid-cols-4">
+          <Card className="card-elevated">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Active Campaigns</CardTitle>
-              <BarChart3 className="h-4 w-4 text-muted-foreground" />
+              <BarChart3 className="h-4 w-4 text-primary" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{summary.active_campaigns}</div>
@@ -170,30 +168,30 @@ export default function CampaignsPage() {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="card-elevated metric-card metric-card-spend">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Total Spend</CardTitle>
-              <DollarSign className="h-4 w-4 text-muted-foreground" />
+              <DollarSign className="h-4 w-4 text-red-500" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{formatCurrency(summary.total_spend)}</div>
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="card-elevated metric-card metric-card-impressions">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Impressions</CardTitle>
-              <Eye className="h-4 w-4 text-muted-foreground" />
+              <Eye className="h-4 w-4 text-blue-500" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{formatNumber(summary.total_impressions)}</div>
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="card-elevated metric-card metric-card-clicks">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Clicks</CardTitle>
-              <MousePointer className="h-4 w-4 text-muted-foreground" />
+              <MousePointer className="h-4 w-4 text-purple-500" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{formatNumber(summary.total_clicks)}</div>
@@ -226,7 +224,7 @@ export default function CampaignsPage() {
               </Button>
             </div>
           ) : (
-            <Table>
+            <Table className="table-compact">
               <TableHeader>
                 <TableRow>
                   <TableHead>Campaign</TableHead>

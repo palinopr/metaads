@@ -111,11 +111,11 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="p-8">
+    <div className="p-6">
       {/* Page Header */}
-      <div className="mb-6">
-        <div className="flex items-center justify-between mb-4">
-          <h1 className="text-2xl font-semibold">Ads Manager</h1>
+      <div className="mb-4">
+        <div className="flex items-center justify-between mb-3">
+          <h1 className="h1">Ads Manager</h1>
           <div className="flex items-center gap-3">
             <DateRangeSelector value={dateRange} onChange={setDateRange} />
             <Button variant="outline">
@@ -131,11 +131,11 @@ export default function DashboardPage() {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-8">
-        <Card>
+      <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4 mb-6">
+        <Card className="card-elevated metric-card metric-card-spend">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Spend</CardTitle>
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
+            <DollarSign className="h-4 w-4 text-red-500" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
@@ -153,10 +153,10 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="card-elevated metric-card metric-card-impressions">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Impressions</CardTitle>
-            <Eye className="h-4 w-4 text-muted-foreground" />
+            <Eye className="h-4 w-4 text-blue-500" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{formatNumber(stats.impressions)}</div>
@@ -166,10 +166,10 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="card-elevated metric-card metric-card-clicks">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Clicks</CardTitle>
-            <MousePointer className="h-4 w-4 text-muted-foreground" />
+            <MousePointer className="h-4 w-4 text-purple-500" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{formatNumber(stats.clicks)}</div>
@@ -179,10 +179,10 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="card-elevated">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Active Campaigns</CardTitle>
-            <BarChart3 className="h-4 w-4 text-muted-foreground" />
+            <BarChart3 className="h-4 w-4 text-primary" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">0</div>
