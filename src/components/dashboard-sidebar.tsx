@@ -2,6 +2,7 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
+import { useSession } from "next-auth/react"
 import { 
   Home,
   BarChart3,
@@ -10,7 +11,8 @@ import {
   FileText,
   DollarSign,
   Settings,
-  HelpCircle
+  HelpCircle,
+  Shield
 } from "lucide-react"
 
 const navigation = [
@@ -50,6 +52,11 @@ const navigation = [
 
 export function DashboardSidebar() {
   const pathname = usePathname()
+  const { data: session } = useSession()
+  
+  // Check if user is admin
+  const adminEmails = process.env.NEXT_PUBLIC_ADMIN_EMAILS?.split(",") || []
+  const isAdmin = session?.user?.email && adminEmails.includes(session.user.email)
 
   return (
     <div className="w-56 bg-card border-r h-full overflow-y-auto">
@@ -90,6 +97,31 @@ export function DashboardSidebar() {
             </nav>
           </div>
         ))}
+        
+        {/* Admin Section - Only visible to admins */}
+        {isAdmin && (
+          <div className="mb-6 border-t pt-6">
+            <h3 className="px-4 mb-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+              Administration
+            </h3>
+            <nav className="px-3">
+              <ul className="space-y-1">
+                <li>
+                  <Link
+                    href="/dashboard/admin/agent-settings"
+                    className={`
+                      sidebar-item
+                      ${pathname.startsWith("/dashboard/admin") ? "active" : ""}
+                    `}
+                  >
+                    <Shield className="h-4 w-4" />
+                    Admin Panel
+                  </Link>
+                </li>
+              </ul>
+            </nav>
+          </div>
+        )}
       </div>
     </div>
   )
