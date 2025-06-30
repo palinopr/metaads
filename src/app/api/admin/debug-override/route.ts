@@ -78,7 +78,7 @@ export async function GET(request: NextRequest) {
           admin: adminEmails[0]?.split('').map(c => c.charCodeAt(0)),
         },
       },
-      suggestions: [],
+      suggestions: [] as string[],
     }
     
     // Add suggestions if not admin
