@@ -66,3 +66,4 @@ src/
 - Responsive design# Deployment trigger: Mon Jun 30 13:19:54 CDT 2025
 # Force redeploy: Mon Jun 30 13:26:24 CDT 2025
 # Database URLs updated: Mon Jun 30 13:55:13 CDT 2025
+# Rebuild with updated NEXT_PUBLIC_ADMIN_EMAILS: Mon Jun 30 14:21:27 CDT 2025
