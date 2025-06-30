@@ -1,12 +1,12 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
+import { anthropic } from '@ai-sdk/anthropic'
+import { openai } from '@ai-sdk/openai'
+import { streamText, generateText } from 'ai'
 
-// This is a TypeScript implementation that would call the Python agent
-// In production, you'd either:
-// 1. Use a Python microservice
-// 2. Use LangChain JS
-// 3. Use a service like Modal or Replicate
+// Choose which AI provider to use
+const AI_PROVIDER = process.env.AI_PROVIDER || 'anthropic' // 'anthropic' or 'openai'
 
 interface AgentRequest {
   message: string
@@ -14,120 +14,179 @@ interface AgentRequest {
   context?: {
     accountId?: string
     previousCampaigns?: any[]
+    chatHistory?: Array<{ role: string; content: string }>
   }
 }
+
+const SYSTEM_PROMPT = `You are an expert Meta Ads campaign creation assistant. Your role is to help users create effective advertising campaigns.
+
+Your capabilities:
+- Analyze business objectives and recommend optimal campaign settings
+- Suggest precise audience targeting based on business type and goals  
+- Calculate appropriate budgets with expected results
+- Generate creative ad copy and content ideas
+- Guide users step-by-step through the campaign creation process
+
+Guidelines:
+- Be conversational and friendly, but professional
+- Ask clarifying questions to understand their needs better
+- Provide specific, actionable recommendations with reasoning
+- Format responses with clear structure using bullet points and sections
+- Include emojis sparingly for friendliness (max 2-3 per response)
+- Keep responses concise but informative
+
+When suggesting campaign settings, always include:
+- Campaign objective (with Meta's exact objective names)
+- Target audience details (demographics, interests, behaviors)
+- Budget recommendations (daily and total)
+- Expected results (impressions, clicks, conversions)
+- Creative suggestions
+
+Current Meta campaign objectives:
+- OUTCOME_AWARENESS (Brand awareness, Reach)
+- OUTCOME_TRAFFIC (Traffic, Landing page views) 
+- OUTCOME_ENGAGEMENT (Engagement, Messages, Video views)
+- OUTCOME_LEADS (Lead generation, Calls)
+- OUTCOME_APP_PROMOTION (App installs, App events)
+- OUTCOME_SALES (Conversions, Catalog sales)`
 
 export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
     if (!session?.user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return new Response('Unauthorized', { status: 401 })
     }
 
     const body: AgentRequest = await req.json()
     const { message, threadId = `thread_${Date.now()}`, context } = body
 
-    // For now, let's create a mock response showing how the agent would work
-    // In production, this would call your Python agent service
-    
-    const mockResponses: Record<string, string> = {
-      "create campaign": `I'll help you create a campaign! Let me start by understanding your business goals. 
+    // Build conversation history
+    const messages = [
+      { role: 'system' as const, content: SYSTEM_PROMPT },
+      ...(context?.chatHistory || []).map(msg => ({
+        role: msg.role as 'user' | 'assistant',
+        content: msg.content
+      })),
+      { role: 'user' as const, content: message }
+    ]
 
-What's your primary objective for this campaign?
-- 🛍️ **Drive Sales** - Get more purchases or conversions
-- 🚗 **Increase Traffic** - Bring more visitors to your website
-- 👁️ **Build Awareness** - Reach more people with your brand
-- 💬 **Boost Engagement** - Get more likes, comments, and shares
+    // Select AI model based on provider
+    const model = AI_PROVIDER === 'openai' 
+      ? openai('gpt-4-turbo-preview')
+      : anthropic('claude-3-sonnet-20240229')
 
-Just tell me a bit about what you want to achieve!`,
-      
-      "sales": `Great choice! A conversion-focused campaign is perfect for driving sales.
+    // Check if client accepts streaming
+    const acceptsStream = req.headers.get('accept')?.includes('text/event-stream')
 
-Based on your goal, I recommend:
-- **Campaign Objective**: Conversions
-- **Optimization**: Purchase events
-- **Initial Budget**: $50-100/day
+    if (acceptsStream) {
+      // Stream the response
+      const result = await streamText({
+        model,
+        messages,
+        temperature: 0.7,
+        maxTokens: 1000,
+      })
 
-Now, tell me about your target audience. Who are your ideal customers?`,
-      
-      "fitness": `Perfect! For a fitness business, here's my audience recommendation:
+      return result.toTextStreamResponse()
+    } else {
+      // Non-streaming response
+      const result = await generateText({
+        model,
+        messages,
+        temperature: 0.7,
+        maxTokens: 1000,
+      })
 
-**Target Audience:**
-- Age: 25-44 years old
-- Interests: Fitness, Wellness, Healthy Lifestyle, Gym
-- Behaviors: Engaged shoppers, Active lifestyle
-- Estimated Reach: 1.5-2M people
+      // Extract any structured data from the response
+      const response = result.text
+      const suggestedActions = extractSuggestedActions(response)
 
-**Budget Suggestion:**
-- Daily: $75 (optimal for this audience size)
-- Weekly: $525
-- Expected Results: ~3,750 clicks per week
-
-Would you like me to refine this audience or shall we move on to creating your ad content?`,
-      
-      "default": `I understand! Let me help you with that. Could you provide more details about:
-- Your business type
-- Your campaign goals
-- Your target audience
-- Your budget range
-
-This will help me create the perfect campaign for you!`
+      return Response.json({
+        success: true,
+        message: response,
+        threadId,
+        suggestedActions,
+        requiresApproval: false,
+        usage: result.usage
+      })
     }
-
-    // Simple keyword matching for demo
-    const lowerMessage = message.toLowerCase()
-    let response = mockResponses.default
-
-    if (lowerMessage.includes('create') && lowerMessage.includes('campaign')) {
-      response = mockResponses["create campaign"]
-    } else if (lowerMessage.includes('sales') || lowerMessage.includes('conversions')) {
-      response = mockResponses["sales"]
-    } else if (lowerMessage.includes('fitness') || lowerMessage.includes('health')) {
-      response = mockResponses["fitness"]
-    }
-
-    // In production, you would:
-    // 1. Call your Python agent API
-    // 2. Stream the response
-    // 3. Handle tool calls (create campaign, etc.)
-    
-    return NextResponse.json({
-      success: true,
-      message: response,
-      threadId,
-      suggestedActions: getSuggestedActions(lowerMessage),
-      requiresApproval: false
-    })
 
   } catch (error) {
     console.error('Agent error:', error)
-    return NextResponse.json(
-      { error: 'Failed to process agent request' },
-      { status: 500 }
-    )
+    
+    // Provide helpful error message
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+    const isApiKeyError = errorMessage.includes('API key') || errorMessage.includes('authentication')
+    
+    if (isApiKeyError) {
+      return Response.json({
+        success: false,
+        error: 'AI service not configured. Please add your API key.',
+        message: `To use the AI assistant, please add your ${AI_PROVIDER === 'openai' ? 'OpenAI' : 'Anthropic'} API key to your environment variables.`,
+        helpLink: AI_PROVIDER === 'openai' 
+          ? 'https://platform.openai.com/api-keys'
+          : 'https://console.anthropic.com/settings/keys'
+      }, { status: 500 })
+    }
+    
+    return Response.json({
+      success: false,
+      error: 'Failed to process your request',
+      message: 'I encountered an error. Please try again or contact support if the issue persists.'
+    }, { status: 500 })
   }
 }
 
-function getSuggestedActions(message: string): any[] {
-  if (message.includes('fitness')) {
-    return [
-      {
+function extractSuggestedActions(response: string): any[] {
+  const actions = []
+  
+  // Detect if response mentions specific campaign objectives
+  if (response.toLowerCase().includes('objective')) {
+    if (response.includes('OUTCOME_SALES') || response.includes('conversions')) {
+      actions.push({
         type: 'quick_reply',
-        label: 'Yes, create this audience',
-        action: 'confirm_audience'
-      },
-      {
+        label: 'Yes, I want to drive sales',
+        action: 'confirm_sales_objective'
+      })
+    }
+    if (response.includes('OUTCOME_TRAFFIC') || response.includes('traffic')) {
+      actions.push({
         type: 'quick_reply',
-        label: 'Adjust age range',
-        action: 'adjust_demographics'
-      },
-      {
-        type: 'quick_reply',
-        label: 'Change budget',
-        action: 'adjust_budget'
-      }
-    ]
+        label: 'I want more website traffic',
+        action: 'confirm_traffic_objective'
+      })
+    }
   }
   
-  return []
+  // Detect if asking about budget
+  if (response.toLowerCase().includes('budget')) {
+    actions.push(
+      {
+        type: 'quick_reply',
+        label: '$50/day',
+        action: 'set_budget_50'
+      },
+      {
+        type: 'quick_reply',
+        label: '$100/day',
+        action: 'set_budget_100'
+      },
+      {
+        type: 'quick_reply',
+        label: 'Custom budget',
+        action: 'set_budget_custom'
+      }
+    )
+  }
+  
+  // Detect if discussing audience
+  if (response.toLowerCase().includes('audience') || response.toLowerCase().includes('target')) {
+    actions.push({
+      type: 'quick_reply',
+      label: 'Help me define my audience',
+      action: 'define_audience'
+    })
+  }
+  
+  return actions
 }

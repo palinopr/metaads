@@ -48,15 +48,17 @@ export function AgentChat({
     {
       id: '1',
       role: 'assistant',
-      content: `Hi! I'm your AI Campaign Assistant. I can help you:
-      
-• Create optimized ad campaigns
-• Set up targeting and audiences
-• Recommend budgets
-• Generate ad creative ideas
+      content: `Hi! I'm your AI Campaign Assistant 🚀
 
-How can I help you today?`,
-      timestamp: new Date()
+I can help you create high-performing Meta ad campaigns. Whether you're new to advertising or looking to optimize your results, I'm here to guide you.
+
+What would you like to do today?`,
+      timestamp: new Date(),
+      suggestedActions: [
+        { type: 'quick_reply', label: 'Create a new campaign', action: 'create_campaign' },
+        { type: 'quick_reply', label: 'Get audience suggestions', action: 'audience_help' },
+        { type: 'quick_reply', label: 'Calculate my budget', action: 'budget_help' }
+      ]
     }
   ])
   const [input, setInput] = useState('')
@@ -86,6 +88,12 @@ How can I help you today?`,
     setIsLoading(true)
 
     try {
+      // Build chat history for context
+      const chatHistory = messages.slice(-10).map(msg => ({
+        role: msg.role,
+        content: msg.content
+      }))
+
       const response = await fetch('/api/agent/campaign', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -93,7 +101,8 @@ How can I help you today?`,
           message: input,
           threadId,
           context: {
-            agentType
+            agentType,
+            chatHistory
           }
         })
       })
@@ -109,13 +118,26 @@ How can I help you today?`,
           suggestedActions: data.suggestedActions
         }
         setMessages(prev => [...prev, assistantMessage])
+      } else {
+        // Show error with helpful message
+        const errorMessage: Message = {
+          id: (Date.now() + 1).toString(),
+          role: 'assistant',
+          content: data.message || 'Sorry, I encountered an error. Please try again.',
+          timestamp: new Date()
+        }
+        setMessages(prev => [...prev, errorMessage])
+        
+        if (data.helpLink) {
+          console.log('Get your API key at:', data.helpLink)
+        }
       }
     } catch (error) {
       console.error('Failed to send message:', error)
       const errorMessage: Message = {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
-        content: 'Sorry, I encountered an error. Please try again.',
+        content: 'Sorry, I couldn\'t connect to the AI service. Please check your internet connection and try again.',
         timestamp: new Date()
       }
       setMessages(prev => [...prev, errorMessage])
@@ -217,13 +239,13 @@ How can I help you today?`,
                   )}
                   <div
                     className={cn(
-                      "max-w-[80%] rounded-lg px-4 py-2",
+                      "max-w-[80%] rounded-lg px-4 py-3",
                       message.role === 'user'
                         ? 'bg-primary text-primary-foreground'
                         : 'bg-muted'
                     )}
                   >
-                    <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+                    <div className="text-sm whitespace-pre-wrap">{message.content}</div>
                     {message.suggestedActions && (
                       <div className="flex flex-wrap gap-2 mt-3">
                         {message.suggestedActions.map((action, idx) => (
