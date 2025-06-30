@@ -9,6 +9,23 @@ export const authOptions: NextAuthOptions = {
     FacebookProvider({
       clientId: process.env.FACEBOOK_APP_ID!,
       clientSecret: process.env.FACEBOOK_APP_SECRET!,
+      authorization: {
+        url: "https://www.facebook.com/v18.0/dialog/oauth",
+        params: {
+          scope: "email public_profile",
+          response_type: "code",
+          client_id: process.env.FACEBOOK_APP_ID!,
+        },
+      },
+      token: {
+        url: "https://graph.facebook.com/v18.0/oauth/access_token",
+      },
+      userinfo: {
+        url: "https://graph.facebook.com/me",
+        params: {
+          fields: "id,name,email,picture",
+        },
+      },
     }),
   ],
   debug: true, // Enable debug mode
