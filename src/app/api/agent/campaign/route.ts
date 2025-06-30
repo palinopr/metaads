@@ -6,7 +6,7 @@ import { openai } from '@ai-sdk/openai'
 import { streamText, generateText } from 'ai'
 
 // Choose which AI provider to use
-const AI_PROVIDER = process.env.AI_PROVIDER || 'anthropic' // 'anthropic' or 'openai'
+const AI_PROVIDER = process.env.AI_PROVIDER || 'openai' // 'anthropic' or 'openai'
 
 interface AgentRequest {
   message: string
