@@ -14,7 +14,7 @@ export async function GET() {
       new URL(supabaseUrl)
       urlValid = true
     } catch (e) {
-      urlError = e.message
+      urlError = e instanceof Error ? e.message : String(e)
     }
   }
   
