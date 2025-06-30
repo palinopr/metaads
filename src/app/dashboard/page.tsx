@@ -14,7 +14,8 @@ import {
   Plus
 } from "lucide-react"
 import Link from "next/link"
-import { DateRangeSelector, type DatePreset } from "@/components/date-range-selector"
+import { DateRangeSelector } from "@/components/date-range-selector"
+import { useDateRange } from "@/contexts/date-range-context"
 
 interface AccountStats {
   impressions: number
@@ -35,7 +36,7 @@ interface SelectedAccount {
 export default function DashboardPage() {
   const [selectedAccount, setSelectedAccount] = useState<SelectedAccount | null>(null)
   const [loading, setLoading] = useState(true)
-  const [dateRange, setDateRange] = useState<DatePreset>("last_30d")
+  const { dateRange, setDateRange } = useDateRange()
 
   useEffect(() => {
     fetchSelectedAccount()

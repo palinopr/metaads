@@ -6,7 +6,8 @@ import { useRouter } from "next/navigation"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { DateRangeSelector, type DatePreset } from "@/components/date-range-selector"
+import { DateRangeSelector } from "@/components/date-range-selector"
+import { useDateRange } from "@/contexts/date-range-context"
 import {
   Table,
   TableBody,
@@ -62,7 +63,7 @@ export default function CampaignsPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
   const [summary, setSummary] = useState<any>(null)
-  const [dateRange, setDateRange] = useState<DatePreset>("last_30d")
+  const { dateRange, setDateRange } = useDateRange()
 
   useEffect(() => {
     fetchCampaigns()

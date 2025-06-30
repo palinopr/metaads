@@ -38,7 +38,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { DateRangeSelector, type DatePreset } from "@/components/date-range-selector"
+import { DateRangeSelector } from "@/components/date-range-selector"
+import { useDateRange } from "@/contexts/date-range-context"
 
 interface Ad {
   id: string
@@ -83,7 +84,7 @@ export default function AdsPage() {
   const [summary, setSummary] = useState<any>(null)
   const [adsetName, setAdsetName] = useState("")
   const [campaignName, setCampaignName] = useState("")
-  const [dateRange, setDateRange] = useState<DatePreset>("last_30d")
+  const { dateRange, setDateRange } = useDateRange()
 
   useEffect(() => {
     fetchAds()

@@ -3,6 +3,7 @@ import { authOptions } from "@/lib/auth"
 import { redirect } from "next/navigation"
 import { DashboardSidebar } from "@/components/dashboard-sidebar"
 import { DashboardHeader } from "@/components/dashboard-header"
+import { DateRangeProvider } from "@/contexts/date-range-context"
 
 export default async function DashboardLayout({
   children,
@@ -16,15 +17,17 @@ export default async function DashboardLayout({
   }
 
   return (
-    <div className="min-h-screen flex flex-col">
-      <DashboardHeader />
-      <div className="flex flex-1">
-        <DashboardSidebar />
-        {/* Main content */}
-        <div className="flex-1 bg-gray-50">
-          <main>{children}</main>
+    <DateRangeProvider>
+      <div className="min-h-screen flex flex-col">
+        <DashboardHeader />
+        <div className="flex flex-1">
+          <DashboardSidebar />
+          {/* Main content */}
+          <div className="flex-1 bg-background">
+            <main>{children}</main>
+          </div>
         </div>
       </div>
-    </div>
+    </DateRangeProvider>
   )
 }
