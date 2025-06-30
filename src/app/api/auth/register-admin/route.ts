@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import bcrypt from 'bcryptjs'
 import { db } from '@/db/drizzle'
-import { user } from '@/db/schema'
+import { users } from '@/db/schema'
 
 export async function POST(request: NextRequest) {
   try {
@@ -18,7 +18,7 @@ export async function POST(request: NextRequest) {
     }
     
     // Check if user already exists
-    const existingUser = await db.query.user.findFirst({
+    const existingUser = await db.query.users.findFirst({
       where: (users, { eq }) => eq(users.email, email),
     })
     
@@ -33,7 +33,7 @@ export async function POST(request: NextRequest) {
     const hashedPassword = await bcrypt.hash(password, 10)
     
     // Create user
-    const newUser = await db.insert(user).values({
+    const newUser = await db.insert(users).values({
       email,
       password: hashedPassword,
       name: name || email.split('@')[0],
