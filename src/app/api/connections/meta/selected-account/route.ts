@@ -37,7 +37,8 @@ export async function GET() {
     let stats = null
     let debugInfo = {
       attempts: [] as any[],
-      finalStatus: "no_data"
+      finalStatus: "no_data",
+      error: undefined as string | undefined
     }
     
     // Attempt 1: Standard insights with date preset
