@@ -52,7 +52,7 @@ export default function CampaignDetailsPage() {
 
   useEffect(() => {
     fetchCampaign()
-  }, [campaignId])
+  }, [campaignId, dateRange])
 
   const fetchCampaign = async () => {
     try {
@@ -60,18 +60,14 @@ export default function CampaignDetailsPage() {
       setError("")
       
       // Fetch campaign details
-      const response = await fetch(`/api/campaigns?campaignId=${campaignId}`)
+      const response = await fetch(`/api/campaigns/${campaignId}/details?sync=true&date_preset=${dateRange}`)
       const data = await response.json()
       
       if (!response.ok) {
         throw new Error(data.error || "Failed to fetch campaign")
       }
       
-      if (data.campaigns && data.campaigns.length > 0) {
-        setCampaign(data.campaigns[0])
-      } else {
-        throw new Error("Campaign not found")
-      }
+      setCampaign(data)
     } catch (error: any) {
       setError(error.message)
     } finally {
