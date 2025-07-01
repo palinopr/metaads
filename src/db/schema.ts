@@ -88,7 +88,6 @@ export const metaConnections = pgTable("meta_connections", {
   id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
   userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
   accessToken: text("access_token").notNull(),
-  refreshToken: text("refresh_token"),
   expiresAt: timestamp("expires_at", { mode: "date" }).notNull(),
   scope: text("scope"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
