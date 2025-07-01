@@ -42,6 +42,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { MetaReconnectBanner } from "@/components/meta-reconnect-banner"
+import { DebugPanel } from "@/components/debug-panel"
 
 interface Campaign {
   id: string
@@ -85,10 +86,27 @@ export default function CampaignsPage() {
       }
       setError("")
       
-      // Only sync with Meta API when explicitly requested
-      const syncParam = forceSync ? '&sync=true' : ''
-      const response = await fetch(`/api/campaigns?date_preset=${dateRange}${syncParam}&includeInsights=true`)
+      // Use simple direct Meta API endpoint (like overview page does)
+      const url = forceSync 
+        ? `/api/campaigns?date_preset=${dateRange}&sync=true&includeInsights=true`
+        : `/api/campaigns/simple?date_preset=${dateRange}`
+      
+      console.log('[Campaigns Page] Fetching campaigns:', {
+        url,
+        dateRange,
+        forceSync
+      })
+      
+      const response = await fetch(url)
       const data = await response.json()
+      
+      console.log('[Campaigns Page] Response:', {
+        status: response.status,
+        ok: response.ok,
+        hasError: !!data.error,
+        campaignsCount: data.campaigns?.length || 0,
+        debug: data.debug
+      })
       
       if (data.error) {
         setError(data.error)
@@ -384,6 +402,9 @@ export default function CampaignsPage() {
       
       {/* AI Campaign Assistant */}
       <AgentChat agentType="campaign" />
+      
+      {/* Debug Panel - Only shows in development */}
+      <DebugPanel />
     </div>
   )
 }
