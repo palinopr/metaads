@@ -34,31 +34,37 @@ export async function GET(request: Request) {
     const syncWithMeta = searchParams.get('sync') === 'true'
     
     // Get selected ad account with token
-    const accountQuery = adAccountId
-      ? db.execute(sql`
-          SELECT 
-            ma.id as account_id,
-            ma.name as account_name,
-            mc.access_token
-          FROM meta_ad_accounts ma
-          JOIN meta_connections mc ON ma.connection_id = mc.id
-          WHERE ma.user_id = ${session.user.id}
-          AND ma.id = ${adAccountId}
-          LIMIT 1
-        `)
-      : db.execute(sql`
-          SELECT 
-            ma.id as account_id,
-            ma.name as account_name,
-            mc.access_token
-          FROM meta_ad_accounts ma
-          JOIN meta_connections mc ON ma.connection_id = mc.id
-          WHERE ma.user_id = ${session.user.id}
-          AND ma.is_selected = true
-          LIMIT 1
-        `)
-    
-    const result = await accountQuery
+    let result: any = { rows: [] }
+    try {
+      const accountQuery = adAccountId
+        ? db.execute(sql`
+            SELECT 
+              ma.id as account_id,
+              ma.name as account_name,
+              mc.access_token
+            FROM meta_ad_accounts ma
+            JOIN meta_connections mc ON ma.connection_id = mc.id
+            WHERE ma.user_id = ${session.user.id}
+            AND ma.id = ${adAccountId}
+            LIMIT 1
+          `)
+        : db.execute(sql`
+            SELECT 
+              ma.id as account_id,
+              ma.name as account_name,
+              mc.access_token
+            FROM meta_ad_accounts ma
+            JOIN meta_connections mc ON ma.connection_id = mc.id
+            WHERE ma.user_id = ${session.user.id}
+            AND ma.is_selected = true
+            LIMIT 1
+          `)
+      
+      result = await accountQuery
+    } catch (dbError) {
+      console.error('[Campaigns] Database connection error:', dbError)
+      // Continue with empty result, tables might not exist
+    }
     
     if (result.rows.length === 0) {
       return NextResponse.json({ 
@@ -70,16 +76,22 @@ export async function GET(request: Request) {
     const account = result.rows[0]
     
     // First, get campaigns from local database
-    const localCampaigns = await db
-      .select()
-      .from(campaigns)
-      .where(
-        and(
-          eq(campaigns.userId, session.user.id),
-          eq(campaigns.adAccountId, account.account_id as string)
+    let localCampaigns: any[] = []
+    try {
+      localCampaigns = await db
+        .select()
+        .from(campaigns)
+        .where(
+          and(
+            eq(campaigns.userId, session.user.id),
+            eq(campaigns.adAccountId, account.account_id as string)
+          )
         )
-      )
-      .orderBy(desc(campaigns.createdAt))
+        .orderBy(desc(campaigns.createdAt))
+    } catch (dbError) {
+      console.error('[Campaigns] Database error:', dbError)
+      // Tables might not exist yet, continue with empty local campaigns
+    }
     
     // If sync is requested, fetch from Meta API and update local DB
     if (syncWithMeta && account.access_token) {
@@ -108,67 +120,78 @@ export async function GET(request: Request) {
         })
       }
       
-      // Sync Meta campaigns to local DB
+      // Sync Meta campaigns to local DB (only if tables exist)
       if (data.data && data.data.length > 0) {
-        for (const metaCampaign of data.data) {
-          const existingCampaign = localCampaigns.find(c => c.metaId === metaCampaign.id)
-          
-          const campaignData = {
-            metaId: metaCampaign.id,
-            adAccountId: account.account_id as string,
-            userId: session.user.id,
-            name: metaCampaign.name,
-            status: metaCampaign.effective_status || metaCampaign.status,
-            objective: metaCampaign.objective,
-            budgetType: metaCampaign.daily_budget ? 'DAILY' : 'LIFETIME',
-            budgetAmount: metaCampaign.daily_budget 
-              ? parseInt(metaCampaign.daily_budget) 
-              : metaCampaign.lifetime_budget 
-              ? parseInt(metaCampaign.lifetime_budget)
-              : 0,
-            syncedAt: new Date(),
+        try {
+          for (const metaCampaign of data.data) {
+            const existingCampaign = localCampaigns.find(c => c.metaId === metaCampaign.id)
+            
+            const campaignData = {
+              metaId: metaCampaign.id,
+              adAccountId: account.account_id as string,
+              userId: session.user.id,
+              name: metaCampaign.name,
+              status: metaCampaign.effective_status || metaCampaign.status,
+              objective: metaCampaign.objective,
+              budgetType: metaCampaign.daily_budget ? 'DAILY' : 'LIFETIME',
+              budgetAmount: metaCampaign.daily_budget 
+                ? parseInt(metaCampaign.daily_budget) 
+                : metaCampaign.lifetime_budget 
+                ? parseInt(metaCampaign.lifetime_budget)
+                : 0,
+              syncedAt: new Date(),
+            }
+            
+            if (existingCampaign) {
+              // Update existing campaign
+              await db
+                .update(campaigns)
+                .set(campaignData)
+                .where(eq(campaigns.id, existingCampaign.id))
+            } else {
+              // Insert new campaign
+              await db.insert(campaigns).values(campaignData)
+            }
+            
+            // Store insights if available
+            if (metaCampaign.insights?.data?.[0]) {
+              const insights = metaCampaign.insights.data[0]
+              await db.insert(campaignInsights).values({
+                campaignId: existingCampaign?.id || metaCampaign.id,
+                date: new Date(),
+                impressions: parseInt(insights.impressions || 0),
+                clicks: parseInt(insights.clicks || 0),
+                spend: Math.round(parseFloat(insights.spend || 0) * 100), // Convert to cents
+                ctr: Math.round(parseFloat(insights.ctr || 0) * 10000),
+                cpm: Math.round(parseFloat(insights.cpm || 0) * 100),
+              }).onConflictDoNothing()
+            }
           }
-          
-          if (existingCampaign) {
-            // Update existing campaign
-            await db
-              .update(campaigns)
-              .set(campaignData)
-              .where(eq(campaigns.id, existingCampaign.id))
-          } else {
-            // Insert new campaign
-            await db.insert(campaigns).values(campaignData)
-          }
-          
-          // Store insights if available
-          if (metaCampaign.insights?.data?.[0]) {
-            const insights = metaCampaign.insights.data[0]
-            await db.insert(campaignInsights).values({
-              campaignId: existingCampaign?.id || metaCampaign.id,
-              date: new Date(),
-              impressions: parseInt(insights.impressions || 0),
-              clicks: parseInt(insights.clicks || 0),
-              spend: Math.round(parseFloat(insights.spend || 0) * 100), // Convert to cents
-              ctr: Math.round(parseFloat(insights.ctr || 0) * 10000),
-              cpm: Math.round(parseFloat(insights.cpm || 0) * 100),
-            }).onConflictDoNothing()
-          }
+        } catch (syncError) {
+          console.error('[Campaigns] Sync to DB error:', syncError)
+          // Continue without local sync
         }
         
         // Refresh local campaigns after sync
-        const updatedCampaigns = await db
-          .select()
-          .from(campaigns)
-          .where(
-            and(
-              eq(campaigns.userId, session.user.id),
-              eq(campaigns.adAccountId, account.account_id as string)
+        try {
+          const updatedCampaigns = await db
+            .select()
+            .from(campaigns)
+            .where(
+              and(
+                eq(campaigns.userId, session.user.id),
+                eq(campaigns.adAccountId, account.account_id as string)
+              )
             )
-          )
-          .orderBy(desc(campaigns.createdAt))
+            .orderBy(desc(campaigns.createdAt))
+          
+          localCampaigns = updatedCampaigns
+        } catch (refreshError) {
+          console.error('[Campaigns] Refresh error:', refreshError)
+        }
         
         return NextResponse.json({
-          campaigns: updatedCampaigns,
+          campaigns: localCampaigns,
           syncedAt: new Date().toISOString(),
           account: {
             id: account.account_id,
@@ -180,22 +203,32 @@ export async function GET(request: Request) {
     
     // Get insights if requested
     let campaignWithInsights = localCampaigns
-    if (includeInsights) {
-      campaignWithInsights = await Promise.all(
-        localCampaigns.map(async (campaign) => {
-          const latestInsight = await db
-            .select()
-            .from(campaignInsights)
-            .where(eq(campaignInsights.campaignId, campaign.id))
-            .orderBy(desc(campaignInsights.date))
-            .limit(1)
-          
-          return {
-            ...campaign,
-            insights: latestInsight[0] || null
-          }
-        })
-      )
+    if (includeInsights && localCampaigns.length > 0) {
+      try {
+        campaignWithInsights = await Promise.all(
+          localCampaigns.map(async (campaign) => {
+            try {
+              const latestInsight = await db
+                .select()
+                .from(campaignInsights)
+                .where(eq(campaignInsights.campaignId, campaign.id))
+                .orderBy(desc(campaignInsights.date))
+                .limit(1)
+              
+              return {
+                ...campaign,
+                insights: latestInsight[0] || null
+              }
+            } catch (insightError) {
+              // If insights table doesn't exist, return campaign without insights
+              return campaign
+            }
+          })
+        )
+      } catch (insightsError) {
+        console.error('[Campaigns] Insights error:', insightsError)
+        // Continue without insights
+      }
     }
     
     // Calculate summary stats
