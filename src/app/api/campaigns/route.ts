@@ -36,6 +36,13 @@ export async function GET(request: Request) {
     // Get selected ad account with token
     let accountData: any = null
     try {
+      console.log('[Campaigns] Query parameters:', {
+        adAccountId,
+        includeInsights,
+        syncWithMeta,
+        userId: session.user.id
+      })
+      
       const accountQuery = adAccountId
         ? db
             .select({
@@ -72,6 +79,16 @@ export async function GET(request: Request) {
       
       const result = await accountQuery
       accountData = result[0]
+      
+      console.log('[Campaigns] Account query result:', {
+        found: !!accountData,
+        account: accountData ? {
+          id: accountData.id,
+          account_id: accountData.account_id,
+          name: accountData.account_name,
+          hasToken: !!accountData.access_token
+        } : null
+      })
     } catch (dbError) {
       console.error('[Campaigns] Database connection error:', dbError)
       // Continue with empty result, tables might not exist
@@ -90,12 +107,17 @@ export async function GET(request: Request) {
     const isValidMetaAccountId = account.account_id && /^\d+$/.test(account.account_id)
     
     if (!isValidMetaAccountId) {
-      console.error('[Campaigns] Invalid Meta account ID format:', account.account_id)
+      console.error('[Campaigns] Invalid Meta account ID format:', {
+        account_id: account.account_id,
+        internal_id: account.id,
+        account_name: account.account_name
+      })
       return NextResponse.json({ 
         campaigns: [],
         error: "Invalid ad account ID format. Please reconnect your Meta account.",
         debug: {
           accountId: account.account_id,
+          internalId: account.id,
           accountName: account.account_name,
           help: "Visit /dashboard/connections to reconnect your Meta account"
         }
