@@ -13,9 +13,9 @@ export async function GET() {
     }
     
     // Check Meta connections
-    let connections = []
-    let adAccounts = []
-    let selectedAccount = null
+    let connections: any[] = []
+    let adAccounts: any[] = []
+    let selectedAccount: any = null
     
     try {
       const connResult = await db.execute(sql`
