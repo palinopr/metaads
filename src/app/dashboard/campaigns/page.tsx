@@ -42,7 +42,6 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { MetaReconnectBanner } from "@/components/meta-reconnect-banner"
-import { DebugPanel } from "@/components/debug-panel"
 
 interface Campaign {
   id: string
@@ -402,9 +401,6 @@ export default function CampaignsPage() {
       
       {/* AI Campaign Assistant */}
       <AgentChat agentType="campaign" />
-      
-      {/* Debug Panel - Only shows in development */}
-      <DebugPanel />
     </div>
   )
 }

@@ -2,7 +2,7 @@ import { NextResponse } from "next/server"
 import { getServerSession } from "next-auth/next"
 import { authOptions } from "@/lib/auth"
 import { db } from "@/db/drizzle"
-import { eq } from "drizzle-orm"
+import { eq, sql } from "drizzle-orm"
 import { metaAdAccounts, metaConnections, campaigns } from "@/db/schema"
 
 export async function GET(request: Request) {
@@ -33,7 +33,7 @@ export async function GET(request: Request) {
     const connections = await db
       .select({
         id: metaConnections.id,
-        hasToken: db.raw('CASE WHEN access_token IS NOT NULL THEN true ELSE false END'),
+        hasToken: sql`CASE WHEN access_token IS NOT NULL THEN true ELSE false END`,
         expiresAt: metaConnections.expiresAt,
         createdAt: metaConnections.createdAt,
         updatedAt: metaConnections.updatedAt
@@ -48,7 +48,7 @@ export async function GET(request: Request) {
     let campaignCount = 0
     if (selectedAccount) {
       const campaignResult = await db
-        .select({ count: db.raw('COUNT(*)::int') })
+        .select({ count: sql<number>`COUNT(*)::int` })
         .from(campaigns)
         .where(eq(campaigns.adAccountId, selectedAccount.id))
       
