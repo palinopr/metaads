@@ -188,3 +188,28 @@ export const optimizationLogs = pgTable("optimization_logs", {
   executedAt: timestamp("executed_at", { mode: "date" }),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 })
+
+export const demographicInsights = pgTable("demographic_insights", {
+  id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  campaignId: text("campaign_id").notNull().references(() => campaigns.id, { onDelete: "cascade" }),
+  adSetId: text("ad_set_id").references(() => adSets.id, { onDelete: "cascade" }),
+  adId: text("ad_id").references(() => ads.id, { onDelete: "cascade" }),
+  date: timestamp("date", { mode: "date" }).notNull(),
+  gender: text("gender").notNull(), // male, female, unknown
+  ageRange: text("age_range"), // 18-24, 25-34, 35-44, 45-54, 55-64, 65+
+  impressions: integer("impressions").notNull().default(0),
+  clicks: integer("clicks").notNull().default(0),
+  spend: integer("spend").notNull().default(0), // In cents
+  conversions: integer("conversions").notNull().default(0),
+  reach: integer("reach").notNull().default(0),
+  frequency: integer("frequency"), // Frequency * 100 for precision
+  ctr: integer("ctr"), // CTR * 10000 for precision
+  cpc: integer("cpc"), // Cost per click in cents
+  cpm: integer("cpm"), // Cost per mille in cents
+  costPerConversion: integer("cost_per_conversion"), // In cents
+  videoViews: integer("video_views"),
+  videoAvgTimeWatched: integer("video_avg_time_watched"), // In seconds
+  actions: jsonb("actions").$type<Record<string, any>>(), // Various action types
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+})

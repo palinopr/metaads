@@ -3,7 +3,7 @@ import { getServerSession } from "next-auth/next"
 import { authOptions } from "@/lib/auth"
 import { db } from "@/db/drizzle"
 import { eq, and, between, desc, sql } from "drizzle-orm"
-import { campaigns, campaignInsights, metaAdAccounts, metaConnections } from "@/db/schema"
+import { campaigns, campaignInsights, metaAdAccounts, metaConnections, demographicInsights } from "@/db/schema"
 
 export async function GET(
   request: Request,
@@ -21,6 +21,7 @@ export async function GET(
     const endDate = searchParams.get('endDate')
     const granularity = searchParams.get('granularity') || 'day' // day, week, month
     const sync = searchParams.get('sync') === 'true'
+    const breakdown = searchParams.get('breakdown') // gender, age, gender_age
 
     // Verify campaign ownership
     const campaign = await db
@@ -57,38 +58,78 @@ export async function GET(
           const insightsUrl = `https://graph.facebook.com/v18.0/${campaign[0].metaId}/insights`
           const params = new URLSearchParams({
             access_token: adAccount[0].accessToken,
-            fields: 'impressions,clicks,spend,ctr,cpm,conversions,actions,cost_per_action_type',
+            fields: 'impressions,clicks,spend,ctr,cpm,conversions,reach,frequency,actions,cost_per_action_type,video_views,video_avg_time_watched',
             time_range: JSON.stringify({
               since: startDate || new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
               until: endDate || new Date().toISOString().split('T')[0]
             }),
             time_increment: granularity === 'day' ? '1' : granularity === 'week' ? '7' : '30'
           })
+          
+          // Add breakdown if requested
+          if (breakdown) {
+            if (breakdown === 'gender_age') {
+              params.append('breakdowns', 'gender,age')
+            } else {
+              params.append('breakdowns', breakdown)
+            }
+          }
 
           const response = await fetch(`${insightsUrl}?${params}`)
           const data = await response.json()
 
           if (data.data && data.data.length > 0) {
             // Store insights in database
-            for (const insight of data.data) {
-              const insightData = {
-                campaignId: campaign[0].id,
-                date: new Date(insight.date_start),
-                impressions: parseInt(insight.impressions || 0),
-                clicks: parseInt(insight.clicks || 0),
-                spend: Math.round(parseFloat(insight.spend || 0) * 100), // Convert to cents
-                ctr: Math.round(parseFloat(insight.ctr || 0) * 10000),
-                cpm: Math.round(parseFloat(insight.cpm || 0) * 100),
-                conversions: parseInt(insight.conversions || 0),
-              }
+            if (breakdown) {
+              // Store demographic insights
+              for (const insight of data.data) {
+                const demographicData = {
+                  campaignId: campaign[0].id,
+                  date: new Date(insight.date_start),
+                  gender: insight.gender || 'unknown',
+                  ageRange: insight.age || null,
+                  impressions: parseInt(insight.impressions || 0),
+                  clicks: parseInt(insight.clicks || 0),
+                  spend: Math.round(parseFloat(insight.spend || 0) * 100), // Convert to cents
+                  conversions: parseInt(insight.conversions || 0),
+                  reach: parseInt(insight.reach || 0),
+                  frequency: insight.frequency ? Math.round(parseFloat(insight.frequency) * 100) : null,
+                  ctr: insight.ctr ? Math.round(parseFloat(insight.ctr) * 10000) : null,
+                  cpc: insight.clicks > 0 ? Math.round((parseFloat(insight.spend) * 100) / parseInt(insight.clicks)) : null,
+                  cpm: insight.cpm ? Math.round(parseFloat(insight.cpm) * 100) : null,
+                  costPerConversion: insight.conversions > 0 ? Math.round((parseFloat(insight.spend) * 100) / parseInt(insight.conversions)) : null,
+                  videoViews: parseInt(insight.video_views || 0),
+                  videoAvgTimeWatched: parseInt(insight.video_avg_time_watched || 0),
+                  actions: insight.actions || null,
+                }
 
-              await db
-                .insert(campaignInsights)
-                .values(insightData)
-                .onConflictDoUpdate({
-                  target: [campaignInsights.campaignId, campaignInsights.date],
-                  set: insightData
-                })
+                await db
+                  .insert(demographicInsights)
+                  .values(demographicData)
+                  .onConflictDoNothing() // Use constraint to prevent duplicates
+              }
+            } else {
+              // Store regular insights (aggregated)
+              for (const insight of data.data) {
+                const insightData = {
+                  campaignId: campaign[0].id,
+                  date: new Date(insight.date_start),
+                  impressions: parseInt(insight.impressions || 0),
+                  clicks: parseInt(insight.clicks || 0),
+                  spend: Math.round(parseFloat(insight.spend || 0) * 100), // Convert to cents
+                  ctr: Math.round(parseFloat(insight.ctr || 0) * 10000),
+                  cpm: Math.round(parseFloat(insight.cpm || 0) * 100),
+                  conversions: parseInt(insight.conversions || 0),
+                }
+
+                await db
+                  .insert(campaignInsights)
+                  .values(insightData)
+                  .onConflictDoUpdate({
+                    target: [campaignInsights.campaignId, campaignInsights.date],
+                    set: insightData
+                  })
+              }
             }
           }
         } catch (error) {
@@ -98,20 +139,57 @@ export async function GET(
     }
 
     // Build date filter
-    let dateFilter = eq(campaignInsights.campaignId, campaignId)
+    let dateFilter: any
+    let demographicDateFilter: any
+    
     if (startDate && endDate) {
       dateFilter = and(
         eq(campaignInsights.campaignId, campaignId),
         between(campaignInsights.date, new Date(startDate), new Date(endDate))
       )!
+      demographicDateFilter = and(
+        eq(demographicInsights.campaignId, campaignId),
+        between(demographicInsights.date, new Date(startDate), new Date(endDate))
+      )!
+    } else {
+      dateFilter = eq(campaignInsights.campaignId, campaignId)
+      demographicDateFilter = eq(demographicInsights.campaignId, campaignId)
     }
 
     // Get insights from database
-    const insights = await db
-      .select()
-      .from(campaignInsights)
-      .where(dateFilter)
-      .orderBy(desc(campaignInsights.date))
+    let insights: any[]
+    let demographicData: any[] = []
+    
+    if (breakdown) {
+      // Get demographic insights
+      demographicData = await db
+        .select()
+        .from(demographicInsights)
+        .where(demographicDateFilter)
+        .orderBy(desc(demographicInsights.date), demographicInsights.gender)
+      
+      // Aggregate demographic data by date for summary
+      insights = await db
+        .select({
+          campaignId: demographicInsights.campaignId,
+          date: demographicInsights.date,
+          impressions: sql<number>`SUM(${demographicInsights.impressions})`,
+          clicks: sql<number>`SUM(${demographicInsights.clicks})`,
+          spend: sql<number>`SUM(${demographicInsights.spend})`,
+          conversions: sql<number>`SUM(${demographicInsights.conversions})`,
+          reach: sql<number>`SUM(${demographicInsights.reach})`,
+        })
+        .from(demographicInsights)
+        .where(demographicDateFilter)
+        .groupBy(demographicInsights.campaignId, demographicInsights.date)
+        .orderBy(desc(demographicInsights.date))
+    } else {
+      insights = await db
+        .select()
+        .from(campaignInsights)
+        .where(dateFilter)
+        .orderBy(desc(campaignInsights.date))
+    }
 
     // Calculate aggregated metrics
     const aggregated = insights.reduce((acc, insight) => {
@@ -138,7 +216,7 @@ export async function GET(
       ? (aggregated.totalSpend / aggregated.totalImpressions) * 1000 / 100 
       : 0
 
-    return NextResponse.json({
+    const response: any = {
       campaign: {
         id: campaign[0].id,
         name: campaign[0].name,
@@ -163,7 +241,57 @@ export async function GET(
         start: startDate || insights[insights.length - 1]?.date,
         end: endDate || insights[0]?.date
       }
-    })
+    }
+    
+    // Add demographic breakdown if requested
+    if (breakdown && demographicData.length > 0) {
+      // Group demographic data by gender
+      const genderBreakdown = demographicData.reduce((acc, demo) => {
+        if (!acc[demo.gender]) {
+          acc[demo.gender] = {
+            impressions: 0,
+            clicks: 0,
+            spend: 0,
+            conversions: 0,
+            reach: 0,
+            dataPoints: []
+          }
+        }
+        
+        acc[demo.gender].impressions += demo.impressions
+        acc[demo.gender].clicks += demo.clicks
+        acc[demo.gender].spend += demo.spend
+        acc[demo.gender].conversions += demo.conversions || 0
+        acc[demo.gender].reach += demo.reach || 0
+        acc[demo.gender].dataPoints.push({
+          date: demo.date,
+          impressions: demo.impressions,
+          clicks: demo.clicks,
+          spend: demo.spend / 100,
+          ctr: demo.ctr ? demo.ctr / 10000 : 0,
+          cpm: demo.cpm ? demo.cpm / 100 : 0,
+          ageRange: demo.ageRange
+        })
+        
+        return acc
+      }, {} as Record<string, any>)
+      
+      // Calculate metrics for each gender
+      Object.keys(genderBreakdown).forEach(gender => {
+        const data = genderBreakdown[gender]
+        data.ctr = data.impressions > 0 ? ((data.clicks / data.impressions) * 100).toFixed(2) : 0
+        data.cpc = data.clicks > 0 ? (data.spend / data.clicks / 100).toFixed(2) : 0
+        data.cpm = data.impressions > 0 ? ((data.spend / data.impressions) * 1000 / 100).toFixed(2) : 0
+        data.spend = data.spend / 100 // Convert to dollars
+      })
+      
+      response.demographics = {
+        breakdown: breakdown,
+        data: genderBreakdown
+      }
+    }
+    
+    return NextResponse.json(response)
   } catch (error) {
     console.error('Error fetching campaign insights:', error)
     return NextResponse.json(
