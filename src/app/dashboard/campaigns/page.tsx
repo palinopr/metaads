@@ -30,7 +30,8 @@ import {
   RefreshCw,
   BarChart3,
   Brain,
-  AlertCircle
+  AlertCircle,
+  Users
 } from "lucide-react"
 import {
   DropdownMenu,
@@ -355,6 +356,7 @@ export default function CampaignsPage() {
                   <TableHead>Campaign</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Budget</TableHead>
+                  <TableHead>Gender Analytics</TableHead>
                   <TableHead className="text-right">Impressions</TableHead>
                   <TableHead className="text-right">Clicks</TableHead>
                   <TableHead className="text-right">Spend</TableHead>
@@ -387,6 +389,20 @@ export default function CampaignsPage() {
                           {campaign.budgetType === 'DAILY' ? '/day' : ' lifetime'}
                         </div>
                       )}
+                    </TableCell>
+                    <TableCell>
+                      <Button 
+                        variant="ghost" 
+                        size="sm"
+                        className="text-xs w-full"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          router.push(`/dashboard/campaigns/${campaign.id}`)
+                        }}
+                      >
+                        <Users className="mr-1 h-3 w-3" />
+                        View Analytics
+                      </Button>
                     </TableCell>
                     <TableCell className="text-right">
                       {formatNumber(campaign.insights?.impressions || 0)}

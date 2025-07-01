@@ -257,6 +257,7 @@ export default function AdSetsPage() {
                   <TableHead>Ad Set</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Budget</TableHead>
+                  <TableHead>Gender Split</TableHead>
                   <TableHead className="text-right">Impressions</TableHead>
                   <TableHead className="text-right">Clicks</TableHead>
                   <TableHead className="text-right">Spend</TableHead>
@@ -293,6 +294,20 @@ export default function AdSetsPage() {
                           {formatCurrency(adSet.lifetime_budget)} lifetime
                         </div>
                       )}
+                    </TableCell>
+                    <TableCell>
+                      <Button 
+                        variant="ghost" 
+                        size="sm"
+                        className="text-xs"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          router.push(`/dashboard/campaigns/${campaignId}/adsets/${adSet.id}?tab=gender`)
+                        }}
+                      >
+                        <Users className="mr-1 h-3 w-3" />
+                        View Gender
+                      </Button>
                     </TableCell>
                     <TableCell className="text-right">
                       {formatNumber(adSet.metrics?.impressions || 0)}

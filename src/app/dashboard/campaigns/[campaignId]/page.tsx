@@ -3,10 +3,9 @@
 import { useState, useEffect } from "react"
 import { useParams, useRouter } from "next/navigation"
 import Link from "next/link"
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { DateRangeSelector } from "@/components/date-range-selector"
 import { GenderAnalytics } from "@/components/gender-analytics"
@@ -209,57 +208,24 @@ export default function CampaignDetailsPage() {
         </div>
       )}
 
-      {/* Tabs */}
-      <Tabs defaultValue="gender" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="gender">
-            <Users className="mr-2 h-4 w-4" />
+      {/* Gender Analytics - Primary Section */}
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-semibold flex items-center gap-2">
+            <Users className="h-5 w-5" />
             Gender Analytics
-          </TabsTrigger>
-          <TabsTrigger value="adsets">
+          </h2>
+          <Button 
+            variant="outline"
+            onClick={() => router.push(`/dashboard/campaigns/${campaignId}/adsets`)}
+          >
             <Target className="mr-2 h-4 w-4" />
-            Ad Sets
-          </TabsTrigger>
-          <TabsTrigger value="insights">
-            <BarChart3 className="mr-2 h-4 w-4" />
-            Insights
-          </TabsTrigger>
-        </TabsList>
+            View Ad Sets
+          </Button>
+        </div>
         
-        <TabsContent value="gender" className="space-y-4">
-          <GenderAnalytics campaignId={campaignId} dateRange={dateRangeForApi} />
-        </TabsContent>
-        
-        <TabsContent value="adsets" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Ad Sets</CardTitle>
-              <CardDescription>
-                Manage ad sets for this campaign
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="text-center py-8">
-              <Button onClick={() => router.push(`/dashboard/campaigns/${campaignId}/adsets`)}>
-                View Ad Sets
-              </Button>
-            </CardContent>
-          </Card>
-        </TabsContent>
-        
-        <TabsContent value="insights" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Campaign Insights</CardTitle>
-              <CardDescription>
-                Detailed performance metrics over time
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="text-center py-8">
-              <p className="text-muted-foreground">Insights visualization coming soon</p>
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+        <GenderAnalytics campaignId={campaignId} dateRange={dateRangeForApi} />
+      </div>
     </div>
   )
 }
