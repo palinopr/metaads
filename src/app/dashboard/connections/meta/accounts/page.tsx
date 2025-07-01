@@ -77,7 +77,7 @@ export default function MetaAccountsPage() {
       // Set selected account if one exists
       const selected = fetchedAccounts.find((acc: AdAccount) => acc.is_selected)
       if (selected) {
-        setSelectedAccount(selected.account_id || selected.id)
+        setSelectedAccount(selected.id) // Use internal UUID
       }
     } catch (error: any) {
       setError(error.message)
@@ -245,7 +245,7 @@ export default function MetaAccountsPage() {
               <>
                 <RadioGroup value={selectedAccount} onValueChange={setSelectedAccount}>
                   {filteredAccounts.map((account) => {
-                    const accountId = account.account_id || account.id
+                    const accountId = account.id // Use internal UUID, not Meta's account_id
                     return (
                     <div
                       key={accountId}
@@ -258,7 +258,7 @@ export default function MetaAccountsPage() {
                       >
                         <div className="font-medium">{account.name}</div>
                         <div className="text-sm text-muted-foreground">
-                          ID: {accountId} • {account.currency} • {account.timezone_name}
+                          ID: {account.account_id || accountId} • {account.currency} • {account.timezone_name}
                         </div>
                       {account.is_selected && (
                         <div className="flex items-center gap-1 mt-1">

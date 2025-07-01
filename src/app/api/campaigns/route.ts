@@ -39,7 +39,8 @@ export async function GET(request: Request) {
       const accountQuery = adAccountId
         ? db
             .select({
-              account_id: sql`COALESCE(${metaAdAccounts.accountId}, ${metaAdAccounts.id})`,
+              id: metaAdAccounts.id,
+              account_id: metaAdAccounts.accountId,
               account_name: metaAdAccounts.name,
               access_token: metaConnections.accessToken
             })
@@ -54,7 +55,8 @@ export async function GET(request: Request) {
             .limit(1)
         : db
             .select({
-              account_id: sql`COALESCE(${metaAdAccounts.accountId}, ${metaAdAccounts.id})`,
+              id: metaAdAccounts.id,
+              account_id: metaAdAccounts.accountId,
               account_name: metaAdAccounts.name,
               access_token: metaConnections.accessToken
             })
@@ -109,7 +111,7 @@ export async function GET(request: Request) {
         .where(
           and(
             eq(campaigns.userId, session.user.id),
-            eq(campaigns.adAccountId, account.account_id as string)
+            eq(campaigns.adAccountId, account.id)
           )
         )
         .orderBy(desc(campaigns.createdAt))
@@ -153,7 +155,7 @@ export async function GET(request: Request) {
             
             const campaignData = {
               metaId: metaCampaign.id,
-              adAccountId: account.account_id as string,
+              adAccountId: account.id,
               userId: session.user.id,
               name: metaCampaign.name,
               status: metaCampaign.effective_status || metaCampaign.status,
@@ -205,7 +207,7 @@ export async function GET(request: Request) {
             .where(
               and(
                 eq(campaigns.userId, session.user.id),
-                eq(campaigns.adAccountId, account.account_id as string)
+                eq(campaigns.adAccountId, account.id)
               )
             )
             .orderBy(desc(campaigns.createdAt))

@@ -94,8 +94,8 @@ export const metaConnections = pgTable("meta_connections", {
 })
 
 export const metaAdAccounts = pgTable("meta_ad_accounts", {
-  id: text("id").primaryKey(), // This should be the Meta account ID, not UUID
-  accountId: text("account_id"), // Numeric Meta account ID (without act_ prefix)
+  id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()), // UUID primary key
+  accountId: text("account_id").notNull().unique(), // Meta's account ID (without act_ prefix)
   userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
   connectionId: text("connection_id").notNull().references(() => metaConnections.id, { onDelete: "cascade" }),
   name: text("name").notNull(),

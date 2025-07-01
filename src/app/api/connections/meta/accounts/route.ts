@@ -89,65 +89,52 @@ export async function GET(request: Request) {
     // Store accounts in database
     if (activeAccounts.length > 0) {
       for (const account of activeAccounts) {
-        // Use the numeric account ID (without act_ prefix) as the primary key
+        // Extract the numeric account ID (without act_ prefix)
         const numericAccountId = account.account_id.replace('act_', '')
         
-        await db.execute(sql`
-          INSERT INTO meta_ad_accounts (
-            id,
-            account_id,
-            user_id,
-            connection_id,
-            name,
-            currency,
-            timezone_name,
-            account_status,
-            is_selected,
-            created_at,
-            updated_at
-          ) VALUES (
-            ${numericAccountId},
-            ${numericAccountId},
-            ${session.user.id},
-            ${connection.id},
-            ${account.name},
-            ${account.currency},
-            ${account.timezone_name},
-            ${account.account_status},
-            false,
-            ${new Date()},
-            ${new Date()}
-          )
-          ON CONFLICT (id) 
-          DO UPDATE SET
-            account_id = ${numericAccountId},
-            name = ${account.name},
-            currency = ${account.currency},
-            timezone_name = ${account.timezone_name},
-            account_status = ${account.account_status},
-            updated_at = ${new Date()}
-        `)
+        await db
+          .insert(metaAdAccounts)
+          .values({
+            accountId: numericAccountId,
+            userId: session.user.id,
+            connectionId: connection.id,
+            name: account.name,
+            currency: account.currency,
+            timezone: account.timezone_name,
+            accountStatus: account.account_status,
+            isSelected: false,
+          })
+          .onConflictDoUpdate({
+            target: metaAdAccounts.accountId,
+            set: {
+              name: account.name,
+              currency: account.currency,
+              timezone: account.timezone_name,
+              accountStatus: account.account_status,
+              updatedAt: new Date(),
+            }
+          })
       }
     }
     
     // Get the updated accounts from database to include selection status
-    const updatedAccounts = await db.execute(sql`
-      SELECT 
-        id,
-        account_id,
-        name,
-        currency,
-        timezone_name,
-        is_selected
-      FROM meta_ad_accounts
-      WHERE user_id = ${session.user.id}
-      ORDER BY name
-    `)
+    const updatedAccounts = await db
+      .select({
+        id: metaAdAccounts.id,
+        account_id: metaAdAccounts.accountId,
+        name: metaAdAccounts.name,
+        currency: metaAdAccounts.currency,
+        timezone_name: metaAdAccounts.timezone,
+        is_selected: metaAdAccounts.isSelected
+      })
+      .from(metaAdAccounts)
+      .where(eq(metaAdAccounts.userId, session.user.id))
+      .orderBy(metaAdAccounts.name)
     
     // Return the accounts
-    const accounts = updatedAccounts.rows.map((account: any) => ({
+    const accounts = updatedAccounts.map((account) => ({
       id: account.id,
-      account_id: account.account_id || account.id,
+      account_id: account.account_id,
       name: account.name,
       currency: account.currency,
       timezone_name: account.timezone_name,

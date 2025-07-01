@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from "next/server"
 import { getServerSession } from "next-auth/next"
 import { authOptions } from "@/lib/auth"
 import { db } from "@/db/drizzle"
-import { sql } from "drizzle-orm"
+import { eq, and, or } from "drizzle-orm"
+import { metaAdAccounts } from "@/db/schema"
 
 export async function POST(request: NextRequest) {
   try {
@@ -19,31 +20,40 @@ export async function POST(request: NextRequest) {
     }
     
     // First, unselect all accounts for this user
-    await db.execute(sql`
-      UPDATE meta_ad_accounts
-      SET is_selected = false
-      WHERE user_id = ${session.user.id}
-    `)
+    await db
+      .update(metaAdAccounts)
+      .set({ isSelected: false })
+      .where(eq(metaAdAccounts.userId, session.user.id))
     
     // Then select the chosen account
-    const result = await db.execute(sql`
-      UPDATE meta_ad_accounts
-      SET 
-        is_selected = true,
-        updated_at = ${new Date()}
-      WHERE 
-        user_id = ${session.user.id}
-        AND (account_id = ${account_id} OR id = ${account_id})
-      RETURNING id, account_id, name
-    `)
+    const result = await db
+      .update(metaAdAccounts)
+      .set({ 
+        isSelected: true,
+        updatedAt: new Date()
+      })
+      .where(
+        and(
+          eq(metaAdAccounts.userId, session.user.id),
+          or(
+            eq(metaAdAccounts.accountId, account_id),
+            eq(metaAdAccounts.id, account_id)
+          )
+        )
+      )
+      .returning({
+        id: metaAdAccounts.id,
+        accountId: metaAdAccounts.accountId,
+        name: metaAdAccounts.name
+      })
     
-    if (result.rows.length === 0) {
+    if (result.length === 0) {
       return NextResponse.json({ error: "Account not found" }, { status: 404 })
     }
     
     return NextResponse.json({ 
       success: true,
-      account: result.rows[0]
+      account: result[0]
     })
   } catch (error) {
     console.error('Error selecting Meta ad account:', error)
