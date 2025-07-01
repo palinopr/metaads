@@ -89,7 +89,6 @@ export const metaConnections = pgTable("meta_connections", {
   userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
   accessToken: text("access_token").notNull(),
   expiresAt: timestamp("expires_at", { mode: "date" }).notNull(),
-  scope: text("scope"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 })

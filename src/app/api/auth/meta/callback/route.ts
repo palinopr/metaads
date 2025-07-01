@@ -62,30 +62,44 @@ export async function GET(request: NextRequest) {
     
     const finalAccessToken = longLivedData.access_token || tokenData.access_token
     
-    // Store connection in database
-    const connectionId = crypto.randomUUID()
-    await db.execute(sql`
-      INSERT INTO meta_connections (
-        id,
-        user_id,
-        access_token,
-        expires_at,
-        created_at,
-        updated_at
-      ) VALUES (
-        ${connectionId},
-        ${userId},
-        ${finalAccessToken},
-        ${new Date(Date.now() + (60 * 24 * 60 * 60 * 1000))}, -- 60 days
-        ${new Date()},
-        ${new Date()}
-      )
-      ON CONFLICT (user_id) 
-      DO UPDATE SET
-        access_token = ${finalAccessToken},
-        expires_at = ${new Date(Date.now() + (60 * 24 * 60 * 60 * 1000))},
-        updated_at = ${new Date()}
+    // Check if connection exists for this user
+    const existingConnection = await db.execute(sql`
+      SELECT id FROM meta_connections 
+      WHERE user_id = ${userId}
+      LIMIT 1
     `)
+    
+    if (existingConnection.rows.length > 0) {
+      // Update existing connection
+      await db.execute(sql`
+        UPDATE meta_connections 
+        SET 
+          access_token = ${finalAccessToken},
+          expires_at = ${new Date(Date.now() + (60 * 24 * 60 * 60 * 1000))},
+          updated_at = ${new Date()}
+        WHERE user_id = ${userId}
+      `)
+    } else {
+      // Create new connection
+      const connectionId = crypto.randomUUID()
+      await db.execute(sql`
+        INSERT INTO meta_connections (
+          id,
+          user_id,
+          access_token,
+          expires_at,
+          created_at,
+          updated_at
+        ) VALUES (
+          ${connectionId},
+          ${userId},
+          ${finalAccessToken},
+          ${new Date(Date.now() + (60 * 24 * 60 * 60 * 1000))},
+          ${new Date()},
+          ${new Date()}
+        )
+      `)
+    }
     
     // Redirect back to connections page
     return NextResponse.redirect(
