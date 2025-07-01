@@ -6,7 +6,7 @@ import { sql } from "drizzle-orm"
 
 export async function GET(
   request: Request,
-  { params }: { params: Promise<{ campaignId: string; adsetId: string }> }
+  { params }: { params: Promise<{ id: string; adsetId: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions)
@@ -15,7 +15,7 @@ export async function GET(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
     
-    const { campaignId, adsetId } = await params
+    const { id: campaignId, adsetId } = await params
     const { searchParams } = new URL(request.url)
     const datePreset = searchParams.get('date_preset') || 'last_30d'
     const limit = searchParams.get('limit') || '50'

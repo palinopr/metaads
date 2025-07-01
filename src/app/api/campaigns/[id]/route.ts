@@ -8,7 +8,7 @@ import { campaigns, campaignInsights, adSets, ads } from "@/db/schema"
 // Get single campaign with details
 export async function GET(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions)
@@ -16,7 +16,7 @@ export async function GET(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    const campaignId = params.id
+    const { id: campaignId } = await params
     const { searchParams } = new URL(request.url)
     const includeAdSets = searchParams.get('includeAdSets') === 'true'
     const includeAds = searchParams.get('includeAds') === 'true'
@@ -89,7 +89,7 @@ export async function GET(
 // Update campaign
 export async function PATCH(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions)
@@ -97,7 +97,7 @@ export async function PATCH(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const campaignId = params.id
+    const { id: campaignId } = await params
     const body = await request.json()
     const { name, status, budgetAmount, spendCap, endTime } = body
 
@@ -153,7 +153,7 @@ export async function PATCH(
 // Delete campaign
 export async function DELETE(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions)
@@ -161,7 +161,7 @@ export async function DELETE(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const campaignId = params.id
+    const { id: campaignId } = await params
 
     // Verify ownership and delete
     const deletedCampaign = await db

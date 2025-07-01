@@ -10,14 +10,14 @@ export const dynamic = 'force-dynamic'
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const session = await getServerSession(authOptions)
   if (!session?.user) {
     return new Response('Unauthorized', { status: 401 })
   }
 
-  const campaignId = params.id
+  const { id: campaignId } = await params
 
   // Verify campaign ownership
   const campaign = await db
