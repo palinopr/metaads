@@ -181,7 +181,7 @@ export default function CampaignsPage() {
               <DollarSign className="h-4 w-4 text-red-500" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{formatCurrency(summary.total_spend)}</div>
+              <div className="text-2xl font-bold">{formatCurrency(summary.total_spend || 0)}</div>
             </CardContent>
           </Card>
 
@@ -191,7 +191,7 @@ export default function CampaignsPage() {
               <Eye className="h-4 w-4 text-blue-500" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{formatNumber(summary.total_impressions)}</div>
+              <div className="text-2xl font-bold">{formatNumber(summary.total_impressions || 0)}</div>
             </CardContent>
           </Card>
 
@@ -201,7 +201,7 @@ export default function CampaignsPage() {
               <MousePointer className="h-4 w-4 text-purple-500" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{formatNumber(summary.total_clicks)}</div>
+              <div className="text-2xl font-bold">{formatNumber(summary.total_clicks || 0)}</div>
             </CardContent>
           </Card>
         </div>
