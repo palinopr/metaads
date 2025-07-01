@@ -367,7 +367,7 @@ export default function CampaignsPage() {
                   <TableRow 
                     key={campaign.id}
                     className="cursor-pointer hover:bg-gray-50"
-                    onClick={() => router.push(`/dashboard/campaigns/${campaign.id}/adsets`)}
+                    onClick={() => router.push(`/dashboard/campaigns/${campaign.id}`)}
                   >
                     <TableCell>
                       <div>
@@ -413,7 +413,7 @@ export default function CampaignsPage() {
                           <DropdownMenuItem 
                             onClick={(e) => {
                               e.stopPropagation()
-                              router.push(`/dashboard/campaigns/${campaign.id}/adsets`)
+                              router.push(`/dashboard/campaigns/${campaign.id}`)
                             }}
                           >
                             <TrendingUp className="mr-2 h-4 w-4" />
