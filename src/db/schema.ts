@@ -100,7 +100,7 @@ export const metaAdAccounts = pgTable("meta_ad_accounts", {
   connectionId: text("connection_id").notNull().references(() => metaConnections.id, { onDelete: "cascade" }),
   name: text("name").notNull(),
   currency: text("currency").notNull(),
-  timezone: text("timezone").notNull(),
+  timezone: text("timezone_name").notNull(),
   accountStatus: integer("account_status"),
   isSelected: boolean("is_selected").notNull().default(false),
   createdAt: timestamp("created_at").notNull().defaultNow(),

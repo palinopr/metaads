@@ -100,7 +100,7 @@ export async function GET(request: Request) {
             connection_id,
             name,
             currency,
-            timezone,
+            timezone_name,
             account_status,
             is_selected,
             created_at,
@@ -123,7 +123,7 @@ export async function GET(request: Request) {
             account_id = ${numericAccountId},
             name = ${account.name},
             currency = ${account.currency},
-            timezone = ${account.timezone_name},
+            timezone_name = ${account.timezone_name},
             account_status = ${account.account_status},
             updated_at = ${new Date()}
         `)
@@ -137,7 +137,7 @@ export async function GET(request: Request) {
         account_id,
         name,
         currency,
-        timezone as timezone_name,
+        timezone_name,
         is_selected
       FROM meta_ad_accounts
       WHERE user_id = ${session.user.id}
