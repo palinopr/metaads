@@ -20,7 +20,69 @@ export async function GET(
     const syncWithMeta = searchParams.get('sync') === 'true'
     const datePreset = searchParams.get('date_preset') || 'last_30d'
 
-    // Get campaign from database
+    // Check if campaignId is a Meta ID (numeric) or database UUID
+    const isMetaId = /^\d+$/.test(campaignId)
+    
+    // If it's a Meta ID, we need to fetch directly from Meta API
+    if (isMetaId) {
+      // Get selected ad account with token
+      const adAccount = await db
+        .select({
+          id: metaAdAccounts.id,
+          accountId: metaAdAccounts.accountId,
+          accessToken: metaConnections.accessToken
+        })
+        .from(metaAdAccounts)
+        .innerJoin(metaConnections, eq(metaAdAccounts.connectionId, metaConnections.id))
+        .where(
+          and(
+            eq(metaAdAccounts.userId, session.user.id),
+            eq(metaAdAccounts.isSelected, true)
+          )
+        )
+        .limit(1)
+
+      if (adAccount.length === 0 || !adAccount[0].accessToken) {
+        return NextResponse.json(
+          { error: 'No ad account selected or invalid token' },
+          { status: 400 }
+        )
+      }
+
+      // Fetch campaign directly from Meta
+      const campaignUrl = `https://graph.facebook.com/v18.0/${campaignId}?fields=id,name,status,effective_status,objective,created_time,daily_budget,lifetime_budget,insights.date_preset(${datePreset}){impressions,clicks,spend,ctr,cpm,conversions}&access_token=${adAccount[0].accessToken}`
+      
+      const response = await fetch(campaignUrl)
+      const metaData = await response.json()
+      
+      if (metaData.error) {
+        return NextResponse.json(
+          { error: metaData.error.message || 'Failed to fetch campaign from Meta' },
+          { status: 400 }
+        )
+      }
+
+      // Return campaign data in expected format
+      return NextResponse.json({
+        id: metaData.id,
+        name: metaData.name,
+        status: metaData.effective_status || metaData.status,
+        objective: metaData.objective,
+        budgetAmount: metaData.daily_budget || metaData.lifetime_budget || 0,
+        budgetType: metaData.daily_budget ? 'DAILY' : 'LIFETIME',
+        createdAt: metaData.created_time,
+        insights: metaData.insights?.data?.[0] ? {
+          impressions: parseInt(metaData.insights.data[0].impressions || 0),
+          clicks: parseInt(metaData.insights.data[0].clicks || 0),
+          spend: Math.round(parseFloat(metaData.insights.data[0].spend || 0) * 100),
+          ctr: Math.round(parseFloat(metaData.insights.data[0].ctr || 0) * 10000),
+          cpm: Math.round(parseFloat(metaData.insights.data[0].cpm || 0) * 100),
+          conversions: parseInt(metaData.insights.data[0].conversions || 0)
+        } : null
+      })
+    }
+    
+    // Otherwise, try to get from database
     const campaign = await db
       .select()
       .from(campaigns)
@@ -33,37 +95,6 @@ export async function GET(
       .limit(1)
 
     if (campaign.length === 0) {
-      // Try to fetch by metaId if campaignId looks like a Meta ID
-      if (/^\d+$/.test(campaignId)) {
-        const campaignByMetaId = await db
-          .select()
-          .from(campaigns)
-          .where(
-            and(
-              eq(campaigns.metaId, campaignId),
-              eq(campaigns.userId, session.user.id)
-            )
-          )
-          .limit(1)
-        
-        if (campaignByMetaId.length > 0) {
-          const result = campaignByMetaId[0]
-          
-          // Get latest insights
-          const insights = await db
-            .select()
-            .from(campaignInsights)
-            .where(eq(campaignInsights.campaignId, result.id))
-            .orderBy(desc(campaignInsights.date))
-            .limit(1)
-          
-          return NextResponse.json({
-            ...result,
-            insights: insights[0] || null
-          })
-        }
-      }
-      
       return NextResponse.json(
         { error: 'Campaign not found' },
         { status: 404 }
