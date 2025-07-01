@@ -42,6 +42,13 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { MetaReconnectBanner } from "@/components/meta-reconnect-banner"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 
 interface Campaign {
   id: string
@@ -70,6 +77,7 @@ export default function CampaignsPage() {
   const [summary, setSummary] = useState<any>(null)
   const [debugInfo, setDebugInfo] = useState<any>(null)
   const [lastSyncTime, setLastSyncTime] = useState<Date | null>(null)
+  const [statusFilter, setStatusFilter] = useState<string>("all")
   const { dateRange, setDateRange } = useDateRange()
 
   useEffect(() => {
@@ -154,6 +162,26 @@ export default function CampaignsPage() {
     return new Intl.NumberFormat('en-US').format(num)
   }
 
+  // Filter and sort campaigns
+  const filteredCampaigns = campaigns
+    .filter(campaign => {
+      if (statusFilter === "all") return true
+      return (campaign.effective_status || campaign.status).toLowerCase() === statusFilter.toLowerCase()
+    })
+    .sort((a, b) => {
+      // Sort by status first (Active > Others)
+      const statusA = (a.effective_status || a.status).toUpperCase()
+      const statusB = (b.effective_status || b.status).toUpperCase()
+      
+      if (statusA === "ACTIVE" && statusB !== "ACTIVE") return -1
+      if (statusA !== "ACTIVE" && statusB === "ACTIVE") return 1
+      
+      // Then sort by spend (higher spend first)
+      const spendA = a.insights?.spend || 0
+      const spendB = b.insights?.spend || 0
+      return spendB - spendA
+    })
+
   if (loading) {
     return (
       <div className="p-8">
@@ -181,6 +209,17 @@ export default function CampaignsPage() {
         </div>
         <div className="flex items-center gap-3">
           <DateRangeSelector value={dateRange} onChange={setDateRange} />
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="Filter by status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Campaigns</SelectItem>
+              <SelectItem value="active">Active</SelectItem>
+              <SelectItem value="paused">Paused</SelectItem>
+              <SelectItem value="archived">Archived</SelectItem>
+            </SelectContent>
+          </Select>
           <Button 
             variant="outline" 
             onClick={() => fetchCampaigns(true)}
@@ -282,7 +321,11 @@ export default function CampaignsPage() {
       {/* Campaigns Table */}
       <Card>
         <CardHeader>
-          <CardTitle>All Campaigns</CardTitle>
+          <CardTitle>
+            {statusFilter === 'all' ? 'All Campaigns' : 
+             statusFilter.charAt(0).toUpperCase() + statusFilter.slice(1) + ' Campaigns'}
+            {filteredCampaigns.length > 0 && ` (${filteredCampaigns.length})`}
+          </CardTitle>
         </CardHeader>
         <CardContent>
           {campaigns.length === 0 ? (
@@ -293,6 +336,16 @@ export default function CampaignsPage() {
                   <Plus className="mr-2 h-4 w-4" />
                   Create your first campaign
                 </Link>
+              </Button>
+            </div>
+          ) : filteredCampaigns.length === 0 ? (
+            <div className="text-center py-12">
+              <p className="text-muted-foreground mb-4">No {statusFilter !== 'all' ? statusFilter : ''} campaigns found</p>
+              <Button 
+                variant="outline" 
+                onClick={() => setStatusFilter('all')}
+              >
+                Show all campaigns
               </Button>
             </div>
           ) : (
@@ -310,7 +363,7 @@ export default function CampaignsPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {campaigns.map((campaign) => (
+                {filteredCampaigns.map((campaign) => (
                   <TableRow 
                     key={campaign.id}
                     className="cursor-pointer hover:bg-gray-50"
