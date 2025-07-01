@@ -27,7 +27,8 @@ import {
   RefreshCw,
   ArrowLeft,
   FileText,
-  Image
+  Image,
+  Users
 } from "lucide-react"
 import {
   DropdownMenu,
@@ -356,6 +357,12 @@ export default function AdsPage() {
                         <DropdownMenuContent align="end">
                           <DropdownMenuLabel>Actions</DropdownMenuLabel>
                           <DropdownMenuSeparator />
+                          <DropdownMenuItem 
+                            onClick={() => router.push(`/dashboard/campaigns/${campaignId}/adsets/${adsetId}/ads/${ad.id}?tab=gender`)}
+                          >
+                            <Users className="mr-2 h-4 w-4" />
+                            Gender Analytics
+                          </DropdownMenuItem>
                           <DropdownMenuItem disabled>
                             <TrendingUp className="mr-2 h-4 w-4" />
                             View Performance

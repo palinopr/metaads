@@ -26,7 +26,8 @@ import {
   MoreHorizontal,
   RefreshCw,
   ArrowLeft,
-  Target
+  Target,
+  Users
 } from "lucide-react"
 import {
   DropdownMenu,
@@ -315,6 +316,15 @@ export default function AdSetsPage() {
                         <DropdownMenuContent align="end">
                           <DropdownMenuLabel>Actions</DropdownMenuLabel>
                           <DropdownMenuSeparator />
+                          <DropdownMenuItem 
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              router.push(`/dashboard/campaigns/${campaignId}/adsets/${adSet.id}?tab=gender`)
+                            }}
+                          >
+                            <Users className="mr-2 h-4 w-4" />
+                            Gender Analytics
+                          </DropdownMenuItem>
                           <DropdownMenuItem disabled>
                             <TrendingUp className="mr-2 h-4 w-4" />
                             View Details

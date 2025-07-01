@@ -22,6 +22,8 @@ import {
 
 interface GenderAnalyticsProps {
   campaignId: string
+  adSetId?: string
+  adId?: string
   dateRange?: {
     start: string
     end: string
@@ -55,7 +57,7 @@ const GENDER_LABELS = {
   unknown: "Unknown"
 }
 
-export function GenderAnalytics({ campaignId, dateRange }: GenderAnalyticsProps) {
+export function GenderAnalytics({ campaignId, adSetId, adId, dateRange }: GenderAnalyticsProps) {
   const [loading, setLoading] = useState(true)
   const [syncing, setSyncing] = useState(false)
   const [data, setData] = useState<any>(null)
@@ -64,7 +66,7 @@ export function GenderAnalytics({ campaignId, dateRange }: GenderAnalyticsProps)
 
   useEffect(() => {
     fetchDemographics()
-  }, [campaignId, dateRange])
+  }, [campaignId, adSetId, adId, dateRange])
 
   const fetchDemographics = async (sync = false) => {
     try {
@@ -79,6 +81,8 @@ export function GenderAnalytics({ campaignId, dateRange }: GenderAnalyticsProps)
         metric,
         ...(dateRange?.start && { startDate: dateRange.start }),
         ...(dateRange?.end && { endDate: dateRange.end }),
+        ...(adSetId && { adSetId }),
+        ...(adId && { adId }),
         ...(sync && { sync: "true" })
       })
 

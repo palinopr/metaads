@@ -21,6 +21,8 @@ export async function GET(
     const endDate = searchParams.get('endDate')
     const metric = searchParams.get('metric') || 'impressions' // impressions, clicks, spend, conversions
     const sync = searchParams.get('sync') === 'true'
+    const adSetId = searchParams.get('adSetId')
+    const adId = searchParams.get('adId')
 
     // Verify campaign ownership
     const campaign = await db
@@ -106,13 +108,21 @@ export async function GET(
     }
 
     // Build date filter
-    let dateFilter = eq(demographicInsights.campaignId, campaignId)
-    if (startDate && endDate) {
-      dateFilter = and(
-        eq(demographicInsights.campaignId, campaignId),
-        between(demographicInsights.date, new Date(startDate), new Date(endDate))
-      )!
+    let filters = [eq(demographicInsights.campaignId, campaignId)]
+    
+    if (adSetId) {
+      filters.push(eq(demographicInsights.adSetId, adSetId))
     }
+    
+    if (adId) {
+      filters.push(eq(demographicInsights.adId, adId))
+    }
+    
+    if (startDate && endDate) {
+      filters.push(between(demographicInsights.date, new Date(startDate), new Date(endDate)))
+    }
+    
+    const dateFilter = and(...filters)!
 
     // Get demographic insights grouped by gender
     const genderData = await db
