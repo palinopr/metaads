@@ -29,7 +29,8 @@ import {
   MoreHorizontal,
   RefreshCw,
   BarChart3,
-  Brain
+  Brain,
+  AlertCircle
 } from "lucide-react"
 import {
   DropdownMenu,
@@ -46,12 +47,12 @@ interface Campaign {
   id: string
   name: string
   status: string
-  effective_status: string
+  effective_status?: string
   objective: string
-  created_time: string
-  daily_budget?: number
-  lifetime_budget?: number
-  metrics?: {
+  created_time?: string
+  budgetAmount?: number
+  budgetType?: string
+  insights?: {
     impressions: number
     clicks: number
     spend: number
@@ -64,21 +65,29 @@ export default function CampaignsPage() {
   const router = useRouter()
   const [campaigns, setCampaigns] = useState<Campaign[]>([])
   const [loading, setLoading] = useState(true)
+  const [syncing, setSyncing] = useState(false)
   const [error, setError] = useState("")
   const [summary, setSummary] = useState<any>(null)
   const [debugInfo, setDebugInfo] = useState<any>(null)
+  const [lastSyncTime, setLastSyncTime] = useState<Date | null>(null)
   const { dateRange, setDateRange } = useDateRange()
 
   useEffect(() => {
     fetchCampaigns()
   }, [dateRange])
 
-  const fetchCampaigns = async () => {
+  const fetchCampaigns = async (forceSync = false) => {
     try {
-      setLoading(true)
+      if (forceSync) {
+        setSyncing(true)
+      } else {
+        setLoading(true)
+      }
       setError("")
       
-      const response = await fetch(`/api/campaigns?date_preset=${dateRange}&sync=true&includeInsights=true`)
+      // Only sync with Meta API when explicitly requested
+      const syncParam = forceSync ? '&sync=true' : ''
+      const response = await fetch(`/api/campaigns?date_preset=${dateRange}${syncParam}&includeInsights=true`)
       const data = await response.json()
       
       if (data.error) {
@@ -88,12 +97,16 @@ export default function CampaignsPage() {
         setCampaigns(data.campaigns || [])
         setSummary(data.summary)
         setDebugInfo(null)
+        if (forceSync && data.syncedAt) {
+          setLastSyncTime(new Date(data.syncedAt))
+        }
       }
     } catch (error: any) {
       setError("Failed to fetch campaigns")
       console.error("Error fetching campaigns:", error)
     } finally {
       setLoading(false)
+      setSyncing(false)
     }
   }
 
@@ -142,13 +155,22 @@ export default function CampaignsPage() {
           <h1 className="h1">Campaigns</h1>
           <p className="text-muted-foreground text-sm">
             Manage and monitor your advertising campaigns
+            {lastSyncTime && (
+              <span className="ml-2 text-xs">
+                • Last synced: {lastSyncTime.toLocaleTimeString()}
+              </span>
+            )}
           </p>
         </div>
         <div className="flex items-center gap-3">
           <DateRangeSelector value={dateRange} onChange={setDateRange} />
-          <Button variant="outline" onClick={fetchCampaigns}>
-            <RefreshCw className="mr-2 h-4 w-4" />
-            Refresh
+          <Button 
+            variant="outline" 
+            onClick={() => fetchCampaigns(true)}
+            disabled={syncing}
+          >
+            <RefreshCw className={`mr-2 h-4 w-4 ${syncing ? 'animate-spin' : ''}`} />
+            {syncing ? 'Syncing...' : 'Sync with Meta'}
           </Button>
           <Button variant="outline" onClick={() => router.push('/dashboard/ai-lab')}>
             <Brain className="mr-2 h-4 w-4" />
@@ -214,11 +236,31 @@ export default function CampaignsPage() {
       {/* Error Alert or Reconnect Banner */}
       {debugInfo ? (
         <MetaReconnectBanner debug={debugInfo} />
-      ) : error && (
-        <Alert variant="destructive">
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
-      )}
+      ) : error ? (
+        error === "No ad account selected" ? (
+          <Alert>
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>
+              <div className="space-y-2">
+                <p>{error}</p>
+                <Button 
+                  asChild 
+                  size="sm"
+                  variant="outline"
+                >
+                  <Link href="/dashboard/connections/meta/accounts">
+                    Select Ad Account
+                  </Link>
+                </Button>
+              </div>
+            </AlertDescription>
+          </Alert>
+        ) : (
+          <Alert variant="destructive">
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )
+      ) : null}
 
       {/* Campaigns Table */}
       <Card>
@@ -266,31 +308,27 @@ export default function CampaignsPage() {
                       </div>
                     </TableCell>
                     <TableCell>
-                      {getStatusBadge(campaign.effective_status)}
+                      {getStatusBadge(campaign.effective_status || campaign.status)}
                     </TableCell>
                     <TableCell>
-                      {campaign.daily_budget && (
+                      {campaign.budgetAmount && (
                         <div className="text-sm">
-                          {formatCurrency(campaign.daily_budget)}/day
-                        </div>
-                      )}
-                      {campaign.lifetime_budget && (
-                        <div className="text-sm">
-                          {formatCurrency(campaign.lifetime_budget)} lifetime
+                          {formatCurrency(campaign.budgetAmount / 100)}
+                          {campaign.budgetType === 'DAILY' ? '/day' : ' lifetime'}
                         </div>
                       )}
                     </TableCell>
                     <TableCell className="text-right">
-                      {formatNumber(campaign.metrics?.impressions || 0)}
+                      {formatNumber(campaign.insights?.impressions || 0)}
                     </TableCell>
                     <TableCell className="text-right">
-                      {formatNumber(campaign.metrics?.clicks || 0)}
+                      {formatNumber(campaign.insights?.clicks || 0)}
                     </TableCell>
                     <TableCell className="text-right">
-                      {formatCurrency(campaign.metrics?.spend || 0)}
+                      {formatCurrency((campaign.insights?.spend || 0) / 100)}
                     </TableCell>
                     <TableCell className="text-right">
-                      {campaign.metrics?.ctr ? `${campaign.metrics.ctr.toFixed(2)}%` : "-"}
+                      {campaign.insights?.ctr ? `${(campaign.insights.ctr / 100).toFixed(2)}%` : "-"}
                     </TableCell>
                     <TableCell>
                       <DropdownMenu>
@@ -321,7 +359,7 @@ export default function CampaignsPage() {
                             AI Optimize
                           </DropdownMenuItem>
                           <DropdownMenuItem disabled>
-                            {campaign.effective_status === "ACTIVE" ? (
+                            {(campaign.effective_status || campaign.status) === "ACTIVE" ? (
                               <>
                                 <Pause className="mr-2 h-4 w-4" />
                                 Pause Campaign

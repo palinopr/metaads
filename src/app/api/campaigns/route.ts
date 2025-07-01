@@ -221,41 +221,47 @@ export async function GET(request: Request) {
     let campaignWithInsights = localCampaigns
     if (includeInsights && localCampaigns.length > 0) {
       try {
-        campaignWithInsights = await Promise.all(
-          localCampaigns.map(async (campaign) => {
-            try {
-              const latestInsight = await db
-                .select()
-                .from(campaignInsights)
-                .where(eq(campaignInsights.campaignId, campaign.id))
-                .orderBy(desc(campaignInsights.date))
-                .limit(1)
-              
-              return {
-                ...campaign,
-                insights: latestInsight[0] || null
-              }
-            } catch (insightError) {
-              // If insights table doesn't exist, return campaign without insights
-              return campaign
-            }
-          })
-        )
+        // Fetch all insights in a single query instead of N+1 queries
+        const campaignIds = localCampaigns.map(c => c.id)
+        const allInsights = await db
+          .select()
+          .from(campaignInsights)
+          .where(sql`${campaignInsights.campaignId} IN ${campaignIds}`)
+          .orderBy(desc(campaignInsights.date))
+        
+        // Group insights by campaign ID and get the latest for each
+        const insightsMap = new Map()
+        allInsights.forEach(insight => {
+          if (!insightsMap.has(insight.campaignId) || 
+              insight.date > insightsMap.get(insight.campaignId).date) {
+            insightsMap.set(insight.campaignId, insight)
+          }
+        })
+        
+        // Map insights back to campaigns
+        campaignWithInsights = localCampaigns.map(campaign => ({
+          ...campaign,
+          insights: insightsMap.get(campaign.id) || null
+        }))
       } catch (insightsError) {
         console.error('[Campaigns] Insights error:', insightsError)
         // Continue without insights
       }
     }
     
-    // Calculate summary stats
+    // Calculate summary stats including insights data
     const summary = {
       total_campaigns: campaignWithInsights.length,
       active_campaigns: campaignWithInsights.filter(c => c.status === 'ACTIVE').length,
       paused_campaigns: campaignWithInsights.filter(c => c.status === 'PAUSED').length,
       total_budget: campaignWithInsights.reduce((sum, c) => sum + (c.budgetAmount || 0), 0) / 100,
+      total_spend: campaignWithInsights.reduce((sum, c) => sum + (c.insights?.spend || 0), 0) / 100,
+      total_impressions: campaignWithInsights.reduce((sum, c) => sum + (c.insights?.impressions || 0), 0),
+      total_clicks: campaignWithInsights.reduce((sum, c) => sum + (c.insights?.clicks || 0), 0),
     }
     
-    return NextResponse.json({
+    // Add caching headers for non-sync requests
+    const response = NextResponse.json({
       campaigns: campaignWithInsights,
       summary,
       account: {
@@ -263,6 +269,13 @@ export async function GET(request: Request) {
         name: account.account_name
       }
     })
+    
+    // Cache for 5 minutes if not syncing
+    if (!syncWithMeta) {
+      response.headers.set('Cache-Control', 'private, max-age=300')
+    }
+    
+    return response
     
   } catch (error) {
     console.error('Error in campaigns endpoint:', error)
