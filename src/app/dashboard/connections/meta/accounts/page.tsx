@@ -113,11 +113,16 @@ export default function MetaAccountsPage() {
       }
       
       setSuccess("Ad account selected successfully!")
+      
+      // Refresh the accounts to show updated selection
+      await fetchAdAccounts()
+      
       setTimeout(() => {
-        router.push("/dashboard")
+        router.push("/dashboard/campaigns")
       }, 1500)
     } catch (error: any) {
-      setError(error.message)
+      console.error('Account selection error:', error)
+      setError(error.message || "Failed to select account")
     } finally {
       setSaving(false)
     }

@@ -47,8 +47,23 @@ export async function POST(request: NextRequest) {
     })
   } catch (error) {
     console.error('Error selecting Meta ad account:', error)
+    
+    // Provide more detailed error message
+    let errorMessage = 'Failed to select ad account'
+    if (error instanceof Error) {
+      errorMessage = error.message
+      // Log the full error for debugging
+      console.error('Full error details:', {
+        message: error.message,
+        stack: error.stack
+      })
+    }
+    
     return NextResponse.json(
-      { error: 'Failed to select ad account' },
+      { 
+        error: errorMessage,
+        details: error instanceof Error ? error.message : 'Unknown error'
+      },
       { status: 500 }
     )
   }
