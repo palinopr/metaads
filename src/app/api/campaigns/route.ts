@@ -33,13 +33,13 @@ export async function GET(request: Request) {
     const includeInsights = searchParams.get('includeInsights') === 'true'
     const syncWithMeta = searchParams.get('sync') === 'true'
     
-    // Get selected ad account with token
+    // Get selected ad account with token - try both old and new schema
     let result: any = { rows: [] }
     try {
       const accountQuery = adAccountId
         ? db.execute(sql`
             SELECT 
-              ma.id as account_id,
+              COALESCE(ma.account_id, ma.id) as account_id,
               ma.name as account_name,
               mc.access_token
             FROM meta_ad_accounts ma
@@ -50,7 +50,7 @@ export async function GET(request: Request) {
           `)
         : db.execute(sql`
             SELECT 
-              ma.id as account_id,
+              COALESCE(ma.account_id, ma.id) as account_id,
               ma.name as account_name,
               mc.access_token
             FROM meta_ad_accounts ma
@@ -74,6 +74,22 @@ export async function GET(request: Request) {
     }
     
     const account = result.rows[0]
+    
+    // Check if account_id looks like a UUID (wrong format)
+    const isValidMetaAccountId = account.account_id && /^\d+$/.test(account.account_id)
+    
+    if (!isValidMetaAccountId) {
+      console.error('[Campaigns] Invalid Meta account ID format:', account.account_id)
+      return NextResponse.json({ 
+        campaigns: [],
+        error: "Invalid ad account ID format. Please reconnect your Meta account.",
+        debug: {
+          accountId: account.account_id,
+          accountName: account.account_name,
+          help: "Visit /dashboard/connections to reconnect your Meta account"
+        }
+      })
+    }
     
     // First, get campaigns from local database
     let localCampaigns: any[] = []

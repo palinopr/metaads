@@ -97,6 +97,7 @@ export const metaConnections = pgTable("meta_connections", {
 
 export const metaAdAccounts = pgTable("meta_ad_accounts", {
   id: text("id").primaryKey(), // Meta's ad account ID
+  accountId: text("account_id"), // Numeric Meta account ID (without act_ prefix)
   userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
   connectionId: text("connection_id").notNull().references(() => metaConnections.id, { onDelete: "cascade" }),
   name: text("name").notNull(),

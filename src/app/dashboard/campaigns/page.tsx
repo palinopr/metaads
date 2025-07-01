@@ -40,6 +40,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import { MetaReconnectBanner } from "@/components/meta-reconnect-banner"
 
 interface Campaign {
   id: string
@@ -65,6 +66,7 @@ export default function CampaignsPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
   const [summary, setSummary] = useState<any>(null)
+  const [debugInfo, setDebugInfo] = useState<any>(null)
   const { dateRange, setDateRange } = useDateRange()
 
   useEffect(() => {
@@ -76,14 +78,16 @@ export default function CampaignsPage() {
       setLoading(true)
       setError("")
       
-      const response = await fetch(`/api/campaigns?date_preset=${dateRange}`)
+      const response = await fetch(`/api/campaigns?date_preset=${dateRange}&sync=true&includeInsights=true`)
       const data = await response.json()
       
       if (data.error) {
         setError(data.error)
+        setDebugInfo(data.debug)
       } else {
         setCampaigns(data.campaigns || [])
         setSummary(data.summary)
+        setDebugInfo(null)
       }
     } catch (error: any) {
       setError("Failed to fetch campaigns")
@@ -207,8 +211,10 @@ export default function CampaignsPage() {
         </div>
       )}
 
-      {/* Error Alert */}
-      {error && (
+      {/* Error Alert or Reconnect Banner */}
+      {debugInfo ? (
+        <MetaReconnectBanner debug={debugInfo} />
+      ) : error && (
         <Alert variant="destructive">
           <AlertDescription>{error}</AlertDescription>
         </Alert>
