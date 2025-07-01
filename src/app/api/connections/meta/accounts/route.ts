@@ -32,14 +32,14 @@ export async function GET(request: Request) {
     if (!forceRefresh) {
       const cachedAccounts = await db.execute(sql`
         SELECT 
+          id,
           account_id,
           name,
           currency,
-          timezone_name,
+          timezone,
           is_selected
         FROM meta_ad_accounts
         WHERE user_id = ${session.user.id}
-        AND is_active = true
         ORDER BY name
       `)
       
@@ -90,46 +90,67 @@ export async function GET(request: Request) {
     // Store accounts in database
     if (activeAccounts.length > 0) {
       for (const account of activeAccounts) {
+        // Use the numeric account ID (without act_ prefix) as the primary key
+        const numericAccountId = account.account_id.replace('act_', '')
+        
         await db.execute(sql`
           INSERT INTO meta_ad_accounts (
+            id,
+            account_id,
             user_id,
             connection_id,
-            account_id,
             name,
             currency,
-            timezone_name,
-            is_active,
+            timezone,
+            account_status,
             created_at,
             updated_at
           ) VALUES (
+            ${numericAccountId},
+            ${numericAccountId},
             ${session.user.id},
             ${connection.id},
-            ${account.account_id},
             ${account.name},
             ${account.currency},
             ${account.timezone_name},
-            true,
+            ${account.account_status},
             ${new Date()},
             ${new Date()}
           )
-          ON CONFLICT (user_id, account_id) 
+          ON CONFLICT (id) 
           DO UPDATE SET
+            account_id = ${numericAccountId},
             name = ${account.name},
             currency = ${account.currency},
-            timezone_name = ${account.timezone_name},
-            is_active = true,
+            timezone = ${account.timezone_name},
+            account_status = ${account.account_status},
             updated_at = ${new Date()}
         `)
       }
     }
     
+    // Get the updated accounts from database to include selection status
+    const updatedAccounts = await db.execute(sql`
+      SELECT 
+        id,
+        account_id,
+        name,
+        currency,
+        timezone,
+        is_selected
+      FROM meta_ad_accounts
+      WHERE user_id = ${session.user.id}
+      ORDER BY name
+    `)
+    
     // Return the accounts
-    const accounts = activeAccounts.map((account: any) => ({
-      account_id: account.account_id,
+    const accounts = updatedAccounts.rows.map((account: any) => ({
+      id: account.id,
+      account_id: account.account_id || account.id,
       name: account.name,
       currency: account.currency,
-      timezone_name: account.timezone_name,
-      is_selected: false
+      timezone_name: account.timezone,
+      is_selected: account.is_selected
     }))
     
     return NextResponse.json({ 

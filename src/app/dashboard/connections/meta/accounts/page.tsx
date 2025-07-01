@@ -12,7 +12,7 @@ import { useRouter } from "next/navigation"
 
 interface AdAccount {
   id: string
-  account_id: string
+  account_id?: string
   name: string
   currency: string
   timezone_name: string
@@ -42,7 +42,7 @@ export default function MetaAccountsPage() {
       const filtered = accounts.filter(
         account => 
           account.name.toLowerCase().includes(query) ||
-          account.account_id.includes(query)
+          (account.account_id || account.id).includes(query)
       )
       setFilteredAccounts(filtered)
     } else {
@@ -77,7 +77,7 @@ export default function MetaAccountsPage() {
       // Set selected account if one exists
       const selected = fetchedAccounts.find((acc: AdAccount) => acc.is_selected)
       if (selected) {
-        setSelectedAccount(selected.account_id)
+        setSelectedAccount(selected.account_id || selected.id)
       }
     } catch (error: any) {
       setError(error.message)
@@ -239,20 +239,22 @@ export default function MetaAccountsPage() {
               ) : (
               <>
                 <RadioGroup value={selectedAccount} onValueChange={setSelectedAccount}>
-                  {filteredAccounts.map((account) => (
-                  <div
-                    key={account.account_id}
-                    className="flex items-start space-x-3 p-4 border rounded-lg hover:bg-accent/50 transition-colors"
-                  >
-                    <RadioGroupItem value={account.account_id} id={account.account_id} />
-                    <Label
-                      htmlFor={account.account_id}
-                      className="flex-1 cursor-pointer"
+                  {filteredAccounts.map((account) => {
+                    const accountId = account.account_id || account.id
+                    return (
+                    <div
+                      key={accountId}
+                      className="flex items-start space-x-3 p-4 border rounded-lg hover:bg-accent/50 transition-colors"
                     >
-                      <div className="font-medium">{account.name}</div>
-                      <div className="text-sm text-muted-foreground">
-                        ID: {account.account_id} • {account.currency} • {account.timezone_name}
-                      </div>
+                      <RadioGroupItem value={accountId} id={accountId} />
+                      <Label
+                        htmlFor={accountId}
+                        className="flex-1 cursor-pointer"
+                      >
+                        <div className="font-medium">{account.name}</div>
+                        <div className="text-sm text-muted-foreground">
+                          ID: {accountId} • {account.currency} • {account.timezone_name}
+                        </div>
                       {account.is_selected && (
                         <div className="flex items-center gap-1 mt-1">
                           <CheckCircle2 className="h-3 w-3 text-green-600" />
@@ -260,8 +262,9 @@ export default function MetaAccountsPage() {
                         </div>
                       )}
                     </Label>
-                  </div>
-                  ))}
+                    </div>
+                    )
+                  })}
                 </RadioGroup>
                 
                 <div className="pt-4">

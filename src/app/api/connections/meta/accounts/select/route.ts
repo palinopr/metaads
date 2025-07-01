@@ -33,8 +33,8 @@ export async function POST(request: NextRequest) {
         updated_at = ${new Date()}
       WHERE 
         user_id = ${session.user.id}
-        AND account_id = ${account_id}
-      RETURNING account_id, name
+        AND (account_id = ${account_id} OR id = ${account_id})
+      RETURNING id, account_id, name
     `)
     
     if (result.rows.length === 0) {
