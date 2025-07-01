@@ -2,7 +2,23 @@ import { NextResponse } from "next/server"
 import { getServerSession } from "next-auth/next"
 import { authOptions } from "@/lib/auth"
 import { db } from "@/db/drizzle"
-import { sql } from "drizzle-orm"
+import { sql, eq, and, desc } from "drizzle-orm"
+import { campaigns, metaAdAccounts, metaConnections, campaignInsights } from "@/db/schema"
+import { z } from "zod"
+
+// Validation schemas
+const createCampaignSchema = z.object({
+  name: z.string().min(1).max(255),
+  objective: z.enum(["SALES", "TRAFFIC", "AWARENESS", "ENGAGEMENT"]),
+  budgetType: z.enum(["DAILY", "LIFETIME"]),
+  budgetAmount: z.number().positive(),
+  spendCap: z.number().positive().optional(),
+  startTime: z.string().datetime().optional(),
+  endTime: z.string().datetime().optional(),
+  adAccountId: z.string(),
+  targeting: z.object({}).optional(),
+  placements: z.array(z.string()).optional(),
+})
 
 export async function GET(request: Request) {
   try {
@@ -12,18 +28,37 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
     
+    const { searchParams } = new URL(request.url)
+    const adAccountId = searchParams.get('adAccountId')
+    const includeInsights = searchParams.get('includeInsights') === 'true'
+    const syncWithMeta = searchParams.get('sync') === 'true'
+    
     // Get selected ad account with token
-    const result = await db.execute(sql`
-      SELECT 
-        ma.account_id,
-        ma.name as account_name,
-        mc.access_token
-      FROM meta_ad_accounts ma
-      JOIN meta_connections mc ON ma.connection_id = mc.id
-      WHERE ma.user_id = ${session.user.id}
-      AND ma.is_selected = true
-      LIMIT 1
-    `)
+    const accountQuery = adAccountId
+      ? db.execute(sql`
+          SELECT 
+            ma.id as account_id,
+            ma.name as account_name,
+            mc.access_token
+          FROM meta_ad_accounts ma
+          JOIN meta_connections mc ON ma.connection_id = mc.id
+          WHERE ma.user_id = ${session.user.id}
+          AND ma.id = ${adAccountId}
+          LIMIT 1
+        `)
+      : db.execute(sql`
+          SELECT 
+            ma.id as account_id,
+            ma.name as account_name,
+            mc.access_token
+          FROM meta_ad_accounts ma
+          JOIN meta_connections mc ON ma.connection_id = mc.id
+          WHERE ma.user_id = ${session.user.id}
+          AND ma.is_selected = true
+          LIMIT 1
+        `)
+    
+    const result = await accountQuery
     
     if (result.rows.length === 0) {
       return NextResponse.json({ 
@@ -33,13 +68,25 @@ export async function GET(request: Request) {
     }
     
     const account = result.rows[0]
-    const { searchParams } = new URL(request.url)
-    const limit = searchParams.get('limit') || '50'
-    const datePreset = searchParams.get('date_preset') || 'last_30d'
     
-    try {
-      // Fetch campaigns from Meta API
-      console.log(`[Campaigns] Fetching campaigns for account ${account.account_id}`)
+    // First, get campaigns from local database
+    const localCampaigns = await db
+      .select()
+      .from(campaigns)
+      .where(
+        and(
+          eq(campaigns.userId, session.user.id),
+          eq(campaigns.adAccountId, account.account_id as string)
+        )
+      )
+      .orderBy(desc(campaigns.createdAt))
+    
+    // If sync is requested, fetch from Meta API and update local DB
+    if (syncWithMeta && account.access_token) {
+      const limit = searchParams.get('limit') || '50'
+      const datePreset = searchParams.get('date_preset') || 'last_30d'
+      
+      console.log(`[Campaigns] Syncing campaigns for account ${account.account_id}`)
       
       const campaignsUrl = `https://graph.facebook.com/v18.0/act_${account.account_id}/campaigns?fields=id,name,status,objective,created_time,updated_time,daily_budget,lifetime_budget,budget_remaining,effective_status,insights.date_preset(${datePreset}){impressions,clicks,spend,ctr,cpm,reach}&limit=${limit}&access_token=${account.access_token}`
       
@@ -48,9 +95,11 @@ export async function GET(request: Request) {
       
       if (data.error) {
         console.error('[Campaigns] Meta API error:', data.error)
+        // Return local campaigns even if Meta sync fails
         return NextResponse.json({
-          campaigns: [],
-          error: data.error.message,
+          campaigns: localCampaigns,
+          error: `Meta sync failed: ${data.error.message}`,
+          syncError: true,
           debug: {
             error_type: data.error.type,
             error_code: data.error.code,
@@ -59,60 +108,112 @@ export async function GET(request: Request) {
         })
       }
       
-      // Transform campaigns data
-      const campaigns = (data.data || []).map((campaign: any) => ({
-        id: campaign.id,
-        name: campaign.name,
-        status: campaign.status,
-        effective_status: campaign.effective_status,
-        objective: campaign.objective,
-        created_time: campaign.created_time,
-        updated_time: campaign.updated_time,
-        daily_budget: campaign.daily_budget ? parseFloat(campaign.daily_budget) / 100 : null,
-        lifetime_budget: campaign.lifetime_budget ? parseFloat(campaign.lifetime_budget) / 100 : null,
-        budget_remaining: campaign.budget_remaining ? parseFloat(campaign.budget_remaining) / 100 : null,
-        metrics: campaign.insights?.data?.[0] ? {
-          impressions: parseInt(campaign.insights.data[0].impressions || 0),
-          clicks: parseInt(campaign.insights.data[0].clicks || 0),
-          spend: parseFloat(campaign.insights.data[0].spend || 0),
-          ctr: parseFloat(campaign.insights.data[0].ctr || 0),
-          cpm: parseFloat(campaign.insights.data[0].cpm || 0),
-          reach: parseInt(campaign.insights.data[0].reach || 0)
-        } : null
-      }))
-      
-      // Get summary stats
-      const summary = {
-        total_campaigns: campaigns.length,
-        active_campaigns: campaigns.filter((c: any) => c.effective_status === 'ACTIVE').length,
-        paused_campaigns: campaigns.filter((c: any) => c.effective_status === 'PAUSED').length,
-        total_spend: campaigns.reduce((sum: number, c: any) => sum + (c.metrics?.spend || 0), 0),
-        total_impressions: campaigns.reduce((sum: number, c: any) => sum + (c.metrics?.impressions || 0), 0),
-        total_clicks: campaigns.reduce((sum: number, c: any) => sum + (c.metrics?.clicks || 0), 0)
-      }
-      
-      return NextResponse.json({
-        campaigns,
-        summary,
-        account: {
-          id: account.account_id,
-          name: account.account_name
-        },
-        pagination: {
-          has_next: !!data.paging?.next,
-          has_previous: !!data.paging?.previous,
-          cursors: data.paging?.cursors
+      // Sync Meta campaigns to local DB
+      if (data.data && data.data.length > 0) {
+        for (const metaCampaign of data.data) {
+          const existingCampaign = localCampaigns.find(c => c.metaId === metaCampaign.id)
+          
+          const campaignData = {
+            metaId: metaCampaign.id,
+            adAccountId: account.account_id as string,
+            userId: session.user.id,
+            name: metaCampaign.name,
+            status: metaCampaign.effective_status || metaCampaign.status,
+            objective: metaCampaign.objective,
+            budgetType: metaCampaign.daily_budget ? 'DAILY' : 'LIFETIME',
+            budgetAmount: metaCampaign.daily_budget 
+              ? parseInt(metaCampaign.daily_budget) 
+              : metaCampaign.lifetime_budget 
+              ? parseInt(metaCampaign.lifetime_budget)
+              : 0,
+            syncedAt: new Date(),
+          }
+          
+          if (existingCampaign) {
+            // Update existing campaign
+            await db
+              .update(campaigns)
+              .set(campaignData)
+              .where(eq(campaigns.id, existingCampaign.id))
+          } else {
+            // Insert new campaign
+            await db.insert(campaigns).values(campaignData)
+          }
+          
+          // Store insights if available
+          if (metaCampaign.insights?.data?.[0]) {
+            const insights = metaCampaign.insights.data[0]
+            await db.insert(campaignInsights).values({
+              campaignId: existingCampaign?.id || metaCampaign.id,
+              date: new Date(),
+              impressions: parseInt(insights.impressions || 0),
+              clicks: parseInt(insights.clicks || 0),
+              spend: Math.round(parseFloat(insights.spend || 0) * 100), // Convert to cents
+              ctr: Math.round(parseFloat(insights.ctr || 0) * 10000),
+              cpm: Math.round(parseFloat(insights.cpm || 0) * 100),
+            }).onConflictDoNothing()
+          }
         }
-      })
-      
-    } catch (error: any) {
-      console.error('[Campaigns] Error:', error)
-      return NextResponse.json({
-        campaigns: [],
-        error: "Failed to fetch campaigns",
-        debug: error.message
-      })
+        
+        // Refresh local campaigns after sync
+        const updatedCampaigns = await db
+          .select()
+          .from(campaigns)
+          .where(
+            and(
+              eq(campaigns.userId, session.user.id),
+              eq(campaigns.adAccountId, account.account_id as string)
+            )
+          )
+          .orderBy(desc(campaigns.createdAt))
+        
+        return NextResponse.json({
+          campaigns: updatedCampaigns,
+          syncedAt: new Date().toISOString(),
+          account: {
+            id: account.account_id,
+            name: account.account_name
+          }
+        })
+      }
     }
+    
+    // Get insights if requested
+    let campaignWithInsights = localCampaigns
+    if (includeInsights) {
+      campaignWithInsights = await Promise.all(
+        localCampaigns.map(async (campaign) => {
+          const latestInsight = await db
+            .select()
+            .from(campaignInsights)
+            .where(eq(campaignInsights.campaignId, campaign.id))
+            .orderBy(desc(campaignInsights.date))
+            .limit(1)
+          
+          return {
+            ...campaign,
+            insights: latestInsight[0] || null
+          }
+        })
+      )
+    }
+    
+    // Calculate summary stats
+    const summary = {
+      total_campaigns: campaignWithInsights.length,
+      active_campaigns: campaignWithInsights.filter(c => c.status === 'ACTIVE').length,
+      paused_campaigns: campaignWithInsights.filter(c => c.status === 'PAUSED').length,
+      total_budget: campaignWithInsights.reduce((sum, c) => sum + (c.budgetAmount || 0), 0) / 100,
+    }
+    
+    return NextResponse.json({
+      campaigns: campaignWithInsights,
+      summary,
+      account: {
+        id: account.account_id,
+        name: account.account_name
+      }
+    })
     
   } catch (error) {
     console.error('Error in campaigns endpoint:', error)
@@ -131,41 +232,187 @@ export async function POST(req: Request) {
     }
 
     const body = await req.json()
-    const { name, objective, budget, duration, audiences, creatives, aiGenerated, adAccountId } = body
-
-    // TODO: Create campaign in Meta Ads API
-    // For now, return mock data with AI-generated fields
-    const mockCampaign = {
-      id: `camp_${Date.now()}`,
-      campaignId: `camp_${Date.now()}`,
-      name,
-      objective,
-      budget,
-      duration,
-      audiences,
-      creatives,
-      aiGenerated: aiGenerated || false,
-      status: 'ACTIVE',
-      created_time: new Date().toISOString(),
-      insights: {
-        impressions: 0,
-        clicks: 0,
-        spend: 0,
-        ctr: 0,
-        cpc: 0,
-        conversions: 0
-      }
+    
+    // Validate request body
+    const validatedData = createCampaignSchema.parse(body)
+    
+    // Verify user has access to the ad account
+    const adAccount = await db
+      .select()
+      .from(metaAdAccounts)
+      .where(
+        and(
+          eq(metaAdAccounts.id, validatedData.adAccountId),
+          eq(metaAdAccounts.userId, session.user.id)
+        )
+      )
+      .limit(1)
+    
+    if (adAccount.length === 0) {
+      return NextResponse.json(
+        { error: 'Invalid ad account' },
+        { status: 403 }
+      )
     }
-
+    
+    // Create campaign in local database first
+    const newCampaign = await db.insert(campaigns).values({
+      adAccountId: validatedData.adAccountId,
+      userId: session.user.id,
+      name: validatedData.name,
+      status: 'ACTIVE',
+      objective: validatedData.objective,
+      budgetType: validatedData.budgetType,
+      budgetAmount: Math.round(validatedData.budgetAmount * 100), // Convert to cents
+      spendCap: validatedData.spendCap ? Math.round(validatedData.spendCap * 100) : null,
+      startTime: validatedData.startTime ? new Date(validatedData.startTime) : null,
+      endTime: validatedData.endTime ? new Date(validatedData.endTime) : null,
+    }).returning()
+    
+    // TODO: Create campaign in Meta Ads API
+    // This would involve:
+    // 1. Getting the access token for the ad account
+    // 2. Making a POST request to Meta Graph API
+    // 3. Updating the local campaign with the Meta campaign ID
+    
     return NextResponse.json({ 
       success: true,
-      campaign: mockCampaign,
-      campaignId: mockCampaign.id
+      campaign: newCampaign[0],
+      campaignId: newCampaign[0].id
     })
   } catch (error) {
     console.error('Campaign creation error:', error)
+    
+    if (error instanceof z.ZodError) {
+      return NextResponse.json(
+        { error: 'Invalid request data', details: error.errors },
+        { status: 400 }
+      )
+    }
+    
     return NextResponse.json(
       { error: 'Failed to create campaign' },
+      { status: 500 }
+    )
+  }
+}
+
+// Update campaign
+export async function PATCH(req: Request) {
+  try {
+    const session = await getServerSession(authOptions)
+    if (!session?.user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+    
+    const { searchParams } = new URL(req.url)
+    const campaignId = searchParams.get('id')
+    
+    if (!campaignId) {
+      return NextResponse.json(
+        { error: 'Campaign ID required' },
+        { status: 400 }
+      )
+    }
+    
+    const body = await req.json()
+    const { name, status, budgetAmount, spendCap, endTime } = body
+    
+    // Verify ownership
+    const campaign = await db
+      .select()
+      .from(campaigns)
+      .where(
+        and(
+          eq(campaigns.id, campaignId),
+          eq(campaigns.userId, session.user.id)
+        )
+      )
+      .limit(1)
+    
+    if (campaign.length === 0) {
+      return NextResponse.json(
+        { error: 'Campaign not found' },
+        { status: 404 }
+      )
+    }
+    
+    // Update campaign
+    const updateData: any = {}
+    if (name !== undefined) updateData.name = name
+    if (status !== undefined) updateData.status = status
+    if (budgetAmount !== undefined) updateData.budgetAmount = Math.round(budgetAmount * 100)
+    if (spendCap !== undefined) updateData.spendCap = Math.round(spendCap * 100)
+    if (endTime !== undefined) updateData.endTime = new Date(endTime)
+    updateData.updatedAt = new Date()
+    
+    const updatedCampaign = await db
+      .update(campaigns)
+      .set(updateData)
+      .where(eq(campaigns.id, campaignId))
+      .returning()
+    
+    // TODO: Update campaign in Meta Ads API if it has a metaId
+    
+    return NextResponse.json({
+      success: true,
+      campaign: updatedCampaign[0]
+    })
+  } catch (error) {
+    console.error('Campaign update error:', error)
+    return NextResponse.json(
+      { error: 'Failed to update campaign' },
+      { status: 500 }
+    )
+  }
+}
+
+// Delete campaign
+export async function DELETE(req: Request) {
+  try {
+    const session = await getServerSession(authOptions)
+    if (!session?.user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+    
+    const { searchParams } = new URL(req.url)
+    const campaignId = searchParams.get('id')
+    
+    if (!campaignId) {
+      return NextResponse.json(
+        { error: 'Campaign ID required' },
+        { status: 400 }
+      )
+    }
+    
+    // Verify ownership and delete
+    const deletedCampaign = await db
+      .delete(campaigns)
+      .where(
+        and(
+          eq(campaigns.id, campaignId),
+          eq(campaigns.userId, session.user.id)
+        )
+      )
+      .returning()
+    
+    if (deletedCampaign.length === 0) {
+      return NextResponse.json(
+        { error: 'Campaign not found' },
+        { status: 404 }
+      )
+    }
+    
+    // TODO: Delete or archive campaign in Meta Ads API if it has a metaId
+    
+    return NextResponse.json({
+      success: true,
+      message: 'Campaign deleted successfully'
+    })
+  } catch (error) {
+    console.error('Campaign deletion error:', error)
+    return NextResponse.json(
+      { error: 'Failed to delete campaign' },
       { status: 500 }
     )
   }
