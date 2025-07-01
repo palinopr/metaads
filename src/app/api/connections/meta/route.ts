@@ -2,7 +2,8 @@ import { NextResponse } from "next/server"
 import { getServerSession } from "next-auth/next"
 import { authOptions } from "@/lib/auth"
 import { db } from "@/db/drizzle"
-import { sql } from "drizzle-orm"
+import { eq } from "drizzle-orm"
+import { metaConnections } from "@/db/schema"
 
 export async function GET() {
   try {
@@ -13,26 +14,34 @@ export async function GET() {
     }
     
     // Get Meta connection for the user
-    const result = await db.execute(sql`
-      SELECT 
-        id,
-        meta_user_id,
-        name,
-        email,
-        expires_at,
-        created_at
-      FROM meta_connections
-      WHERE user_id = ${session.user.id}
-      LIMIT 1
-    `)
+    const connections = await db
+      .select({
+        id: metaConnections.id,
+        expires_at: metaConnections.expiresAt,
+        created_at: metaConnections.createdAt
+      })
+      .from(metaConnections)
+      .where(eq(metaConnections.userId, session.user.id))
+      .limit(1)
     
-    const connection = result.rows[0] || null
+    const connection = connections[0] || null
     
     return NextResponse.json({ connection })
   } catch (error) {
     console.error('Error fetching Meta connection:', error)
+    
+    // Provide more specific error message
+    let errorMessage = 'Failed to fetch connection'
+    if (error instanceof Error) {
+      errorMessage = error.message
+      if (error.message.includes('column') || error.message.includes('relation')) {
+        console.error('Database schema error in meta_connections:', error.message)
+        errorMessage = 'Database schema error: ' + error.message
+      }
+    }
+    
     return NextResponse.json(
-      { error: 'Failed to fetch connection' },
+      { error: errorMessage },
       { status: 500 }
     )
   }
@@ -47,10 +56,9 @@ export async function DELETE() {
     }
     
     // Delete Meta connection and related data
-    await db.execute(sql`
-      DELETE FROM meta_connections
-      WHERE user_id = ${session.user.id}
-    `)
+    await db
+      .delete(metaConnections)
+      .where(eq(metaConnections.userId, session.user.id))
     
     return NextResponse.json({ success: true })
   } catch (error) {

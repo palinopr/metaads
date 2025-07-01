@@ -2,7 +2,8 @@ import { NextResponse } from "next/server"
 import { getServerSession } from "next-auth/next"
 import { authOptions } from "@/lib/auth"
 import { db } from "@/db/drizzle"
-import { sql } from "drizzle-orm"
+import { eq, sql } from "drizzle-orm"
+import { metaConnections, metaAdAccounts } from "@/db/schema"
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url)
@@ -15,14 +16,13 @@ export async function GET(request: Request) {
     }
     
     // First get the Meta connection
-    const connectionResult = await db.execute(sql`
-      SELECT id, access_token
-      FROM meta_connections
-      WHERE user_id = ${session.user.id}
-      LIMIT 1
-    `)
+    const connections = await db
+      .select()
+      .from(metaConnections)
+      .where(eq(metaConnections.userId, session.user.id))
+      .limit(1)
     
-    const connection = connectionResult.rows[0]
+    const connection = connections[0]
     
     if (!connection) {
       return NextResponse.json({ error: "No Meta connection found" }, { status: 404 })
@@ -30,31 +30,30 @@ export async function GET(request: Request) {
     
     // Check if we have cached accounts (unless force refresh)
     if (!forceRefresh) {
-      const cachedAccounts = await db.execute(sql`
-        SELECT 
-          id,
-          account_id,
-          name,
-          currency,
-          timezone,
-          is_selected
-        FROM meta_ad_accounts
-        WHERE user_id = ${session.user.id}
-        ORDER BY name
-      `)
+      const cachedAccounts = await db
+        .select({
+          id: metaAdAccounts.id,
+          account_id: metaAdAccounts.accountId,
+          name: metaAdAccounts.name,
+          currency: metaAdAccounts.currency,
+          timezone_name: metaAdAccounts.timezone,
+          is_selected: metaAdAccounts.isSelected
+        })
+        .from(metaAdAccounts)
+        .where(eq(metaAdAccounts.userId, session.user.id))
       
-      if (cachedAccounts.rows.length > 0) {
+      if (cachedAccounts.length > 0) {
         return NextResponse.json({ 
-          accounts: cachedAccounts.rows,
+          accounts: cachedAccounts,
           cached: true,
-          total: cachedAccounts.rows.length
+          total: cachedAccounts.length
         })
       }
     }
     
     // Fetch all ad accounts from Meta API with pagination
     let allAccounts: any[] = []
-    let nextPageUrl = `https://graph.facebook.com/v18.0/me/adaccounts?fields=id,account_id,name,currency,timezone_name,account_status&limit=100&access_token=${connection.access_token}`
+    let nextPageUrl = `https://graph.facebook.com/v18.0/me/adaccounts?fields=id,account_id,name,currency,timezone_name,account_status&limit=100&access_token=${connection.accessToken}`
     
     // Fetch all pages of ad accounts
     while (nextPageUrl) {
@@ -103,6 +102,7 @@ export async function GET(request: Request) {
             currency,
             timezone,
             account_status,
+            is_selected,
             created_at,
             updated_at
           ) VALUES (
@@ -114,6 +114,7 @@ export async function GET(request: Request) {
             ${account.currency},
             ${account.timezone_name},
             ${account.account_status},
+            false,
             ${new Date()},
             ${new Date()}
           )
@@ -136,7 +137,7 @@ export async function GET(request: Request) {
         account_id,
         name,
         currency,
-        timezone,
+        timezone as timezone_name,
         is_selected
       FROM meta_ad_accounts
       WHERE user_id = ${session.user.id}
@@ -149,7 +150,7 @@ export async function GET(request: Request) {
       account_id: account.account_id || account.id,
       name: account.name,
       currency: account.currency,
-      timezone_name: account.timezone,
+      timezone_name: account.timezone_name,
       is_selected: account.is_selected
     }))
     
@@ -160,8 +161,21 @@ export async function GET(request: Request) {
     })
   } catch (error) {
     console.error('Error fetching Meta ad accounts:', error)
+    
+    // Provide more specific error message if possible
+    let errorMessage = 'Failed to fetch ad accounts'
+    if (error instanceof Error) {
+      errorMessage = error.message
+      
+      // Log database-specific errors
+      if (error.message.includes('column') || error.message.includes('relation')) {
+        console.error('Database schema error detected:', error.message)
+        errorMessage = 'Database schema error: ' + error.message
+      }
+    }
+    
     return NextResponse.json(
-      { error: 'Failed to fetch ad accounts' },
+      { error: errorMessage },
       { status: 500 }
     )
   }

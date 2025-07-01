@@ -63,32 +63,26 @@ export async function GET(request: NextRequest) {
     const finalAccessToken = longLivedData.access_token || tokenData.access_token
     
     // Store connection in database
+    const connectionId = crypto.randomUUID()
     await db.execute(sql`
       INSERT INTO meta_connections (
+        id,
         user_id,
-        meta_user_id,
         access_token,
-        name,
-        email,
         expires_at,
         created_at,
         updated_at
       ) VALUES (
+        ${connectionId},
         ${userId},
-        ${userData.id},
         ${finalAccessToken},
-        ${userData.name || ''},
-        ${userData.email || ''},
         ${new Date(Date.now() + (60 * 24 * 60 * 60 * 1000))}, -- 60 days
         ${new Date()},
         ${new Date()}
       )
       ON CONFLICT (user_id) 
       DO UPDATE SET
-        meta_user_id = ${userData.id},
         access_token = ${finalAccessToken},
-        name = ${userData.name || ''},
-        email = ${userData.email || ''},
         expires_at = ${new Date(Date.now() + (60 * 24 * 60 * 60 * 1000))},
         updated_at = ${new Date()}
     `)

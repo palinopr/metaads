@@ -3,7 +3,7 @@ import { getServerSession } from "next-auth/next"
 import { authOptions } from "@/lib/auth"
 import { db } from "@/db/drizzle"
 import { sql, eq, and, desc } from "drizzle-orm"
-import { campaigns, metaAdAccounts, metaConnections, campaignInsights } from "@/db/schema"
+import { campaigns, metaAdAccounts, metaConnections, campaignInsights, users } from "@/db/schema"
 import { z } from "zod"
 
 // Validation schemas
@@ -33,47 +33,56 @@ export async function GET(request: Request) {
     const includeInsights = searchParams.get('includeInsights') === 'true'
     const syncWithMeta = searchParams.get('sync') === 'true'
     
-    // Get selected ad account with token - try both old and new schema
-    let result: any = { rows: [] }
+    // Get selected ad account with token
+    let accountData: any = null
     try {
       const accountQuery = adAccountId
-        ? db.execute(sql`
-            SELECT 
-              COALESCE(ma.account_id, ma.id) as account_id,
-              ma.name as account_name,
-              mc.access_token
-            FROM meta_ad_accounts ma
-            JOIN meta_connections mc ON ma.connection_id = mc.id
-            WHERE ma.user_id = ${session.user.id}
-            AND ma.id = ${adAccountId}
-            LIMIT 1
-          `)
-        : db.execute(sql`
-            SELECT 
-              COALESCE(ma.account_id, ma.id) as account_id,
-              ma.name as account_name,
-              mc.access_token
-            FROM meta_ad_accounts ma
-            JOIN meta_connections mc ON ma.connection_id = mc.id
-            WHERE ma.user_id = ${session.user.id}
-            AND ma.is_selected = true
-            LIMIT 1
-          `)
+        ? db
+            .select({
+              account_id: sql`COALESCE(${metaAdAccounts.accountId}, ${metaAdAccounts.id})`,
+              account_name: metaAdAccounts.name,
+              access_token: metaConnections.accessToken
+            })
+            .from(metaAdAccounts)
+            .innerJoin(metaConnections, eq(metaAdAccounts.connectionId, metaConnections.id))
+            .where(
+              and(
+                eq(metaAdAccounts.userId, session.user.id),
+                eq(metaAdAccounts.id, adAccountId)
+              )
+            )
+            .limit(1)
+        : db
+            .select({
+              account_id: sql`COALESCE(${metaAdAccounts.accountId}, ${metaAdAccounts.id})`,
+              account_name: metaAdAccounts.name,
+              access_token: metaConnections.accessToken
+            })
+            .from(metaAdAccounts)
+            .innerJoin(metaConnections, eq(metaAdAccounts.connectionId, metaConnections.id))
+            .where(
+              and(
+                eq(metaAdAccounts.userId, session.user.id),
+                eq(metaAdAccounts.isSelected, true)
+              )
+            )
+            .limit(1)
       
-      result = await accountQuery
+      const result = await accountQuery
+      accountData = result[0]
     } catch (dbError) {
       console.error('[Campaigns] Database connection error:', dbError)
       // Continue with empty result, tables might not exist
     }
     
-    if (result.rows.length === 0) {
+    if (!accountData) {
       return NextResponse.json({ 
         campaigns: [],
         error: "No ad account selected"
       })
     }
     
-    const account = result.rows[0]
+    const account = accountData
     
     // Check if account_id looks like a UUID (wrong format)
     const isValidMetaAccountId = account.account_id && /^\d+$/.test(account.account_id)
