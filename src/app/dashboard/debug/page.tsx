@@ -109,11 +109,11 @@ export default function DebugPage() {
               </div>
             </div>
             <div className="space-y-1">
-              <p className="text-sm text-muted-foreground">Insights Access</p>
+              <p className="text-sm text-muted-foreground">Selected Account</p>
               <div className="flex items-center gap-2">
-                <StatusIcon success={testResults.summary?.hasInsightsAccess} />
+                <StatusIcon success={testResults.summary?.hasSelectedAccount} />
                 <span className="font-medium">
-                  {testResults.summary?.hasInsightsAccess ? "Available" : "Not Available"}
+                  {testResults.summary?.hasSelectedAccount ? "Yes" : "None"}
                 </span>
               </div>
             </div>
@@ -133,6 +133,25 @@ export default function DebugPage() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Selected Account Info */}
+      {testResults.selectedAccount && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Building2 className="h-5 w-5" />
+              Selected Ad Account
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              <p><span className="font-medium">Name:</span> {testResults.selectedAccount.name}</p>
+              <p><span className="font-medium">Account ID:</span> {testResults.selectedAccount.accountId}</p>
+              <p><span className="font-medium">Internal ID:</span> {testResults.selectedAccount.id}</p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* User Info */}
       {testResults.tests?.userInfo && (

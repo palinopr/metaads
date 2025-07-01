@@ -20,6 +20,14 @@ export async function GET() {
       LIMIT 1
     `)
     
+    // Check selected ad account
+    const selectedAccountResult = await db.execute(sql`
+      SELECT id, account_id, name, is_selected
+      FROM meta_ad_accounts
+      WHERE user_id = ${session.user.id} AND is_selected = true
+      LIMIT 1
+    `)
+    
     if (connectionResult.rows.length === 0) {
       return NextResponse.json({ 
         error: "No Meta connection found",
@@ -35,6 +43,11 @@ export async function GET() {
         hasConnection: true,
         metaUserId: connection.meta_user_id
       },
+      selectedAccount: selectedAccountResult.rows.length > 0 ? {
+        id: selectedAccountResult.rows[0].id,
+        accountId: selectedAccountResult.rows[0].account_id,
+        name: selectedAccountResult.rows[0].name
+      } : null,
       tests: {} as any,
       errors: [] as any[],
       summary: {} as any
@@ -210,6 +223,7 @@ export async function GET() {
     results.summary = {
       hasValidToken: results.tests.userInfo?.success || false,
       hasAdAccounts: results.tests.adAccounts?.count > 0,
+      hasSelectedAccount: !!results.selectedAccount,
       hasInsightsAccess: results.tests.insights?.success || false,
       totalErrors: results.errors.length,
       requiredPermissions: [
