@@ -429,11 +429,20 @@ export default function CampaignsPage() {
                           <DropdownMenuItem 
                             onClick={(e) => {
                               e.stopPropagation()
+                              router.push(`/dashboard/campaigns/${campaign.id}/analytics`)
+                            }}
+                          >
+                            <BarChart3 className="mr-2 h-4 w-4" />
+                            View Analytics
+                          </DropdownMenuItem>
+                          <DropdownMenuItem 
+                            onClick={(e) => {
+                              e.stopPropagation()
                               router.push(`/dashboard/campaigns/${campaign.id}`)
                             }}
                           >
                             <TrendingUp className="mr-2 h-4 w-4" />
-                            View Details
+                            Campaign Details
                           </DropdownMenuItem>
                           <DropdownMenuItem 
                             onClick={(e) => {

@@ -154,7 +154,16 @@ export default function CampaignDetailsPage() {
             {campaign.objective} • {campaign.budgetType === 'DAILY' ? 'Daily' : 'Lifetime'} Budget: {formatCurrency(campaign.budgetAmount / 100)}
           </p>
         </div>
-        <DateRangeSelector value={dateRange} onChange={setDateRange} />
+        <div className="flex items-center gap-3">
+          <Button 
+            variant="default"
+            onClick={() => router.push(`/dashboard/campaigns/${campaignId}/analytics`)}
+          >
+            <BarChart3 className="mr-2 h-4 w-4" />
+            View Full Analytics
+          </Button>
+          <DateRangeSelector value={dateRange} onChange={setDateRange} />
+        </div>
       </div>
 
       {/* Overview Cards */}
