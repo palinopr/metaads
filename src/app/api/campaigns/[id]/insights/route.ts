@@ -22,6 +22,8 @@ export async function GET(
     const granularity = searchParams.get('granularity') || 'day' // day, week, month
     const sync = searchParams.get('sync') === 'true'
     const breakdown = searchParams.get('breakdown') // gender, age, gender_age
+    const includeTimeSeries = searchParams.get('includeTimeSeries') === 'true'
+    const aggregation = searchParams.get('aggregation') || 'daily'
 
     // Verify campaign ownership
     const campaign = await db
@@ -288,6 +290,26 @@ export async function GET(
       response.demographics = {
         breakdown: breakdown,
         data: genderBreakdown
+      }
+    }
+    
+    // Add time series data if requested
+    if (includeTimeSeries) {
+      // If no insights data, return empty array
+      if (insights.length === 0) {
+        response.timeSeries = []
+      } else {
+        // Format insights as time series
+        response.timeSeries = insights.map(i => ({
+          date: i.date,
+          impressions: i.impressions,
+          clicks: i.clicks,
+          spend: i.spend / 100,
+          conversions: i.conversions || 0,
+          ctr: i.ctr ? i.ctr / 10000 : 0,
+          cpc: i.clicks > 0 ? i.spend / i.clicks / 100 : 0,
+          cpm: i.impressions > 0 ? (i.spend / i.impressions) * 1000 / 100 : 0
+        }))
       }
     }
     

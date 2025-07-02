@@ -215,6 +215,7 @@ export async function GET(
       conversionsPercentage: totals.conversions > 0 ? ((parseInt(g.conversions.toString()) / totals.conversions) * 100).toFixed(1) : '0'
     }))
 
+    // Return data even if empty (components will show sync button)
     return NextResponse.json({
       campaign: {
         id: campaign[0].id,
@@ -222,29 +223,29 @@ export async function GET(
         status: campaign[0].status
       },
       demographics: {
-        gender: genderDistribution,
-        age: ageData.map(a => ({
+        gender: genderData.length > 0 ? genderDistribution : [],
+        age: ageData.length > 0 ? ageData.map(a => ({
           ageRange: a.ageRange || 'unknown',
-          impressions: a.impressions,
-          clicks: a.clicks,
+          impressions: a.impressions || 0,
+          clicks: a.clicks || 0,
           spend: (a.spend / 100).toFixed(2),
-          conversions: a.conversions,
+          conversions: a.conversions || 0,
           ctr: a.impressions > 0 ? ((a.clicks / a.impressions) * 100).toFixed(2) : '0',
           conversionRate: a.clicks > 0 ? ((a.conversions / a.clicks) * 100).toFixed(2) : '0'
-        })),
-        timeSeries: timeSeriesData.map(t => ({
+        })) : [],
+        timeSeries: timeSeriesData.length > 0 ? timeSeriesData.map(t => ({
           date: t.date,
           gender: t.gender,
           [metric]: metric === 'spend' ? ((t as any)[metric] / 100).toFixed(2) : (t as any)[metric]
-        }))
+        })) : []
       },
       totals: {
-        impressions: totals.impressions,
-        clicks: totals.clicks,
+        impressions: totals.impressions || 0,
+        clicks: totals.clicks || 0,
         spend: (totals.spend / 100).toFixed(2),
-        conversions: totals.conversions,
-        reach: totals.reach,
-        videoViews: totals.videoViews,
+        conversions: totals.conversions || 0,
+        reach: totals.reach || 0,
+        videoViews: totals.videoViews || 0,
         ctr: totals.impressions > 0 ? ((totals.clicks / totals.impressions) * 100).toFixed(2) : '0',
         cpc: totals.clicks > 0 ? (totals.spend / totals.clicks / 100).toFixed(2) : '0',
         cpm: totals.impressions > 0 ? ((totals.spend / totals.impressions) * 1000 / 100).toFixed(2) : '0'
