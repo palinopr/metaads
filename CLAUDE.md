@@ -298,4 +298,51 @@ async def stream_agent_response(agent, input_data):
 - Token usage > 80% limit: Critical
 - API failures > 10/min: Critical
 
+## Railway Deployment Guidelines
+
+### Critical Learning (2024-01-07)
+**Problem**: Railway services maintain their initial configuration type. A service configured for Next.js will not properly run Python apps even if you push Python code.
+
+**Solution**:
+1. **Always create separate services** for different tech stacks
+2. **For Python deployments**:
+   - Create new "Empty Service" in Railway
+   - Don't reuse Next.js configured services
+   - Ensure PORT environment variable is accessible
+   - Use simple health check endpoint at root
+
+**Working Python Config**:
+```python
+# app.py
+from flask import Flask, jsonify
+import os
+
+app = Flask(__name__)
+
+@app.route('/')
+def health():
+    return jsonify({"status": "healthy"})
+
+if __name__ == '__main__':
+    port = int(os.environ.get('PORT', 8080))
+    app.run(host='0.0.0.0', port=port)
+```
+
+```txt
+# requirements.txt
+flask==3.0.0
+gunicorn==21.2.0
+```
+
+```txt
+# Procfile
+web: gunicorn app:app --bind 0.0.0.0:$PORT
+```
+
+### Debugging Railway Deployments
+1. Check environment variables: `railway variables -s service-name`
+2. Verify service type matches code (Next.js vs Python)
+3. Ensure health check endpoint exists at `/`
+4. Monitor with: `curl -I https://your-app.railway.app`
+
 Remember: We're building the future of marketing automation. Every line of code should make marketing easier for our users.
