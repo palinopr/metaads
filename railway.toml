@@ -2,12 +2,6 @@
 builder = "nixpacks"
 
 [deploy]
-runtime = "python"
 startCommand = "gunicorn app:app --bind 0.0.0.0:$PORT --workers 1 --threads 8"
 healthcheckPath = "/"
 healthcheckTimeout = 30
-restartPolicyType = "on-failure"
-
-[nixpacks]
-python = "3.11"
-installCommand = "pip install -r railway-requirements.txt"
