@@ -1,5 +1,17 @@
 # Product Requirements Prompt (PRP) - [FEATURE NAME]
 
+## 0. Pre-Implementation Setup Verification
+
+Before starting implementation, verify:
+- [ ] Development server is running (`curl -I http://localhost:3000`)
+- [ ] No existing TypeScript errors (`npm run typecheck`)
+- [ ] No linting errors (`npm run lint`)
+- [ ] Database is accessible (`npm run db:studio`)
+- [ ] Latest code is pulled (`git pull origin main`)
+- [ ] Dependencies are up to date (`npm install`)
+
+If any check fails, see `SETUP.md` or `COMMON_ISSUES.md` for resolution.
+
 ## 1. Goal / Why / What
 
 ### Goal
@@ -108,15 +120,32 @@ async function [mainFunction]() {
 
 ## 5. Validation & Testing
 
+### Step 0: Environment Verification
+```bash
+# Ensure dev server is still running
+curl -I http://localhost:3000 || npm run dev
+
+# Check for any background errors
+tail -n 50 dev.log  # if running in background
+
+# Verify environment variables for feature
+grep "FEATURE_SPECIFIC_VAR" .env || echo "Missing required env var"
+```
+
 ### Step 1: Syntax & Type Checking
 ```bash
 npm run lint
 npm run typecheck
+
+# If errors, check COMMON_ISSUES.md for solutions
 ```
 
 ### Step 2: Build Verification
 ```bash
 npm run build
+
+# If memory errors:
+# NODE_OPTIONS="--max-old-space-size=4096" npm run build
 ```
 
 ### Step 3: Unit Tests
@@ -171,6 +200,13 @@ npm test -- [test-file-pattern]
 - ❌ Synchronous Meta API calls
 - ❌ Missing loading states for async operations
 - ❌ Not following existing code patterns
+
+### Setup & Environment Pitfalls
+- ❌ Assuming dev server is running (always verify)
+- ❌ Not checking for existing TypeScript errors before starting
+- ❌ Using wrong working directory for commands
+- ❌ Forgetting to install new dependencies after git pull
+- ❌ Not verifying environment variables for the feature
 
 ## 8. Rollback Plan
 

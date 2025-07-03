@@ -5,6 +5,18 @@ This document contains critical rules and context for AI assistants working on t
 ## Project Overview
 MetaAds is an AI-powered Meta (Facebook) Ads management platform - "Cursor for Meta Ads". It automates campaign creation, optimization, and monitoring through conversational AI interfaces.
 
+## Pre-Development Checklist
+
+Before implementing any features, ensure:
+1. **Project is running**: Verify with `curl -I http://localhost:3000`
+2. **Dependencies installed**: Check `node_modules` exists (npm install if needed)
+3. **Environment configured**: Verify `.env` file exists (copy from .env.example)
+4. **Database ready**: Run `npm run db:push` for new setups
+5. **No existing errors**: Run `npm run lint && npm run typecheck`
+6. **Development server active**: Check `ps aux | grep "next dev"`
+
+If any check fails, see `SETUP.md` for resolution.
+
 ## Critical Rules
 
 ### 1. Project Awareness
@@ -159,6 +171,13 @@ python scripts/test-agent-connectivity.py
 - Implement fallback UI for error states
 - Handle Meta API specific errors gracefully
 
+### 11. Development Environment Management
+- **Local Dev**: SQLite is acceptable for quick prototyping
+- **Background Processes**: Use `nohup npm run dev > dev.log 2>&1 &` for long sessions
+- **Port Conflicts**: Check with `lsof -i :3000` before starting
+- **Process Management**: Track PIDs when running background servers
+- **Environment Switching**: Keep separate .env.local and .env.production files
+
 ## Common Patterns
 
 ### API Route Pattern
@@ -215,17 +234,24 @@ export async function getCampaignsByUserId(userId: string) {
 4. **SSE in Next.js**: Requires specific response headers
 5. **TypeScript Strict**: Some libraries need type assertions
 
+### Setup & Environment Gotchas
+6. **Working Directory**: Bash commands may fail with `cd` - use absolute paths
+7. **npm install Timeouts**: Some packages take 10-30s, use longer timeouts
+8. **Background Processes**: Next.js dev server continues running after terminal closes
+9. **SQLite for Dev**: Acceptable for local dev but switch to PostgreSQL for production
+10. **Placeholder Credentials**: Dev server runs with placeholders but features won't work
+
 ### AI Agent Gotchas
-6. **Python Path Issues**: Add project root to sys.path in agents
-7. **Async Execution**: All agent methods must be async
-8. **Tool Timeouts**: Meta API calls can take 10+ seconds
-9. **Memory Leaks**: Clear agent memory after sessions
-10. **LLM Rate Limits**: 
+11. **Python Path Issues**: Add project root to sys.path in agents
+12. **Async Execution**: All agent methods must be async
+13. **Tool Timeouts**: Meta API calls can take 10+ seconds
+14. **Memory Leaks**: Clear agent memory after sessions
+15. **LLM Rate Limits**: 
     - OpenAI: 10,000 tokens/min for GPT-4
     - Anthropic: 100,000 tokens/min for Claude
-11. **Cost Management**: Use GPT-3.5 for simple tasks to reduce costs
-12. **Prompt Injection**: Always validate user inputs before passing to LLMs
-13. **Response Streaming**: EventSource API has 64KB limit per message
+16. **Cost Management**: Use GPT-3.5 for simple tasks to reduce costs
+17. **Prompt Injection**: Always validate user inputs before passing to LLMs
+18. **Response Streaming**: EventSource API has 64KB limit per message
 
 ## Validation Commands
 ```bash

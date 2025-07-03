@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth"
 import { db } from "@/db/drizzle"
 import { eq, sql } from "drizzle-orm"
 import { metaConnections, metaAdAccounts } from "@/db/schema"
+import { parseMetaAccountId, isValidMetaAccountId } from "@/lib/meta/account-utils"
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url)
@@ -89,8 +90,16 @@ export async function GET(request: Request) {
     // Store accounts in database
     if (activeAccounts.length > 0) {
       for (const account of activeAccounts) {
+        // Validate and parse the account ID
+        if (!isValidMetaAccountId(account.account_id)) {
+          console.error(`Invalid Meta account ID format: ${account.account_id}`)
+          continue
+        }
+        
         // Extract the numeric account ID (without act_ prefix)
-        const numericAccountId = account.account_id.replace('act_', '')
+        const numericAccountId = parseMetaAccountId(account.account_id)
+        
+        console.log(`Storing account: ${account.name} with ID: ${numericAccountId}`)
         
         await db
           .insert(metaAdAccounts)

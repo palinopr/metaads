@@ -2,8 +2,9 @@ import { NextRequest, NextResponse } from "next/server"
 import { getServerSession } from "next-auth/next"
 import { authOptions } from "@/lib/auth"
 import { db } from "@/db/drizzle"
-import { eq, and, or } from "drizzle-orm"
+import { eq, and } from "drizzle-orm"
 import { metaAdAccounts } from "@/db/schema"
+import { isInternalUUID } from "@/lib/meta/account-utils"
 
 export async function POST(request: NextRequest) {
   try {
@@ -19,13 +20,21 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Account ID is required" }, { status: 400 })
     }
     
+    // Validate that the account_id is an internal UUID
+    if (!isInternalUUID(account_id)) {
+      return NextResponse.json({ 
+        error: "Invalid account ID format. Please use the internal account ID.",
+        details: "Expected UUID format, received: " + account_id
+      }, { status: 400 })
+    }
+    
     // First, unselect all accounts for this user
     await db
       .update(metaAdAccounts)
       .set({ isSelected: false })
       .where(eq(metaAdAccounts.userId, session.user.id))
     
-    // Then select the chosen account
+    // Then select the chosen account using internal UUID only
     const result = await db
       .update(metaAdAccounts)
       .set({ 
@@ -35,10 +44,7 @@ export async function POST(request: NextRequest) {
       .where(
         and(
           eq(metaAdAccounts.userId, session.user.id),
-          or(
-            eq(metaAdAccounts.accountId, account_id),
-            eq(metaAdAccounts.id, account_id)
-          )
+          eq(metaAdAccounts.id, account_id)
         )
       )
       .returning({

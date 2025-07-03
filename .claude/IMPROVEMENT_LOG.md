@@ -25,6 +25,36 @@ When working on any task, watch for:
 
 ---
 
+### 2025-07-03 - Initial Context Engineering Implementation
+**Discovery**: Setting up and running projects requires significant context beyond code
+**Current Approach**: Minimal documentation, rely on AI to figure out setup
+**Better Approach**: Comprehensive setup docs, validation checklists, troubleshooting guides
+**Action Taken**: 
+- [x] Created SETUP.md with step-by-step instructions
+- [x] Added Pre-Development Checklist to CLAUDE.md
+- [x] Created DEVELOPMENT_WORKFLOW.md for common tasks
+- [x] Created COMMON_ISSUES.md for troubleshooting
+- [x] Updated PRP template with setup verification
+
+### 2025-07-03 - Development Environment Management
+**Discovery**: Dev environment state significantly impacts development success
+**Current Approach**: Assume environment is ready
+**Better Approach**: Always verify environment state before development
+**Action Taken**: 
+- [x] Added environment checks to CLAUDE.md
+- [x] Documented background process management
+- [x] Added quick verification commands
+- [x] Created troubleshooting for common env issues
+
+### 2025-07-03 - Working Directory and Path Issues
+**Discovery**: Bash cd commands fail in certain contexts, causing setup failures
+**Current Approach**: Use cd for navigation
+**Better Approach**: Use absolute paths or stay in current directory
+**Action Taken**: 
+- [x] Documented in CLAUDE.md gotchas
+- [x] Added examples using absolute paths
+- [x] Included workarounds in COMMON_ISSUES.md
+
 ### Example Entry:
 ### 2025-01-03 - MetaAds Context Setup
 **Discovery**: Found that MetaAds uses specific error handling patterns for Meta API
@@ -41,6 +71,12 @@ When working on any task, watch for:
 2. **AI Agent Communication** - Document the Python/TypeScript bridge pattern
 3. **Campaign State Machine** - Document the campaign status transitions
 4. **Batch Operations** - Add examples for bulk Meta API operations
+5. **Python Agent Examples** - Create `examples/agent-pattern.py` with standard patterns
+6. **Testing Patterns** - Add comprehensive testing examples to examples/
+7. **CI/CD Workflow** - Document deployment and continuous integration setup
+8. **Performance Optimization** - Create examples for caching, lazy loading, etc.
+9. **Meta Sandbox Setup** - Document how to set up Meta test accounts
+10. **Production Environment** - Create production setup guide separate from dev
 
 ## Context Quality Checklist
 

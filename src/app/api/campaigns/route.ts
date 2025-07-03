@@ -5,6 +5,7 @@ import { db } from "@/db/drizzle"
 import { sql, eq, and, desc } from "drizzle-orm"
 import { campaigns, metaAdAccounts, metaConnections, campaignInsights, users } from "@/db/schema"
 import { z } from "zod"
+import { formatMetaAccountId, isValidMetaAccountId } from "@/lib/meta/account-utils"
 
 // Validation schemas
 const createCampaignSchema = z.object({
@@ -103,10 +104,8 @@ export async function GET(request: Request) {
     
     const account = accountData
     
-    // Check if account_id looks like a UUID (wrong format)
-    const isValidMetaAccountId = account.account_id && /^\d+$/.test(account.account_id)
-    
-    if (!isValidMetaAccountId) {
+    // Validate Meta account ID format
+    if (!isValidMetaAccountId(account.account_id)) {
       console.error('[Campaigns] Invalid Meta account ID format:', {
         account_id: account.account_id,
         internal_id: account.id,
@@ -147,9 +146,10 @@ export async function GET(request: Request) {
       const limit = searchParams.get('limit') || '50'
       const datePreset = searchParams.get('date_preset') || 'last_30d'
       
-      console.log(`[Campaigns] Syncing campaigns for account ${account.account_id}`)
+      const metaAccountId = formatMetaAccountId(account.account_id)
+      console.log(`[Campaigns] Syncing campaigns for account ${metaAccountId}`)
       
-      const campaignsUrl = `https://graph.facebook.com/v18.0/act_${account.account_id}/campaigns?fields=id,name,status,objective,created_time,updated_time,daily_budget,lifetime_budget,budget_remaining,effective_status,insights.date_preset(${datePreset}){impressions,clicks,spend,ctr,cpm,reach}&limit=${limit}&access_token=${account.access_token}`
+      const campaignsUrl = `https://graph.facebook.com/v18.0/${metaAccountId}/campaigns?fields=id,name,status,objective,created_time,updated_time,daily_budget,lifetime_budget,budget_remaining,effective_status,insights.date_preset(${datePreset}){impressions,clicks,spend,ctr,cpm,reach}&limit=${limit}&access_token=${account.access_token}`
       
       const response = await fetch(campaignsUrl)
       const data = await response.json()

@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { CheckCircle2, AlertCircle, Loader2, Building2, ArrowLeft, Search, RefreshCw } from "lucide-react"
 import { useRouter } from "next/navigation"
+import { getDisplayAccountId } from "@/lib/meta/account-utils"
 
 interface AdAccount {
   id: string
@@ -258,7 +259,7 @@ export default function MetaAccountsPage() {
                       >
                         <div className="font-medium">{account.name}</div>
                         <div className="text-sm text-muted-foreground">
-                          ID: {account.account_id || accountId} • {account.currency} • {account.timezone_name}
+                          Meta ID: {account.account_id ? getDisplayAccountId(account.account_id) : 'Not synced'} • {account.currency} • {account.timezone_name}
                         </div>
                       {account.is_selected && (
                         <div className="flex items-center gap-1 mt-1">
