@@ -15,8 +15,28 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // CEO Fast Solution: Call Python workflow directly
-    // In production, use a queue system
+    // Check if external API URL is configured (Railway deployment)
+    const externalApiUrl = process.env.EXTERNAL_API_URL || process.env.NEXT_PUBLIC_API_URL;
+    
+    if (externalApiUrl) {
+      try {
+        // Call external Python service (Railway)
+        const response = await fetch(`${externalApiUrl}/api/campaign/create`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ message, userId: userId || "web_user" })
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          return NextResponse.json(data);
+        }
+      } catch (e) {
+        console.log('External API not available, falling back to local execution');
+      }
+    }
+
+    // Fallback: Call Python workflow directly (local/demo)
     const result = await executeWorkflow(message, userId || "web_user");
 
     return NextResponse.json({
