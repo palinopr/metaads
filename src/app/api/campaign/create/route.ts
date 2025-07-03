@@ -41,8 +41,27 @@ export async function POST(request: NextRequest) {
 
 // Execute Python workflow (CEO: Quick and dirty for MVP)
 async function executeWorkflow(message: string, userId: string) {
+  // First, try to use the Python API endpoint if available
+  if (process.env.VERCEL_ENV === 'production') {
+    try {
+      const pythonResponse = await fetch(`${process.env.VERCEL_URL || ''}/api/campaign-python`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message, userId })
+      });
+      
+      if (pythonResponse.ok) {
+        const data = await pythonResponse.json();
+        return data;
+      }
+    } catch (e) {
+      console.log('Python endpoint not available, falling back to subprocess');
+    }
+  }
+
+  // Fallback to subprocess for local development
   return new Promise((resolve, reject) => {
-    const scriptPath = path.join(process.cwd(), "src", "api", "workflow_bridge.py");
+    const scriptPath = path.join(process.cwd(), "src", "agents", "api_bridge.py");
     
     const pythonProcess = spawn("python", [
       scriptPath,

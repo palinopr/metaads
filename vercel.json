@@ -13,6 +13,10 @@
   "functions": {
     "src/app/api/campaign/create/route.ts": {
       "maxDuration": 30
+    },
+    "api/campaign-python.py": {
+      "runtime": "python3.9",
+      "maxDuration": 30
     }
   },
   "crons": [

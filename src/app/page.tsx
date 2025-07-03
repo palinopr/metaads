@@ -12,11 +12,34 @@ export default function HomePage() {
     if (!message.trim()) return;
 
     setIsCreating(true);
-    // TODO: Call our API
-    setTimeout(() => {
+    
+    try {
+      // Call our Python API endpoint (or fallback to Node.js)
+      const response = await fetch('/api/campaign/create', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          message: message.trim(),
+          userId: 'web_user'
+        }),
+      });
+
+      const data = await response.json();
+      
+      if (data.success) {
+        alert(`✨ ${data.message || 'Campaign created successfully!'}\n\nCampaign: ${data.campaign?.name || 'AI Campaign'}\nBudget: ${data.campaign?.budget || '$100/day'}`);
+        setMessage("");
+      } else {
+        alert(`Error: ${data.error || 'Failed to create campaign'}`);
+      }
+    } catch (error) {
+      console.error('Campaign creation error:', error);
+      alert('Failed to create campaign. Please try again.');
+    } finally {
       setIsCreating(false);
-      alert("Campaign created! (Demo mode - connect API next)");
-    }, 2000);
+    }
   };
 
   return (
