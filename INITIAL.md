@@ -1,92 +1,133 @@
-# MetaAds Feature Request - Meta OAuth Connection
+# INITIAL - Conversational Campaign Builder
 
-## FEATURE
-Enable users to connect their Facebook/Meta business accounts through OAuth, store access tokens securely, and manage multiple connected accounts.
+## FEATURE: Natural Language Campaign Creation System
 
-## USER STORY
-As a digital marketer, I want to connect my Meta business accounts to MetaAds so that I can manage my Facebook/Instagram advertising campaigns through the platform.
+Build a conversational interface that allows users to create complete marketing campaigns using natural language. Users should be able to describe their campaign goals in plain English and have the system automatically generate the entire campaign structure with optimal settings.
 
-## EXAMPLES
-- Similar component: Basic auth flow in `src/app/api/auth/[...nextauth]/route.ts`
-- Similar API endpoint: User registration in `src/app/api/auth/register/route.ts`
-- Similar functionality: NextAuth.js provider patterns (currently email/password only)
+### Core Functionality
 
-## ACCEPTANCE CRITERIA
-- [ ] Users can initiate Facebook OAuth connection from dashboard
-- [ ] OAuth flow redirects to Facebook for authorization
-- [ ] Access tokens are stored securely with encryption
-- [ ] Users can view their connected Meta accounts
-- [ ] Users can disconnect accounts
-- [ ] Handle OAuth errors gracefully with user-friendly messages
-- [ ] Support for both Facebook and Instagram business accounts
-- [ ] Respect Meta's API permissions and scopes
+1. **Natural Language Understanding**
+   - Parse campaign objectives from conversational input
+   - Extract key parameters (budget, audience, duration, goals)
+   - Handle ambiguous requests with clarifying questions
+   - Support multiple languages (start with English)
 
-## DOCUMENTATION
-- Meta Marketing API: https://developers.facebook.com/docs/marketing-api/getting-started
-- Facebook Login for Business: https://developers.facebook.com/docs/facebook-login/guides/advanced/manual-flow
-- NextAuth.js Facebook Provider: https://next-auth.js.org/providers/facebook
-- Internal docs: requirements/REQUIREMENTS_SPEC.md#meta-connections
+2. **Campaign Structure Generation**
+   - Create campaign hierarchy (Campaign → Ad Sets → Ads)
+   - Set appropriate campaign objectives based on goals
+   - Configure optimal bidding strategies
+   - Generate targeting parameters
 
-## META ADS API REQUIREMENTS
-- Required permissions: 
-  - `ads_management` - Manage advertising campaigns
-  - `ads_read` - Read advertising insights and campaign data  
-  - `business_management` - Access business accounts and pages
-  - `pages_read_engagement` - Read page data
-- API endpoints needed: 
-  - `/me/accounts` - Get user's business accounts
-  - `/me/businesses` - Get user's business manager accounts
-  - `/act_{account_id}/` - Validate account access
-- Rate limit considerations: OAuth calls are not rate limited, but account validation calls are
+3. **Interactive Refinement**
+   - Show campaign preview in real-time
+   - Allow conversational modifications
+   - Suggest improvements based on best practices
+   - Validate against platform policies
 
-## UI/UX REQUIREMENTS
-- Location in app: Dashboard with "Connect Meta Account" button
-- User flow: 
-  1. Dashboard → "Connect Account" → OAuth popup/redirect
-  2. Facebook authorization → Callback → Success message
-  3. Connected accounts shown in dashboard
-- Mobile responsive: Yes (OAuth should work on mobile)
-- Loading states needed: Yes (OAuth flow can take 5-10 seconds)
+4. **Multi-Channel Support**
+   - Start with Meta (Facebook/Instagram)
+   - Design for future expansion (Google, TikTok, etc.)
+   - Platform-specific optimizations
+   - Cross-platform campaign coordination
 
-## DATA REQUIREMENTS
-- New database tables: 
-  - `meta_connections` (user_id, access_token, refresh_token, expires_at, scopes)
-  - `meta_ad_accounts` (connection_id, account_id, account_name, currency, timezone, is_selected)
-- Modifications to existing tables: None
-- Data retention policy: Tokens valid for 60 days, refresh as needed
+### Example Interactions
 
-## AI AGENT INVOLVEMENT
-- Agent required: No (this is pure OAuth integration)
-- Agent type: N/A
-- Agent capabilities needed: N/A
+**User**: "I want to promote my new fitness app to women aged 25-40 who are interested in yoga and wellness, with a budget of $500 per week"
 
-## PERFORMANCE REQUIREMENTS
-- Expected load: Up to 1000 OAuth connections per day
-- Response time target: OAuth flow completion < 10 seconds
-- Real-time updates needed: No (OAuth is one-time flow)
+**System**: 
+- Creates campaign with "App Installs" objective
+- Sets up ad set targeting women 25-40
+- Adds interests: yoga, wellness, meditation, fitness
+- Configures $500 weekly budget with optimal daily distribution
+- Suggests creative formats that work best for app installs
 
-## SECURITY CONSIDERATIONS
-- Authentication required: Yes (users must be logged in)
-- Authorization rules: Users can only connect accounts they own
-- Data sensitivity: HIGH - Access tokens allow full account management
-- Encryption: All tokens encrypted at rest using ENCRYPTION_KEY
-- Token refresh: Implement automatic token refresh before expiration
+**User**: "Focus more on Instagram and add men too"
 
-## OTHER CONSIDERATIONS
-- Facebook App Review may be required for production permissions
-- Handle Facebook API versioning (currently v18.0)
-- Implement proper error handling for expired/invalid tokens
-- Consider implementing webhook for real-time token revocation
-- Support for Facebook Business Manager vs personal accounts
-- Handle edge cases: account suspended, permissions revoked, etc.
+**System**:
+- Updates placement to prioritize Instagram
+- Expands gender targeting to all
+- Adjusts creative recommendations for Instagram
+- Recalculates budget distribution
 
-## SUCCESS METRICS
-- OAuth completion rate (target: >90%)
-- Token refresh success rate (target: >95%) 
-- User satisfaction with connection flow
-- Time to complete OAuth flow (target: <30 seconds)
-- Error rate during connection process (target: <5%)
+## EXAMPLES:
 
----
+### Agent Examples
+- `examples/agents/base_agent.py` - Base agent class template
+- `examples/agents/campaign_parser_agent.py` - Natural language parsing example
+- `examples/agents/meta_api_agent.py` - Meta API integration patterns
 
-**Note**: After filling out this template, use `/generate-prp` to create a comprehensive Product Requirements Prompt for implementation.
+### Workflow Examples  
+- `examples/workflows/campaign_creation_workflow.py` - Multi-step campaign creation
+- `examples/workflows/supervisor_routing.py` - Request routing pattern
+
+### State Management
+- `examples/state-management/campaign_state.py` - Campaign state schema
+- `examples/state-management/conversation_memory.py` - Conversation tracking
+
+## DOCUMENTATION:
+
+### LangGraph Resources
+- [StateGraph Documentation](https://langchain-ai.github.io/langgraph/how-tos/create-react-agent/)
+- [Human-in-the-Loop Patterns](https://langchain-ai.github.io/langgraph/how-tos/human-in-the-loop/)
+- [Persistence and Checkpointing](https://langchain-ai.github.io/langgraph/how-tos/persistence/)
+
+### Meta Ads API
+- [Campaign Creation API](https://developers.facebook.com/docs/marketing-api/reference/ad-campaign-group)
+- [Targeting Options](https://developers.facebook.com/docs/marketing-api/audiences/reference/targeting)
+- [Budget Optimization](https://developers.facebook.com/docs/marketing-api/campaign-budget-optimization)
+
+### UI/UX Patterns
+- [Conversational UI Best Practices](https://www.nngroup.com/articles/chatbot-usability/)
+- [Progressive Disclosure](https://www.nngroup.com/articles/progressive-disclosure/)
+
+## OTHER CONSIDERATIONS:
+
+### Technical Requirements
+1. **Response Time**: Initial response < 2 seconds
+2. **Conversation Memory**: Maintain context for entire session
+3. **Streaming**: Show campaign building progress in real-time
+4. **Validation**: Check all parameters before API calls
+5. **Error Recovery**: Graceful handling of API failures
+
+### User Experience
+1. **Onboarding**: First-time users should create a campaign in < 3 minutes
+2. **Suggestions**: Proactively offer optimization tips
+3. **Templates**: Provide quick-start templates for common scenarios
+4. **Help**: Inline explanations for marketing terms
+
+### Campaign Creation Gotchas
+1. **Budget Minimums**: Meta requires minimum daily budgets ($1-5 depending on objective)
+2. **Audience Size**: Must have sufficient reach (usually 1000+ people)
+3. **Policy Compliance**: Certain industries have restrictions
+4. **Creative Requirements**: Different objectives need different creative formats
+5. **Attribution Windows**: Default settings may not be optimal
+
+### Integration Points
+1. **Authentication**: User must have connected Meta account
+2. **Permissions**: Require ads_management, business_management scopes  
+3. **Account Selection**: Handle multiple ad accounts
+4. **Currency**: Detect and use account currency
+5. **Time Zones**: Use ad account timezone for scheduling
+
+### Data to Track
+1. **Conversation Metrics**: Messages to campaign creation
+2. **Success Rate**: Campaigns successfully created vs attempted
+3. **Modification Frequency**: How often users refine campaigns
+4. **Error Points**: Where users get stuck
+5. **Performance**: Created campaigns' actual performance
+
+### Future Enhancements
+1. **Voice Input**: "Hey, create a campaign for..."
+2. **Campaign Templates**: Industry-specific starting points
+3. **Competitive Analysis**: "Create a campaign like [competitor]"
+4. **Performance Prediction**: Estimate results before launching
+5. **Bulk Operations**: "Create 10 variations of this campaign"
+
+### Security & Compliance
+1. **Input Sanitization**: Prevent prompt injection
+2. **Rate Limiting**: Prevent abuse of API calls
+3. **Audit Trail**: Log all campaign modifications
+4. **Data Privacy**: Don't store sensitive targeting data
+5. **Access Control**: Respect user permissions in Meta Business Manager
+
+This conversational campaign builder will be the cornerstone of our platform, making sophisticated marketing accessible to everyone through natural language.

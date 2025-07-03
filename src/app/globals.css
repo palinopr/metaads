@@ -4,88 +4,48 @@
 
 @layer base {
   :root {
-    /* Modern, clean color palette inspired by successful analytics platforms */
-    --background: 0 0% 98%; /* #FAFAFA - Subtle off-white */
-    --foreground: 240 10% 3.9%; /* Near black for high contrast */
-    
-    /* Cards with subtle depth */
+    --background: 0 0% 100%;
+    --foreground: 222.2 84% 4.9%;
     --card: 0 0% 100%;
-    --card-foreground: 240 10% 3.9%;
+    --card-foreground: 222.2 84% 4.9%;
     --popover: 0 0% 100%;
-    --popover-foreground: 240 10% 3.9%;
-    
-    /* Primary - Modern purple/violet */
-    --primary: 262 83% 58%; /* #8B5CF6 */
-    --primary-foreground: 0 0% 100%;
-    
-    /* Secondary - Neutral gray */
-    --secondary: 240 4.8% 95.9%;
-    --secondary-foreground: 240 5.9% 10%;
-    
-    /* Muted elements */
-    --muted: 240 4.8% 95.9%;
-    --muted-foreground: 240 3.8% 46.1%;
-    
-    /* Accent - Bright blue for CTAs */
-    --accent: 217 91% 60%; /* #3B82F6 */
-    --accent-foreground: 0 0% 100%;
-    
-    /* Status colors */
-    --destructive: 0 84% 60%;
-    --destructive-foreground: 0 0% 98%;
-    
-    /* Borders - Very subtle */
-    --border: 240 5.9% 90%;
-    --input: 240 5.9% 90%;
-    
-    --ring: 262 83% 58%;
-    --radius: 0.375rem; /* Slightly smaller radius for modern look */
-    
-    /* Chart colors - Data visualization optimized */
-    --chart-1: 262 83% 58%; /* Purple */
-    --chart-2: 217 91% 60%; /* Blue */
-    --chart-3: 158 64% 52%; /* Teal */
-    --chart-4: 38 92% 50%; /* Orange */
-    --chart-5: 0 84% 60%; /* Red */
+    --popover-foreground: 222.2 84% 4.9%;
+    --primary: 222.2 47.4% 11.2%;
+    --primary-foreground: 210 40% 98%;
+    --secondary: 210 40% 96.1%;
+    --secondary-foreground: 222.2 47.4% 11.2%;
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+    --accent: 210 40% 96.1%;
+    --accent-foreground: 222.2 47.4% 11.2%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 222.2 84% 4.9%;
+    --radius: 0.5rem;
   }
 
   .dark {
-    /* Dark mode optimized for long viewing sessions */
-    --background: 222 84% 5%; /* Very dark blue */
+    --background: 222.2 84% 4.9%;
     --foreground: 210 40% 98%;
-    
-    --card: 222 47% 11%;
+    --card: 222.2 84% 4.9%;
     --card-foreground: 210 40% 98%;
-    --popover: 222 47% 11%;
+    --popover: 222.2 84% 4.9%;
     --popover-foreground: 210 40% 98%;
-    
-    /* Primary - Lighter purple for dark mode */
-    --primary: 267 84% 81%; /* #C4B5FD */
-    --primary-foreground: 222 47% 11%;
-    
-    --secondary: 217 33% 17%;
+    --primary: 210 40% 98%;
+    --primary-foreground: 222.2 47.4% 11.2%;
+    --secondary: 217.2 32.6% 17.5%;
     --secondary-foreground: 210 40% 98%;
-    
-    --muted: 217 33% 17%;
-    --muted-foreground: 215 20% 65%;
-    
-    --accent: 217 91% 70%; /* Lighter blue */
-    --accent-foreground: 222 47% 11%;
-    
-    --destructive: 0 72% 51%;
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+    --accent: 217.2 32.6% 17.5%;
+    --accent-foreground: 210 40% 98%;
+    --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 210 40% 98%;
-    
-    --border: 217 33% 17%;
-    --input: 217 33% 17%;
-    
-    --ring: 267 84% 81%;
-    
-    /* Dark mode chart colors */
-    --chart-1: 267 84% 81%;
-    --chart-2: 217 91% 70%;
-    --chart-3: 158 64% 62%;
-    --chart-4: 38 92% 60%;
-    --chart-5: 0 84% 70%;
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 212.7 26.8% 83.9%;
   }
 }
 
@@ -94,106 +54,37 @@
     @apply border-border;
   }
   body {
-    @apply bg-background text-foreground antialiased;
-    font-feature-settings: "rlig" 1, "calt" 1;
+    @apply bg-background text-foreground;
   }
 }
 
-@layer components {
-  /* Compact design system */
-  .h1 {
-    @apply text-2xl font-semibold tracking-tight;
+/* CEO Custom Styles */
+.bg-grid-white {
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32' width='32' height='32' fill='none' stroke='rgb(255 255 255 / 0.02)'%3e%3cpath d='M0 .5H31.5V32'/%3e%3c/svg%3e");
+}
+
+/* Smooth animations */
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
   }
-  
-  .h2 {
-    @apply text-xl font-semibold tracking-tight;
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
-  
-  .h3 {
-    @apply text-lg font-semibold tracking-tight;
-  }
-  
-  /* Metric cards with gradients */
-  .metric-card {
-    @apply relative overflow-hidden;
-  }
-  
-  .metric-card-spend {
-    @apply bg-gradient-to-br from-red-500/10 to-pink-500/10 border-red-200/50;
-  }
-  
-  .metric-card-impressions {
-    @apply bg-gradient-to-br from-blue-500/10 to-cyan-500/10 border-blue-200/50;
-  }
-  
-  .metric-card-clicks {
-    @apply bg-gradient-to-br from-purple-500/10 to-pink-500/10 border-purple-200/50;
-  }
-  
-  .metric-card-conversions {
-    @apply bg-gradient-to-br from-green-500/10 to-emerald-500/10 border-green-200/50;
-  }
-  
-  /* Compact table styles */
-  .table-compact th {
-    @apply h-9 px-3 text-xs font-medium;
-  }
-  
-  .table-compact td {
-    @apply h-10 px-3 text-sm;
-  }
-  
-  /* Status badges */
-  .badge-active {
-    @apply bg-green-100 text-green-700 border-green-200;
-  }
-  
-  .badge-paused {
-    @apply bg-amber-100 text-amber-700 border-amber-200;
-  }
-  
-  .badge-error {
-    @apply bg-red-100 text-red-700 border-red-200;
-  }
-  
-  /* Dark mode status badges */
-  .dark .badge-active {
-    @apply bg-green-500/10 text-green-400 border-green-500/20;
-  }
-  
-  .dark .badge-paused {
-    @apply bg-amber-500/10 text-amber-400 border-amber-500/20;
-  }
-  
-  .dark .badge-error {
-    @apply bg-red-500/10 text-red-400 border-red-500/20;
-  }
-  
-  /* Sidebar styles */
-  .sidebar-item {
-    @apply flex items-center gap-2 px-3 py-1.5 text-sm rounded-md transition-colors;
-  }
-  
-  .sidebar-item:hover {
-    @apply bg-primary/10 text-primary;
-  }
-  
-  .sidebar-item.active {
-    @apply bg-primary text-primary-foreground shadow-sm;
-  }
-  
-  /* Card elevation */
-  .card-elevated {
-    @apply shadow-sm border-border/50 hover:shadow-md transition-shadow;
-  }
-  
-  /* Smooth focus states */
-  .focus-ring {
-    @apply focus:outline-none focus:ring-2 focus:ring-primary/20 focus:ring-offset-2;
-  }
-  
-  /* Gradient text */
-  .gradient-text {
-    @apply bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent;
-  }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.5s ease-out;
+}
+
+/* Gradient text */
+.gradient-text {
+  @apply text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-400;
+}
+
+/* Glass effect */
+.glass {
+  @apply bg-white/10 backdrop-blur-lg border border-white/20;
 }

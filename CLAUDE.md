@@ -1,361 +1,301 @@
-# MetaAds - Global AI Assistant Rules
-
-This document contains critical rules and context for AI assistants working on the MetaAds project.
+# AI Marketing Automation - Global AI Assistant Rules
 
 ## Project Overview
-MetaAds is an AI-powered Meta (Facebook) Ads management platform - "Cursor for Meta Ads". It automates campaign creation, optimization, and monitoring through conversational AI interfaces.
+
+This is an AI-powered marketing automation platform that makes creating and managing marketing campaigns as easy as having a conversation. Built with LangGraph for multi-agent orchestration and Context Engineering for reliability.
+
+**Vision**: "Claude Code for Marketing" - where non-technical users can create, manage, and optimize campaigns using natural language.
 
 ## Pre-Development Checklist
 
-Before implementing any features, ensure:
-1. **Project is running**: Verify with `curl -I http://localhost:3000`
-2. **Dependencies installed**: Check `node_modules` exists (npm install if needed)
-3. **Environment configured**: Verify `.env` file exists (copy from .env.example)
-4. **Database ready**: Run `npm run db:push` for new setups
-5. **No existing errors**: Run `npm run lint && npm run typecheck`
-6. **Development server active**: Check `ps aux | grep "next dev"`
-
-If any check fails, see `SETUP.md` for resolution.
+Before implementing any features:
+1. **Environment Setup**: Ensure Python 3.9+ and Node.js 18+ are installed
+2. **Dependencies**: Run `pip install -r requirements.txt` and `npm install`
+3. **LangGraph**: Verify LangGraph and LangChain are properly installed
+4. **API Keys**: Check `.env` has required keys (OPENAI_API_KEY, ANTHROPIC_API_KEY, etc.)
+5. **Database**: Ensure PostgreSQL/SQLite is running for development
 
 ## Critical Rules
 
-### 0. GITHUB PUSH RULE - NEVER FORGET!
-**MANDATORY**: After EVERY change to the codebase:
-1. Create a descriptive commit: `git add . && git commit -m "feat/fix/docs: description"`
-2. Push to GitHub: `git push origin main`
-3. Verify deployment: Check GitHub Actions or Vercel dashboard
-4. **This is NON-NEGOTIABLE** - Set up reminders, use TodoWrite, whatever it takes!
+### 1. Context Engineering First
+- **ALWAYS** create an INITIAL.md before building features
+- Generate PRPs using the systematic approach
+- Validate each implementation step
+- Document patterns for reuse
 
-**Deployment Flow**:
-- Changes pushed to GitHub → Automatically deployed via Vercel
-- Production URL updates automatically after successful push
-- Always verify deployment status after push
+### 2. Agent Development Standards
+- Each agent lives in `src/agents/` as a Python file
+- Follow the base agent template in `examples/agents/base_agent.py`
+- All agents must support async execution
+- Implement comprehensive error handling
+- Use Pydantic for input/output validation
 
-### 1. Project Awareness
-- **ALWAYS** read planning documents before implementing features
-- Check TodoRead at the start of each conversation
-- Review recent commits to understand current state
-- Read REQUIREMENTS_SPEC.md for feature context
+### 3. LangGraph Patterns
+- Define clear state schemas for each workflow
+- Use TypedDict for state definitions
+- Implement checkpointing for all workflows
+- Add interrupt points for human approval
+- Enable LangSmith tracing in production
 
-### 2. Technology Stack Rules
-- **Framework**: Next.js 15 with App Router (NOT Pages Router)
-- **Language**: TypeScript with strict mode enabled
+### 4. Technology Stack
+- **Orchestration**: LangGraph for agent workflows
+- **LLMs**: OpenAI GPT-4 (complex), GPT-3.5 (simple), Claude (analysis)
+- **Frontend**: Next.js 15 with App Router
 - **Database**: PostgreSQL with Drizzle ORM
-- **Authentication**: NextAuth.js with Facebook OAuth
-- **UI**: Tailwind CSS + shadcn/ui components
-- **AI**: OpenAI/Anthropic SDKs for agents
+- **Authentication**: Supabase Auth
+- **UI**: Tailwind CSS + shadcn/ui
+- **Monitoring**: LangSmith for observability
 
-### 3. Code Structure Rules
-- Keep components under 300 lines
-- Split large files into logical modules
-- Use server components by default, client components only when needed
-- Follow existing patterns in src/components and src/app
-
-### 4. File Organization
+### 5. Code Organization
 ```
 src/
-├── app/              # Next.js App Router pages
-├── components/       # Reusable React components
-├── lib/             # Utilities and integrations
-├── db/              # Database schema and queries
-├── agents/          # AI agent implementations
-├── types/           # TypeScript type definitions
-└── contexts/        # React context providers
+├── agents/           # Python agent implementations
+├── workflows/        # LangGraph workflow definitions
+├── app/             # Next.js frontend
+├── components/      # React components
+├── lib/            # Utilities and integrations
+├── db/             # Database schemas
+└── types/          # TypeScript/Python type definitions
 ```
 
-### 5. Testing & Validation
-- Run `npm run lint` before committing
-- Run `npm run typecheck` to verify types
-- Test with `npm test` for unit tests
-- Build with `npm run build` to catch errors
-- Always handle Meta API rate limits
+### 6. Agent Communication Protocol
+- Agents communicate through shared state only
+- No direct agent-to-agent calls
+- Supervisor agent manages complex workflows
+- State updates must be atomic
+- Include correlation IDs for tracking
 
-### 6. Meta Ads API Integration
-- Use official facebook-nodejs-business-sdk
-- Always check user permissions before API calls
-- Implement exponential backoff for rate limits
-- Store access tokens securely in database
-- Log all API errors for debugging
+### 7. Performance Requirements
+- Agent response time < 3 seconds
+- Workflow completion < 10 seconds
+- Stream responses for long operations
+- Cache API responses appropriately
+- Implement circuit breakers
 
-### 7. AI Agent Development
+### 8. Testing Standards
+- Unit tests for each agent tool
+- Integration tests for workflows
+- Mock external API calls
+- Test error scenarios
+- Minimum 80% code coverage
 
-#### Agent Architecture
-- **Location**: All agents live in `src/agents/` as Python files
-- **Base Class**: Inherit from the standardized `MetaAdsAgent` class (see `examples/agent-pattern.py`)
-- **Naming**: Use kebab-case for files (e.g., `campaign-creator.py`)
-- **Integration**: Call agents via API routes in `src/app/api/agents/`
-
-#### Required Components
-```python
-# Every agent must have:
-1. Environment configuration
-2. Tool definitions with @tool decorator
-3. Error handling and fallbacks
-4. Async execution support
-5. Session/memory management
-```
-
-#### Agent Development Rules
-1. **LLM Configuration**:
-   - Support both OpenAI and Anthropic providers
-   - Use environment variable `AI_PROVIDER` to switch
-   - Default to GPT-4 for complex tasks, GPT-3.5 for simple
-   - Set appropriate temperature (0.7 for creative, 0 for analytical)
-
-2. **Tool Development**:
-   - Always use Pydantic models for tool inputs
-   - Include comprehensive docstrings
-   - Implement retry logic for external API calls
-   - Return structured Dict[str, Any] responses
-   - See `examples/agent-tool-pattern.py` for patterns
-
-3. **Error Handling**:
-   - Never let exceptions bubble up to the user
-   - Provide fallback responses when APIs fail
-   - Log errors with context for debugging
-   - Return user-friendly error messages
-
-4. **Memory Management**:
-   - Use LangGraph's InMemorySaver for development
-   - Implement session-based memory for production
-   - Clear memory after 24 hours of inactivity
-   - Store important context in database
-
-5. **Testing Requirements**:
-   - Mock all external API calls in tests
-   - Test with both LLM providers
-   - Include edge cases (rate limits, API failures)
-   - Validate tool outputs match schemas
-
-#### Integration Pattern
-```typescript
-// API Route (TypeScript)
-await executeAgent(
-  agentType: "optimization",
-  action: "analyze",
-  parameters: { campaignId: "123" },
-  sessionId: "user-session-456"
-)
-```
-
-```python
-# Agent (Python)
-async def process(self, action: str, params: Dict, session_id: str):
-    # Implementation
-```
-
-#### Performance Guidelines
-- Keep agent responses under 5 seconds
-- Stream responses for long-running tasks
-- Cache Meta API responses for 5 minutes
-- Use connection pooling for API calls
-
-#### Validation Scripts
-```bash
-# Validate AI configuration
-./scripts/validate-ai-config.js
-
-# Test agent connectivity
-python scripts/test-agent-connectivity.py
-
-# Check Meta permissions
-./scripts/check-meta-permissions.js
-```
-
-### 8. Security Rules
-- NEVER commit .env files
-- Use environment variables for all secrets
+### 9. Security Guidelines
+- Never log sensitive data (API keys, tokens)
 - Validate all user inputs
-- Sanitize data before database operations
-- Check OAuth scopes match requirements
-
-### 9. Performance Considerations
-- Use React Server Components for initial loads
-- Implement proper caching strategies
-- Optimize images with next/image
-- Use database indexes on frequently queried fields
-- Implement SSE with proper connection management
+- Implement rate limiting
+- Use environment variables for secrets
+- Sanitize LLM outputs
 
 ### 10. Error Handling
-- Always use try-catch for async operations
-- Provide user-friendly error messages
-- Log errors with context for debugging
-- Implement fallback UI for error states
-- Handle Meta API specific errors gracefully
-
-### 11. Development Environment Management
-- **Local Dev**: SQLite is acceptable for quick prototyping
-- **Background Processes**: Use `nohup npm run dev > dev.log 2>&1 &` for long sessions
-- **Port Conflicts**: Check with `lsof -i :3000` before starting
-- **Process Management**: Track PIDs when running background servers
-- **Environment Switching**: Keep separate .env.local and .env.production files
+- Always provide user-friendly error messages
+- Log errors with full context
+- Implement retry logic with backoff
+- Graceful degradation for failures
+- Never expose internal errors to users
 
 ## Common Patterns
 
-### API Route Pattern
-```typescript
-// app/api/campaigns/route.ts
-import { auth } from "@/lib/auth"
-import { db } from "@/db"
+### Agent Implementation Pattern
+```python
+from typing import Dict, Any, List
+from langchain.tools import tool
+from pydantic import BaseModel, Field
+import logging
 
-export async function GET(request: Request) {
-  const session = await auth()
-  if (!session) {
-    return Response.json({ error: "Unauthorized" }, { status: 401 })
-  }
-  
-  try {
-    // Implementation
-  } catch (error) {
-    console.error("Campaign fetch error:", error)
-    return Response.json({ error: "Internal error" }, { status: 500 })
-  }
-}
+class AgentInput(BaseModel):
+    """Input schema for agent"""
+    task: str = Field(description="Task description")
+    context: Dict[str, Any] = Field(default_factory=dict)
+
+class MarketingAgent:
+    """Base agent implementation"""
+    
+    def __init__(self, name: str):
+        self.name = name
+        self.logger = logging.getLogger(name)
+        self.tools = self._setup_tools()
+    
+    @tool
+    async def process_task(self, input: AgentInput) -> Dict[str, Any]:
+        """Main agent entry point"""
+        try:
+            # Implementation
+            return {"status": "success", "result": result}
+        except Exception as e:
+            self.logger.error(f"Error in {self.name}: {e}")
+            return {"status": "error", "message": str(e)}
+    
+    def _setup_tools(self) -> List:
+        """Define agent-specific tools"""
+        return []
 ```
 
-### Component Pattern
-```typescript
-// components/campaigns/campaign-card.tsx
-interface CampaignCardProps {
-  campaign: Campaign
-  onUpdate?: (campaign: Campaign) => void
-}
+### Workflow Pattern
+```python
+from langgraph.graph import StateGraph, END
+from typing import TypedDict, Annotated
+import operator
 
-export function CampaignCard({ campaign, onUpdate }: CampaignCardProps) {
-  // Implementation following shadcn/ui patterns
-}
+class WorkflowState(TypedDict):
+    messages: Annotated[list, operator.add]
+    current_agent: str
+    task_status: str
+    results: dict
+
+# Build workflow
+workflow = StateGraph(WorkflowState)
+
+# Add nodes
+workflow.add_node("supervisor", supervisor_agent)
+workflow.add_node("specialist", specialist_agent)
+
+# Add edges
+workflow.set_entry_point("supervisor")
+workflow.add_conditional_edges(
+    "supervisor",
+    route_decision,
+    {
+        "continue": "specialist",
+        "complete": END
+    }
+)
+
+# Compile
+app = workflow.compile(checkpointer=checkpointer)
 ```
 
-### Database Query Pattern
-```typescript
-// lib/queries/campaigns.ts
-import { db } from "@/db"
-import { campaigns } from "@/db/schema"
+### State Management Pattern
+```python
+from typing import TypedDict, Annotated, Sequence
+from langchain_core.messages import BaseMessage
+import operator
 
-export async function getCampaignsByUserId(userId: string) {
-  return db.select().from(campaigns).where(eq(campaigns.userId, userId))
-}
+class AgentState(TypedDict):
+    # Message history
+    messages: Annotated[Sequence[BaseMessage], operator.add]
+    
+    # Workflow control
+    current_agent: str
+    next_agent: str
+    
+    # Task tracking
+    task_id: str
+    task_status: Literal["pending", "in_progress", "completed", "failed"]
+    
+    # Results
+    results: Dict[str, Any]
+    errors: List[str]
+    
+    # Metadata
+    user_id: str
+    session_id: str
+    timestamp: datetime
 ```
 
 ## Known Gotchas
 
-### General Gotchas
-1. **Facebook OAuth**: Requires HTTPS even in development
-2. **Meta API Versions**: Always use the latest stable version (v18.0)
-3. **Rate Limits**: Different limits for development vs production
-4. **SSE in Next.js**: Requires specific response headers
-5. **TypeScript Strict**: Some libraries need type assertions
+### LangGraph Specific
+1. **State Updates**: Must use reducers for list fields
+2. **Checkpointing**: Requires serializable state
+3. **Async Execution**: All node functions must be async
+4. **Graph Compilation**: Happens once, plan accordingly
+5. **Human-in-the-Loop**: Requires interrupt_before configuration
 
-### Setup & Environment Gotchas
-6. **Working Directory**: Bash commands may fail with `cd` - use absolute paths
-7. **npm install Timeouts**: Some packages take 10-30s, use longer timeouts
-8. **Background Processes**: Next.js dev server continues running after terminal closes
-9. **SQLite for Dev**: Acceptable for local dev but switch to PostgreSQL for production
-10. **Placeholder Credentials**: Dev server runs with placeholders but features won't work
+### Agent Development
+6. **Token Limits**: Monitor usage, implement streaming
+7. **API Rate Limits**: Use exponential backoff
+8. **Memory Management**: Clear agent memory periodically
+9. **Tool Timeouts**: Set appropriate timeouts for external calls
+10. **Error Propagation**: Catch errors at agent boundaries
 
-### AI Agent Gotchas
-11. **Python Path Issues**: Add project root to sys.path in agents
-12. **Async Execution**: All agent methods must be async
-13. **Tool Timeouts**: Meta API calls can take 10+ seconds
-14. **Memory Leaks**: Clear agent memory after sessions
-15. **LLM Rate Limits**: 
-    - OpenAI: 10,000 tokens/min for GPT-4
-    - Anthropic: 100,000 tokens/min for Claude
-16. **Cost Management**: Use GPT-3.5 for simple tasks to reduce costs
-17. **Prompt Injection**: Always validate user inputs before passing to LLMs
-18. **Response Streaming**: EventSource API has 64KB limit per message
+### Integration Issues
+11. **LangSmith**: Requires specific environment variables
+12. **Streaming**: Use Server-Sent Events for real-time updates
+13. **CORS**: Configure properly for API endpoints
+14. **Authentication**: Integrate with Supabase carefully
+15. **Database Connections**: Use connection pooling
 
 ## Validation Commands
 ```bash
-# Before any commit
+# Python environment
+python -m pytest tests/
+python -m mypy src/
+
+# Frontend
 npm run lint
 npm run typecheck
 npm run build
 
-# Database changes
-npm run db:generate
-npm run db:migrate
+# Integration tests
+python tests/integration/test_workflows.py
 
-# Testing
-npm test
-npm run test:e2e  # If implemented
+# LangSmith validation
+python scripts/validate_langsmith.py
 ```
 
-## Deployment Rules
-**IMPORTANT: Always deploy to production with Vercel**
-```bash
-# ALWAYS use this command:
-vercel --prod
+## Development Workflow
 
-# NEVER use just 'vercel' for preview deployments
-```
+### Feature Development
+1. Create INITIAL.md with requirements
+2. Generate PRP using context engineering
+3. Implement agents following patterns
+4. Create workflow connecting agents
+5. Add frontend integration
+6. Write comprehensive tests
+7. Deploy with monitoring
 
-This ensures consistent production URLs and proper environment handling.
+### Debugging Workflow
+1. Enable LangSmith tracing
+2. Add debug logging to agents
+3. Use LangGraph visualizer
+4. Check state at each step
+5. Validate tool inputs/outputs
 
 ## Resources
-- Meta Ads API Docs: https://developers.facebook.com/docs/marketing-apis
-- Next.js 15 Docs: https://nextjs.org/docs
-- Drizzle ORM: https://orm.drizzle.team
-- shadcn/ui: https://ui.shadcn.com
+- [LangGraph Documentation](https://langchain-ai.github.io/langgraph/)
+- [LangSmith Guide](https://docs.smith.langchain.com/)
+- [Context Engineering Best Practices](https://github.com/coleam00/context-engineering-intro)
+- Internal: `examples/` directory for patterns
 
-## API Access & Self-Service Troubleshooting
+## Performance Optimization
 
-### Available Tools
-- **Vercel CLI**: Environment variables, logs, deployments
-- **Supabase API**: Database, auth, real-time, storage
-- **Meta Ads API**: Campaign management endpoints
-- **AI Services**: OpenAI and Anthropic APIs
+### Caching Strategy
+```python
+from functools import lru_cache
+import hashlib
 
-### Self-Service Error Resolution
-When encountering errors:
-1. Check `API_ACCESS.md` for common fixes
-2. Verify environment variables are set correctly
-3. Check rate limits and implement backoff
-4. Review server logs for detailed errors
+@lru_cache(maxsize=100)
+def get_cached_response(query_hash: str):
+    """Cache frequently requested data"""
+    pass
 
-### Quick Fixes
-```bash
-# Database issues
-npm run db:studio  # Visual database browser
-
-# Environment issues
-vercel env pull    # Get latest env vars
-
-# Build issues
-npm run lint       # Fix linting errors
-npm run typecheck  # Fix type errors
+def hash_query(query: dict) -> str:
+    """Create cache key from query"""
+    return hashlib.md5(json.dumps(query, sort_keys=True).encode()).hexdigest()
 ```
 
-For detailed API documentation and troubleshooting, see `API_ACCESS.md`.
+### Streaming Responses
+```python
+async def stream_agent_response(agent, input_data):
+    """Stream responses for better UX"""
+    async for chunk in agent.astream(input_data):
+        yield f"data: {json.dumps(chunk)}\n\n"
+```
 
-## Context Engineering Workflow
-1. Feature requests go in INITIAL.md
-2. Generate PRP with `/generate-prp`
-3. Execute implementation with `/execute-prp`
-4. Validate at each step
-5. Fix errors using API_ACCESS.md
-6. Update documentation as needed
+## Monitoring and Alerts
 
-## Continuous Context Improvement
+### Key Metrics to Track
+- Agent execution time
+- Workflow completion rate
+- Error rates by agent
+- Token usage per request
+- API call volumes
+- User satisfaction scores
 
-**IMPORTANT**: Always think proactively about improving the project's context:
+### Alert Thresholds
+- Error rate > 5%: Warning
+- Response time > 5s: Warning
+- Token usage > 80% limit: Critical
+- API failures > 10/min: Critical
 
-1. **Document New Patterns**: When you discover a pattern used multiple times, add it to `examples/`
-2. **Fix What's Wrong**: If you find a better way to do something, update the existing examples
-3. **Capture Gotchas**: Add newly discovered pitfalls to this file or relevant documentation
-4. **Enhance Templates**: If PRPs are missing important sections, update the template
-5. **Track Improvements**: Use `.claude/IMPROVEMENT_LOG.md` to track discoveries
-
-### When to Update Context
-- Found a repeated pattern? → Add to `examples/`
-- Discovered a Meta API quirk? → Add to Known Gotchas
-- Better error handling approach? → Update examples
-- Missing validation step? → Add to PRP template
-- New integration point? → Document the pattern
-
-### Example Improvements
-- If you implement SSE and it works well → Create `examples/sse-pattern.ts`
-- If you find Meta API has undocumented behavior → Add to CLAUDE.md gotchas
-- If you create a new agent pattern → Add `examples/agent-pattern.py`
-
-Remember: Context is king. When in doubt, research existing patterns before implementing new ones. But when you find better ways, update the context for future use! When errors occur, check API_ACCESS.md first before asking for help.
+Remember: We're building the future of marketing automation. Every line of code should make marketing easier for our users.
