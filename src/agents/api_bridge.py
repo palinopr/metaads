@@ -35,6 +35,41 @@ async def main():
         print(json.dumps({"error": "No message provided"}))
         sys.exit(1)
     
+    # Check if we have OpenAI API key
+    if not os.getenv("OPENAI_API_KEY"):
+        # For demo, return mock data
+        mock_response = {
+            "success": True,
+            "sessionId": "demo-session",
+            "campaign": {
+                "id": "campaign-demo123",
+                "name": "AI Marketing Campaign",
+                "status": "draft",
+                "objective": "TRAFFIC",
+                "budget": 100,
+                "budgetType": "daily",
+                "estimatedReach": 10000,
+                "estimatedClicks": 500,
+                "estimatedConversions": 50,
+            },
+            "creative": {
+                "headline": "Discover the Future of Marketing",
+                "primaryText": "AI-powered campaigns that deliver 5x better results. Join thousands of successful businesses.",
+                "cta": "LEARN_MORE"
+            },
+            "messages": [
+                {
+                    "role": "assistant",
+                    "content": "I've analyzed your request and created a high-performance campaign optimized for your goals!"
+                }
+            ],
+            "executionTime": 2.5,
+            "errors": [],
+            "warnings": []
+        }
+        print(json.dumps(mock_response))
+        return
+    
     try:
         # Process through workflow
         start_time = datetime.now()
@@ -76,39 +111,5 @@ async def main():
 
 
 if __name__ == "__main__":
-    # Check if we have OpenAI API key
-    if not os.getenv("OPENAI_API_KEY"):
-        # For demo, return mock data
-        mock_response = {
-            "success": True,
-            "sessionId": "demo-session",
-            "campaign": {
-                "id": "campaign-demo123",
-                "name": "AI Marketing Campaign",
-                "status": "draft",
-                "objective": "TRAFFIC",
-                "budget": 100,
-                "budgetType": "daily",
-                "estimatedReach": 10000,
-                "estimatedClicks": 500,
-                "estimatedConversions": 50,
-            },
-            "creative": {
-                "headline": "Discover the Future of Marketing",
-                "primaryText": "AI-powered campaigns that deliver 5x better results. Join thousands of successful businesses.",
-                "cta": "LEARN_MORE"
-            },
-            "messages": [
-                {
-                    "role": "assistant",
-                    "content": "I've analyzed your request and created a high-performance campaign optimized for your goals!"
-                }
-            ],
-            "executionTime": 2.5,
-            "errors": [],
-            "warnings": []
-        }
-        print(json.dumps(mock_response))
-    else:
-        # Run actual workflow
-        asyncio.run(main())
+    # Run the workflow
+    asyncio.run(main())

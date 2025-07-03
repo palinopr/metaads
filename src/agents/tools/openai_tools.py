@@ -10,8 +10,9 @@ from dotenv import load_dotenv
 # Load environment variables
 load_dotenv()
 
-# Initialize OpenAI client
-client = AsyncOpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+# Initialize OpenAI client only if API key is available
+api_key = os.getenv("OPENAI_API_KEY")
+client = AsyncOpenAI(api_key=api_key) if api_key else None
 
 
 async def parse_campaign_request(
@@ -55,6 +56,9 @@ Hints from initial parsing: {json.dumps(quick_parse_hints or {})}
 Return only valid JSON."""
 
     try:
+        if not client:
+            raise Exception("OpenAI API key not configured")
+            
         response = await client.chat.completions.create(
             model="gpt-4-turbo-preview",
             messages=[
@@ -126,6 +130,9 @@ Tone: {tone or 'Professional but friendly'}
 Return only valid JSON."""
 
     try:
+        if not client:
+            raise Exception("OpenAI API key not configured")
+            
         response = await client.chat.completions.create(
             model="gpt-4-turbo-preview",
             messages=[
@@ -172,6 +179,9 @@ Suggest:
 Return as JSON with: recommendations, expected_results, warnings"""
 
     try:
+        if not client:
+            raise Exception("OpenAI API key not configured")
+            
         response = await client.chat.completions.create(
             model="gpt-4-turbo-preview",
             messages=[{"role": "user", "content": prompt}],

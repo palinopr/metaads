@@ -2,6 +2,11 @@
 
 > "Claude Code for Marketing" - Making sophisticated marketing campaigns as easy as having a conversation.
 
+## 🚀 Live Demo
+
+- **Web App**: https://metaads-peach.vercel.app
+- **Status**: MVP deployed and functional
+
 ## Overview
 
 This platform revolutionizes marketing automation by using conversational AI and multi-agent systems to handle campaign creation, optimization, and management. Built on LangGraph for reliable agent orchestration and Context Engineering for systematic development.
@@ -16,18 +21,23 @@ This platform revolutionizes marketing automation by using conversational AI and
 
 ## Architecture
 
-The platform uses a sophisticated multi-agent system:
+The platform uses a sophisticated multi-agent system powered by LangGraph:
 
 ```
-Marketing Supervisor Agent
-├── Campaign Creator Agent - Builds campaign structures
-├── Content Generation Agent - Creates compelling ad copy
-├── Optimization Agent - Monitors and improves performance
-├── Analytics Agent - Provides insights and predictions
-├── Budget Management Agent - Allocates spending optimally
-├── Audience Research Agent - Discovers new segments
-└── Compliance Agent - Ensures policy adherence
+Supervisor Agent (Orchestrator)
+├── Parser Agent - Extracts structured data from natural language
+├── Creative Agent - Generates compelling ad copy using GPT-4
+├── Builder Agent - Structures campaigns for Meta Ads API
+└── [Future] Optimization Agent - A/B testing and performance tuning
 ```
+
+### Current Implementation
+
+- **Frontend**: Next.js 14 app deployed on Vercel
+- **AI Agents**: Python/LangGraph service (ready for deployment)
+- **LLM**: OpenAI GPT-4 for creative generation, GPT-3.5 for parsing
+- **State Management**: LangGraph with TypedDict states
+- **Monitoring**: LangSmith integration ready
 
 ## Quick Start
 
@@ -35,31 +45,41 @@ Marketing Supervisor Agent
 
 - Python 3.9+
 - Node.js 18+
-- PostgreSQL or SQLite
-- API Keys: OpenAI, Anthropic, Meta Ads
+- OpenAI API key (for AI agents)
+- Meta Ads API credentials (for campaign deployment)
 
 ### Installation
 
 ```bash
 # Clone the repository
-git clone [repository-url]
-cd ai-marketing-automation
+git clone https://github.com/palinopr/metaads.git
+cd metaads-new
 
-# Install Python dependencies
-pip install -r requirements.txt
-
-# Install Node dependencies
+# Frontend Setup
 npm install
+npm run build
 
-# Set up environment variables
-cp .env.example .env
-# Edit .env with your API keys
+# Python AI Agents Setup
+python3 -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+pip install -r agent-requirements.txt
 
-# Initialize database
-python scripts/init_db.py
+# Environment Setup
+cp .env.local .env
+# Edit .env and add your OPENAI_API_KEY
+
+# Test the AI agents
+python test_agent_workflow.py
 
 # Run the development server
 npm run dev
+```
+
+### Try the Demo
+
+```bash
+# Interactive AI demo (no API key required for simulation)
+python demo_ai_agents.py
 ```
 
 ### Create Your First Campaign
@@ -77,17 +97,22 @@ campaign = await create_campaign_from_request(request)
 ## Project Structure
 
 ```
-ai-marketing-automation/
+metaads-new/
 ├── src/
-│   ├── agents/          # Python agent implementations
-│   ├── workflows/       # LangGraph workflow definitions
+│   ├── agents/          # Python AI agents (LangGraph)
+│   │   ├── workflow.py  # Main orchestration flow
+│   │   ├── supervisor.py # Orchestrator agent
+│   │   ├── parser.py    # NLP parsing agent
+│   │   ├── creative.py  # Ad copy generation
+│   │   └── builder.py   # Campaign structuring
 │   ├── app/            # Next.js frontend
 │   ├── components/     # React components
-│   └── lib/            # Utilities and integrations
-├── examples/           # Code examples and patterns
-├── PRPs/              # Product Requirements Prompts
-├── tests/             # Test suites
-└── docs/              # Additional documentation
+│   └── lib/            # Utilities
+├── docs/              # Documentation
+│   └── PYTHON_SERVICE_SETUP.md
+├── test_agent_workflow.py  # Test the AI system
+├── demo_ai_agents.py      # Interactive demo
+└── agent-requirements.txt # Python dependencies
 ```
 
 ## Development
@@ -201,25 +226,44 @@ POST /api/campaigns/{id}/optimize
 - Rate limiting implemented
 - GDPR compliant data handling
 
+## Deployment
+
+### Frontend (Already Deployed)
+The Next.js app is deployed on Vercel at https://metaads-peach.vercel.app
+
+### Python AI Service
+See [docs/PYTHON_SERVICE_SETUP.md](docs/PYTHON_SERVICE_SETUP.md) for deployment options:
+- Vercel Functions (Recommended for MVP)
+- Railway.app (Recommended for scale)
+- Google Cloud Run
+- AWS Lambda
+
 ## Roadmap
 
-### Phase 1 (Current)
-- ✅ Core agent infrastructure
+### Phase 1 (Current) ✅
+- ✅ Core agent infrastructure (LangGraph)
 - ✅ Campaign creation workflow
-- ✅ Basic optimization
-- 🔄 Frontend interface
+- ✅ Natural language parsing
+- ✅ AI-powered creative generation
+- ✅ Frontend interface deployed
 
-### Phase 2
-- Multi-channel orchestration
-- Advanced content generation
-- Predictive analytics
-- Voice interface
+### Phase 2 (Next Steps)
+- 🔄 Connect Meta Ads API
+- 🔄 User authentication (Supabase)
+- 🔄 Deploy Python service
+- 🔄 Campaign performance tracking
 
 ### Phase 3
+- Multi-channel support (Google, TikTok)
+- A/B testing automation
+- Budget optimization agent
+- Analytics dashboard
+
+### Phase 4
 - Custom agent builder
-- Marketplace for agent templates
+- Webhook integrations
 - Enterprise features
-- API for developers
+- Public API
 
 ## Support
 
