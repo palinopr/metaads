@@ -3,7 +3,6 @@ Flask app for Railway deployment of AI Marketing Agents
 """
 from flask import Flask, request, jsonify
 from flask_cors import CORS
-import asyncio
 import os
 import sys
 from datetime import datetime
@@ -11,8 +10,14 @@ from datetime import datetime
 # Add src to path
 sys.path.append(os.path.join(os.path.dirname(__file__), 'src'))
 
-# Import our workflow
-from agents.workflow import process_campaign_request
+# Try to import our workflow
+try:
+    from agents.workflow import process_campaign_request
+    import asyncio
+    AGENTS_AVAILABLE = True
+except ImportError as e:
+    print(f"Warning: Could not import agents: {e}")
+    AGENTS_AVAILABLE = False
 
 app = Flask(__name__)
 CORS(app)  # Enable CORS for all routes
@@ -23,7 +28,7 @@ def home():
     return jsonify({
         "status": "healthy",
         "service": "AI Marketing Automation",
-        "agents": ["supervisor", "parser", "creative", "builder"],
+        "agents_available": AGENTS_AVAILABLE,
         "version": "1.0.0"
     })
 
@@ -38,8 +43,8 @@ def create_campaign():
         if not message:
             return jsonify({"error": "Message is required"}), 400
         
-        # Check for OpenAI API key
-        if not os.getenv("OPENAI_API_KEY"):
+        # Check for AI capability
+        if not AGENTS_AVAILABLE or not os.getenv("OPENAI_API_KEY"):
             # Return demo response
             return jsonify({
                 "success": True,
@@ -97,7 +102,8 @@ def create_campaign():
     except Exception as e:
         return jsonify({
             "error": "Failed to create campaign",
-            "details": str(e)
+            "details": str(e),
+            "agents_available": AGENTS_AVAILABLE
         }), 500
 
 @app.route('/api/health', methods=['GET'])
@@ -109,10 +115,11 @@ def health_check():
         "environment": {
             "python_version": sys.version,
             "openai_configured": bool(os.getenv("OPENAI_API_KEY")),
-            "agents_available": True
+            "agents_available": AGENTS_AVAILABLE
         }
     })
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
+    print(f"Starting Flask app on port {port}")
     app.run(host='0.0.0.0', port=port)
