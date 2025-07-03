@@ -19,6 +19,18 @@ If any check fails, see `SETUP.md` for resolution.
 
 ## Critical Rules
 
+### 0. GITHUB PUSH RULE - NEVER FORGET!
+**MANDATORY**: After EVERY change to the codebase:
+1. Create a descriptive commit: `git add . && git commit -m "feat/fix/docs: description"`
+2. Push to GitHub: `git push origin main`
+3. Verify deployment: Check GitHub Actions or Vercel dashboard
+4. **This is NON-NEGOTIABLE** - Set up reminders, use TodoWrite, whatever it takes!
+
+**Deployment Flow**:
+- Changes pushed to GitHub → Automatically deployed via Vercel
+- Production URL updates automatically after successful push
+- Always verify deployment status after push
+
 ### 1. Project Awareness
 - **ALWAYS** read planning documents before implementing features
 - Check TodoRead at the start of each conversation

@@ -200,12 +200,42 @@ For comprehensive troubleshooting, see `TROUBLESHOOTING.md`.
 - `examples/` - Reference implementations
 - `npm run db:studio` - Visual database debugging
 
+## Deployment
+
+### Automatic Deployment via GitHub
+This project is configured for automatic deployment:
+1. **Push to GitHub** → Triggers Vercel deployment
+2. **Main branch** → Deploys to production
+3. **Other branches** → Create preview deployments
+
+### Manual Deployment
+```bash
+# Deploy to production
+vercel --prod
+
+# Create preview deployment
+vercel
+```
+
+### GitHub Push Workflow
+**CRITICAL**: Always push changes to GitHub:
+```bash
+# After making changes
+git add .
+git commit -m "feat/fix/docs: description of changes"
+git push origin main
+
+# Verify deployment at:
+# https://vercel.com/[your-username]/metaads
+```
+
 ## Contributing
 
 1. Follow the Context Engineering workflow for all new features
 2. Ensure all tests pass before submitting PRs
 3. Update documentation as needed
 4. Follow existing code patterns from `examples/`
+5. **ALWAYS push to GitHub after changes** - This triggers automatic deployment!
 
 # Deployment trigger: Mon Jun 30 13:19:54 CDT 2025
 # Force redeploy: Mon Jun 30 13:26:24 CDT 2025
