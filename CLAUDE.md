@@ -269,6 +269,17 @@ npm test
 npm run test:e2e  # If implemented
 ```
 
+## Deployment Rules
+**IMPORTANT: Always deploy to production with Vercel**
+```bash
+# ALWAYS use this command:
+vercel --prod
+
+# NEVER use just 'vercel' for preview deployments
+```
+
+This ensures consistent production URLs and proper environment handling.
+
 ## Resources
 - Meta Ads API Docs: https://developers.facebook.com/docs/marketing-apis
 - Next.js 15 Docs: https://nextjs.org/docs
