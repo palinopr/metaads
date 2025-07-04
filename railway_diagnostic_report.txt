@@ -1,0 +1,32 @@
+Railway Deployment Diagnostic Report
+================================================================================
+
+Critical Issues: 1
+  ❌ Invalid runtime.txt format (should be 'python-X.Y.Z')
+
+Warnings: 3
+  ⚠️  Found 2 Log files
+  ⚠️  Found 71 Node.js dependencies in Python project
+  ⚠️  No main block found
+
+Information: 20
+  ✓ Python version: 3.9.6
+  ✓ Found .env.local
+  ✓ Found .env.production
+  ✓ App entry point: app.py
+  ✓ Found .gitignore
+  ✓ All 5174 Python files have valid syntax
+  ✓ Flask framework detected
+  ✓ Found requirements.txt
+  ✓ Found railway-requirements.txt
+  ✓ Found agent-requirements.txt
+  ✓ Web process: web: gunicorn app:app --bind 0.0.0.0:$PORT --workers 1 --threads 8 --timeout 120
+  ✓ Runtime: python-3.11
+  ✓ Port configuration found using environment variable
+  ✓ App initialization found
+  ✓ Host configured to 0.0.0.0
+  ✓ Analyzed 30 Python files for imports
+  ✓ app.py is readable
+  ✓ requirements.txt is readable
+  ✓ Procfile is readable
+  ✓ runtime.txt is readable
