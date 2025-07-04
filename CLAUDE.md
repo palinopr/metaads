@@ -344,5 +344,6 @@ web: gunicorn app:app --bind 0.0.0.0:$PORT
 2. Verify service type matches code (Next.js vs Python)
 3. Ensure health check endpoint exists at `/`
 4. Monitor with: `curl -I https://your-app.railway.app`
+5. **Python Version**: Use only major.minor in runtime.txt (e.g., `python-3.11` not `python-3.11.8`)
 
 Remember: We're building the future of marketing automation. Every line of code should make marketing easier for our users.
