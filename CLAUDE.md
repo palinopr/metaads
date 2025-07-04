@@ -339,11 +339,41 @@ gunicorn==21.2.0
 web: gunicorn app:app --bind 0.0.0.0:$PORT
 ```
 
-### Debugging Railway Deployments
-1. Check environment variables: `railway variables -s service-name`
-2. Verify service type matches code (Next.js vs Python)
-3. Ensure health check endpoint exists at `/`
-4. Monitor with: `curl -I https://your-app.railway.app`
+### Railway Deployment Process
+
+#### CRITICAL: Service Configuration
+- **metaads**: Next.js frontend service (DO NOT use for Python)
+- **metaads-python-api**: Python backend service (USE THIS)
+
+#### After Each Change - Deployment Steps:
+```bash
+# 1. Commit changes
+git add -A
+git commit -m "Your change description"
+git push origin main
+
+# 2. Deploy to Railway (Python backend)
+cd /Users/jaimeortiz/Test\ Main/metaads-new
+railway link -p 88cfcbd9-fe82-4bda-bb9b-fd1cf5f5688e
+railway up --service metaads-python-api
+
+# 3. Monitor deployment
+railway logs --service metaads-python-api
+
+# 4. Verify deployment
+curl https://metaads-python-api-production.up.railway.app
+```
+
+#### Service URLs:
+- **Python API**: https://metaads-python-api-production.up.railway.app
+- **Next.js Frontend**: https://metaads.vercel.app
+
+#### Debugging Railway Deployments:
+1. Check environment variables: `railway variables`
+2. Verify correct service: `railway status` (should show metaads-python-api)
+3. View logs: `railway logs`
+4. Ensure health check endpoint exists at `/`
 5. **Python Version**: Use only major.minor in runtime.txt (e.g., `python-3.11` not `python-3.11.8`)
+6. **Service Mismatch**: Never deploy Python to "metaads" service (it's configured for Next.js)
 
 Remember: We're building the future of marketing automation. Every line of code should make marketing easier for our users.

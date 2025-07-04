@@ -1,0 +1,162 @@
+{
+  "timestamp": "2025-07-03T21:23:43.970108",
+  "passed": 16,
+  "failed": 0,
+  "warnings": 6,
+  "details": [
+    {
+      "check": "Python version",
+      "severity": "critical",
+      "status": "pass",
+      "message": "Python 3.9",
+      "fix": ""
+    },
+    {
+      "check": "Node.js installed",
+      "severity": "critical",
+      "status": "pass",
+      "message": "v22.16.0",
+      "fix": ""
+    },
+    {
+      "check": "NPM installed",
+      "severity": "critical",
+      "status": "pass",
+      "message": "NPM 10.9.2",
+      "fix": ""
+    },
+    {
+      "check": "Git installed",
+      "severity": "important",
+      "status": "pass",
+      "message": "",
+      "fix": ""
+    },
+    {
+      "check": "Railway CLI available",
+      "severity": "important",
+      "status": "warning",
+      "message": "Railway CLI not installed",
+      "fix": "npm install -g @railway/cli"
+    },
+    {
+      "check": "Railway authentication",
+      "severity": "important",
+      "status": "warning",
+      "message": "Railway CLI not installed",
+      "fix": ""
+    },
+    {
+      "check": "Railway project linked",
+      "severity": "important",
+      "status": "warning",
+      "message": "Railway CLI not installed",
+      "fix": ""
+    },
+    {
+      "check": "Backend files present",
+      "severity": "critical",
+      "status": "pass",
+      "message": "",
+      "fix": ""
+    },
+    {
+      "check": "Frontend files present",
+      "severity": "critical",
+      "status": "pass",
+      "message": "",
+      "fix": ""
+    },
+    {
+      "check": "Configuration files",
+      "severity": "critical",
+      "status": "warning",
+      "message": "Missing optional: railway.json, railway.toml",
+      "fix": ""
+    },
+    {
+      "check": "Dependencies specified",
+      "severity": "critical",
+      "status": "pass",
+      "message": "",
+      "fix": ""
+    },
+    {
+      "check": "No syntax errors",
+      "severity": "critical",
+      "status": "pass",
+      "message": "",
+      "fix": ""
+    },
+    {
+      "check": "Environment variables",
+      "severity": "important",
+      "status": "warning",
+      "message": "Missing env vars: OPENAI_API_KEY",
+      "fix": "Set environment variables in Railway dashboard"
+    },
+    {
+      "check": "Port configuration",
+      "severity": "critical",
+      "status": "pass",
+      "message": "",
+      "fix": ""
+    },
+    {
+      "check": "Node modules installed",
+      "severity": "warning",
+      "status": "pass",
+      "message": "",
+      "fix": ""
+    },
+    {
+      "check": "Python packages installed",
+      "severity": "warning",
+      "status": "warning",
+      "message": "Some Python packages not installed locally",
+      "fix": "Run: pip install -r requirements.txt"
+    },
+    {
+      "check": "Build scripts present",
+      "severity": "important",
+      "status": "pass",
+      "message": "",
+      "fix": ""
+    },
+    {
+      "check": "No sensitive data",
+      "severity": "critical",
+      "status": "pass",
+      "message": "",
+      "fix": ""
+    },
+    {
+      "check": "Git ignore configured",
+      "severity": "important",
+      "status": "pass",
+      "message": "",
+      "fix": ""
+    },
+    {
+      "check": "Procfile valid",
+      "severity": "critical",
+      "status": "pass",
+      "message": "",
+      "fix": ""
+    },
+    {
+      "check": "Runtime specified",
+      "severity": "important",
+      "status": "pass",
+      "message": "",
+      "fix": ""
+    },
+    {
+      "check": "Start command works",
+      "severity": "critical",
+      "status": "pass",
+      "message": "",
+      "fix": ""
+    }
+  ]
+}

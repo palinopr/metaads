@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Railway Deployment Guide</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
+        h1 { color: #7C3AED; }
+        .method { background: #f5f5f5; padding: 20px; margin: 20px 0; border-radius: 8px; }
+        pre { background: #333; color: #fff; padding: 10px; overflow-x: auto; }
+        .success { color: #10B981; }
+        .warning { color: #F59E0B; }
+        .error { color: #EF4444; }
+    </style>
+</head>
+<body>
+    <h1>Railway Deployment Guide</h1>
+    
+    <div class="method">
+        <h2>Method 1: Railway CLI</h2>
+        <pre>npm install -g @railway/cli
+railway login
+railway init
+railway up</pre>
+    </div>
+    
+    <div class="method">
+        <h2>Method 2: GitHub Integration</h2>
+        <ol>
+            <li>Push code to GitHub</li>
+            <li>Go to railway.app/new</li>
+            <li>Connect GitHub repo</li>
+            <li>Deploy!</li>
+        </ol>
+    </div>
+    
+    <div class="method">
+        <h2>Method 3: Manual Upload</h2>
+        <ol>
+            <li>Go to railway.app/new</li>
+            <li>Create empty project</li>
+            <li>Upload project files</li>
+            <li>Set environment variables</li>
+        </ol>
+    </div>
+</body>
+</html>
