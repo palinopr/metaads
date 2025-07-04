@@ -1,0 +1,27 @@
+# Ignore Python files for Next.js service
+*.py
+*.pyc
+__pycache__/
+venv/
+.venv/
+requirements.txt
+railway-requirements.txt
+agent-requirements.txt
+Procfile
+runtime.txt
+src/agents/
+src/workflows/
+test_*.py
+demo_*.py
+railway-python-deploy/
+_*.py.bak
+ULTRATHINK_*.py
+ultrathink_*.py
+deploy_*.py
+railway_*.py
+*.log
+*.sh
+docs/
+PRPs/
+examples/
+scripts/
