@@ -7,9 +7,7 @@ import os
 from datetime import datetime
 import asyncio
 import json
-
-# Import will be done conditionally to avoid deployment errors
-process_campaign_request = None
+from src.agents.workflow import process_campaign_request
 
 app = Flask(__name__)
 # Enable CORS for Vercel frontend
@@ -47,11 +45,6 @@ def create_campaign():
         # Check if we have OpenAI key and should use AI
         if os.getenv("OPENAI_API_KEY") and os.getenv("OPENAI_API_KEY") != "sk-demo-key-replace-with-real-api-key":
             try:
-                # Lazy import to avoid deployment issues
-                global process_campaign_request
-                if process_campaign_request is None:
-                    from src.agents.workflow import process_campaign_request
-                
                 # Use AI workflow
                 loop = asyncio.new_event_loop()
                 asyncio.set_event_loop(loop)
