@@ -1,4 +1,12 @@
-# Minimal requirements for Railway
+# Requirements for Railway - AI Marketing Automation
 flask==3.0.0
 gunicorn==21.2.0
 flask-cors==4.0.0
+
+# LangGraph and AI dependencies
+langgraph==0.0.37
+langchain==0.1.0
+langchain-openai==0.0.5
+langchain-anthropic==0.0.1
+pydantic==2.5.3
+python-dotenv==1.0.0
