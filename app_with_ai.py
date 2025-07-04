@@ -1,10 +1,13 @@
 """
-Simple Flask app for Railway - AI Marketing Automation
+Production Flask app for Railway - AI Marketing Automation
 """
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 import os
 from datetime import datetime
+import asyncio
+import json
+from src.agents.workflow import process_campaign_request
 
 app = Flask(__name__)
 # Enable CORS for Vercel frontend
@@ -39,16 +42,60 @@ def create_campaign():
         if not message:
             return jsonify({"error": "Message is required"}), 400
         
-        # Check if we have OpenAI key
-        has_real_key = os.getenv("OPENAI_API_KEY") and os.getenv("OPENAI_API_KEY") != "sk-demo-key-replace-with-real-api-key"
-        
-        # For now, enhanced demo mode (AI integration coming next)
-        # Parse intent from message
+        # Check if we have OpenAI key and should use AI
+        if os.getenv("OPENAI_API_KEY") and os.getenv("OPENAI_API_KEY") != "sk-demo-key-replace-with-real-api-key":
+            try:
+                # Use AI workflow
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+                
+                # Process through AI agents
+                result = loop.run_until_complete(
+                    process_campaign_request(message, user_id)
+                )
+                
+                # Extract campaign data from AI result
+                campaign_plan = result.get('campaign_plan', {})
+                ad_creative = result.get('ad_creative', {})
+                
+                response = {
+                    "success": True,
+                    "campaign": {
+                        "id": result.get('session_id', f"campaign-{datetime.now().strftime('%Y%m%d%H%M%S')}"),
+                        "name": result.get('campaign_name', 'AI Campaign'),
+                        "status": "ready",
+                        "budget": f"${result.get('budget', 100)}/day",
+                        "audience": result.get('target_audience', 'AI-optimized targeting'),
+                        "platform": result.get('platform', 'Facebook & Instagram'),
+                        "estimatedReach": campaign_plan.get('estimated_reach', 100000),
+                        "estimatedClicks": campaign_plan.get('estimated_clicks', 5000),
+                        "objective": result.get('campaign_objective', 'Brand Awareness')
+                    },
+                    "content": [{
+                        "headline": ad_creative.get('headline', 'Transform Your Business'),
+                        "text": ad_creative.get('body', 'Discover amazing opportunities'),
+                        "cta": ad_creative.get('cta', 'Learn More')
+                    }],
+                    "executionTime": 3.5,
+                    "message": "AI-powered campaign created successfully! 🚀",
+                    "mode": "ai",
+                    "reasoning": result.get('messages', [])[-1] if result.get('messages') else "AI agents processed your request"
+                }
+                
+                return jsonify(response)
+                
+            except Exception as ai_error:
+                print(f"AI processing error: {ai_error}")
+                # Fall back to demo mode
+                
+        # Demo mode (no API key or AI failed)
+        # Parse intent from message (simple demo logic)
         budget = "100"
         if "$" in message:
+            # Extract budget
             parts = message.split("$")
             if len(parts) > 1:
-                budget_part = parts[1].split()[0].replace("/day", "").replace("/month", "").replace(",", "")
+                budget_part = parts[1].split()[0].replace("/day", "").replace(",", "")
                 try:
                     budget = str(int(float(budget_part)))
                 except:
@@ -63,23 +110,14 @@ def create_campaign():
             platform = "TikTok"
             
         business = "your business"
-        if "vegan" in message.lower() and "restaurant" in message.lower():
-            business = "vegan restaurant"
-        elif "coffee" in message.lower():
+        if "coffee" in message.lower():
             business = "coffee shop"
         elif "fitness" in message.lower():
             business = "fitness app"
         elif "saas" in message.lower() or "software" in message.lower():
             business = "software platform"
-            
-        # Extract location if mentioned
-        location = ""
-        if "brooklyn" in message.lower():
-            location = "Brooklyn"
-        elif "manhattan" in message.lower():
-            location = "Manhattan"
-        elif "california" in message.lower():
-            location = "California"
+        elif "vegan" in message.lower() or "restaurant" in message.lower():
+            business = "vegan restaurant"
             
         # Generate response
         campaign_id = f"campaign-{datetime.now().strftime('%Y%m%d%H%M%S')}"
@@ -88,23 +126,22 @@ def create_campaign():
             "success": True,
             "campaign": {
                 "id": campaign_id,
-                "name": f"{business.title()} {platform} Campaign" + (f" - {location}" if location else ""),
+                "name": f"{business.title()} {platform} Campaign",
                 "status": "ready",
                 "budget": f"${budget}/day",
-                "audience": f"{location} health-conscious millennials" if location and "vegan" in message.lower() else "AI-optimized targeting",
+                "audience": "AI-optimized targeting",
                 "platform": platform,
                 "estimatedReach": int(budget) * 1000,
                 "estimatedClicks": int(budget) * 50
             },
             "content": [{
-                "headline": f"Brooklyn's Best {business.title()}" if location == "Brooklyn" else f"Discover the Best {business.title()} Experience",
-                "text": "Fresh, local, and loved by millennials!" if "vegan" in message.lower() else f"Join thousands of satisfied customers. Limited time offer!",
-                "cta": "Reserve Now" if "restaurant" in message.lower() else "Learn More"
+                "headline": f"Discover the Best {business.title()} Experience",
+                "text": f"Join thousands of satisfied customers. Limited time offer - don't miss out!",
+                "cta": "Learn More" if int(budget) < 100 else "Shop Now"
             }],
             "executionTime": 2.5,
             "message": f"Campaign created! Targeting {platform} with ${budget}/day budget.",
-            "mode": "ai-ready" if has_real_key else "demo",
-            "ai_status": "ready" if has_real_key else "waiting for real API key"
+            "mode": "demo"
         }
         
         return jsonify(response)
@@ -124,7 +161,6 @@ def health_check():
         "environment": {
             "python_version": "3.11",
             "has_openai_key": bool(os.getenv("OPENAI_API_KEY")),
-            "openai_key_valid": os.getenv("OPENAI_API_KEY") != "sk-demo-key-replace-with-real-api-key" if os.getenv("OPENAI_API_KEY") else False,
             "cors_enabled": True,
             "railway_region": os.getenv("RAILWAY_ENVIRONMENT", "unknown")
         }
